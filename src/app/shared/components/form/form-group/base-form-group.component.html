@@ -1,0 +1,11 @@
+<div
+  class="grid gap-4"
+  [ngClass]="{
+    'grid-cols-1': true,
+    'md:grid-cols-2': columns() >= 2,
+    'lg:grid-cols-3': columns() >= 3,
+    'xl:grid-cols-4': columns() >= 4,
+  }"
+>
+  <ng-content />
+</div>

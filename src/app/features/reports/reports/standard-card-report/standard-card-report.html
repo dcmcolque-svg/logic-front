@@ -1,0 +1,22 @@
+<div class="standard-card">
+
+  <!-- Icon -->
+  <div
+    class="card-icon"
+    [style.background-color]="backgroundColorIcon"
+    [style.color]="colorIcon"
+  >
+    <i [class]="'pi ' + (report.icon ?? 'pi-chart-bar')"></i>
+  </div>
+
+  <!-- Text -->
+  <div class="card-text">
+    <span class="card-title" [title]="'reports.report_names.' + report.name | translate">
+      {{ 'reports.report_names.' + report.name | translate }}
+    </span>
+    <span class="card-subtitle">
+      {{ 'reports.report_descriptions.' + report.report_type | translate }}
+    </span>
+  </div>
+
+</div>

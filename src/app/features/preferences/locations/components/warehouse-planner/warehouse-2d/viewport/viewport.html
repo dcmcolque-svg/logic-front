@@ -1,0 +1,596 @@
+<!-- ── Duplicate location codes dialog ──────────────────────────────────── -->
+<p-dialog
+  header="Duplicate Location Codes"
+  [visible]="dupDialogVisible()"
+  (visibleChange)="dupDialogVisible.set($event)"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '480px', 'max-width': '95vw' }"
+  appendTo="body">
+
+  <div class="dup-dialog-body">
+    <p class="dup-dialog-msg">
+      The following location codes already exist and <strong>will not be created</strong>:
+    </p>
+    <ul class="dup-dialog-list">
+      @for (code of dupDialogCodes(); track code) {
+        <li>{{ code }}</li>
+      }
+    </ul>
+    @if (dupPendingItems().length > 0) {
+      <p class="dup-dialog-note">
+        {{ dupPendingItems().length }} location(s) without conflicts will be created.
+        Only the area and hallways adjacent to these locations will be placed.
+      </p>
+    } @else {
+      <p class="dup-dialog-note dup-dialog-note--warn">
+        All locations in this batch already exist. Nothing will be created.
+      </p>
+    }
+  </div>
+
+  <ng-template pTemplate="footer">
+    @if (dupPendingItems().length > 0) {
+      <p-button
+        label="Create remaining ({{ dupPendingItems().length }})"
+        severity="success"
+        (onClick)="finalizeDuplicateConfirm()" />
+      <p-button
+        label="Cancel"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="finalizeDuplicateCancel()" />
+    } @else {
+      <p-button
+        label="OK"
+        severity="secondary"
+        (onClick)="finalizeDuplicateCancel()" />
+    }
+  </ng-template>
+</p-dialog>
+<!-- ── Overlap Conflict Warning ──────────────────────────────────────────── -->
+@if (state.overlapConflicts().size > 0) {
+  <div class="overlap-warning">
+    <i class="pi pi-exclamation-triangle"></i>
+    <span>{{ 'preferences.location.overlap_warning' | translate }}</span>
+    <button class="overlap-warning-dismiss" (click)="dismissOverlapWarning()">
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+}
+<!-- ── Unnamed Locs Warning ────────────────────────────────────────────── -->
+@if (state.hasUnnamedLocs()) {
+  <div class="unnamed-warning" [class.stacked]="state.overlapConflicts().size > 0">
+    <i class="pi pi-exclamation-circle"></i>
+    <span>{{ 'preferences.location.unnamed_warning' | translate }}</span>
+  </div>
+}
+
+<!-- Grid Viewport -->
+<div id="grid-viewport" #viewport
+  [class.tool-arrow]="state.activeTool() === 'arrow'"
+  [class.tool-hand]="state.activeTool() === 'hand'"
+  [class.tool-brush]="state.activeTool() === 'brush'">
+
+  <div id="grid-container" #container
+    [style.width.px]="getPx(state.gridWidth())"
+    [style.height.px]="getPx(state.gridDepth())">
+
+    <!-- Selection Box -->
+    <div id="selection-box" class="selection-box"
+      [class.hidden]="!state.emptySelection()"
+      [style.left.px]="getPx(state.emptySelection()?.x || 0)"
+      [style.top.px]="getPx(state.emptySelection()?.y || 0)"
+      [style.width.px]="getPx(state.emptySelection()?.w || 0)"
+      [style.height.px]="getPx(state.emptySelection()?.h || 0)">
+    </div>
+
+    <!-- Cursor-size tooltip -->
+    <div id="cursor-size-tooltip" class="cursor-size-tooltip hidden"></div>
+
+    <!-- Hallway preview line -->
+    <div id="hallway-preview-line" class="hallway-preview-line hidden"></div>
+
+    <!-- ── Generate Preview Ghost ── -->
+    @if (state.generatePreview(); as gp) {
+      <div class="gen-preview-ghost"
+        [style.left.px]="getPx(gp.gx)"
+        [style.top.px]="getPx(gp.gy)"
+        [style.width.px]="getPx(gp.gw)"
+        [style.height.px]="getPx(gp.gh)"
+        (mousedown)="onPreviewGhostMouseDown($event)">
+
+        <!-- SVG detail layer: hallways + loc cells -->
+        <svg class="gen-preview-svg"
+          [attr.width]="getPx(gp.gw)"
+          [attr.height]="getPx(gp.gh)"
+          style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible;">
+
+          <!-- Hallway strips -->
+          @for (hw of gp.hallways; track hw.rx + '_' + hw.ry) {
+            <rect
+              [attr.x]="getPx(hw.rx)"
+              [attr.y]="getPx(hw.ry)"
+              [attr.width]="getPx(hw.rw)"
+              [attr.height]="getPx(hw.rh)"
+              fill="rgba(40,44,52,0.75)"
+              stroke="rgba(100,116,139,0.5)"
+              stroke-width="1"
+              rx="1"/>
+          }
+
+          <!-- Loc cells (shown up to 400 for perf) -->
+          @for (lc of gp.locCells.slice(0, 400); track lc.rx + '_' + lc.ry) {
+            <rect
+              [attr.x]="getPx(lc.rx) + getPx(1) * 0.1"
+              [attr.y]="getPx(lc.ry) + getPx(1) * 0.1"
+              [attr.width]="getPx(1) * 0.8"
+              [attr.height]="getPx(1) * 0.8"
+              fill="rgba(16,185,129,0.4)"
+              stroke="rgba(16,185,129,0.7)"
+              stroke-width="0.5"
+              rx="1"/>
+          }
+          @if (gp.locCells.length > 400) {
+            <text
+              [attr.x]="getPx(gp.gw) / 2"
+              [attr.y]="getPx(gp.gh) / 2"
+              text-anchor="middle" dominant-baseline="middle"
+              fill="rgba(245,158,11,0.9)" font-size="12" font-weight="700">
+              +{{ gp.locCells.length - 400 }} more locs
+            </text>
+          }
+        </svg>
+
+        <!-- Area label + dims -->
+        <span class="gen-preview-label">{{ gp.label }}</span>
+        <span class="gen-preview-dims">{{ gp.gw }}×{{ gp.gh }} · {{ gp.locCells.length }} locs</span>
+
+        <!-- Action buttons -->
+        <div class="gen-preview-actions" (mousedown)="$event.stopPropagation()">
+          <button class="gen-preview-confirm" (click)="onCommitPreview()">✓ Place</button>
+          <button class="gen-preview-cancel"  (click)="state.generatePreview.set(null)">✕</button>
+        </div>
+      </div>
+    }
+
+
+    <!-- ── Rendered Items (viewport-culled for performance) ── -->
+    @for (item of culledItems(); track item.id) {
+      <div class="grid-item"
+        [id]="item.id"
+        [attr.data-item-id]="item.id"
+        [class]="'grid-item type-' + (item.type || 'unknown').toLowerCase() + (item.type === 'Area' ? ' ' + getAreaConnClasses(item) : '')"
+        [class.selected]="item.selected"
+        [class.drag-collision]="item.selected && dragHasCollision()"
+        [class.overlap-conflict]="state.overlapConflicts().has(item.id)"
+        [class.unnamed-loc]="item.unnamed && !item.name?.trim()"
+        [class.level-hidden]="state.activeLevelView() !== 'All' && item.level > getLevelFilter()"
+        [class.level-faded]="state.activeLevelView() !== 'All' && item.level < getLevelFilter()"
+        [class.layer-hidden]="isHiddenByLayer(item)"
+        [style.background]="item.type === 'Loc' ? getLocLevelColor(item.level) : null"
+        [style.left.px]="getPx(item.gx)"
+        [style.top.px]="getPx(item.gy)"
+        [style.width.px]="getPx(item.gw)"
+        [style.height.px]="getPx(item.gh)"
+        [style.z-index]="getItemZIndex(item)"
+        [style.transform]="item.type === 'Loc' && !item.fullScale ? 'scale(0.82)' : getTransform(item)"
+        (mousedown)="onItemMouseDown($event, item)"
+        (contextmenu)="onItemContextMenu($event, item)">
+
+        <!-- Area: floating name label (only shown on the top-left area of each visual group) -->
+        @if (item.type === 'Area' && !getAreaConnClasses(item).includes('area-hide-label')) {
+          <div class="area-name-label" (mousedown)="onAreaLabelMouseDown($event, item)">
+            {{ item.name || 'Area' }}
+          </div>
+        }
+
+        <!-- Loc: level letter -->
+        @if (item.type === 'Loc') {
+          <span style="font-size:0.8rem; font-weight:700; text-align:center; display:flex; align-items:center; justify-content:center; height:100%;">
+            {{ getLevelLetter(item.level) }}
+          </span>
+        }
+
+        <!-- Other visible types (not Wall/Door/Conveyor/Area/Hallway/Loc) -->
+        @if (item.type !== 'Wall' && item.type !== 'Door' && item.type !== 'Conveyor' &&
+             item.type !== 'Area' && item.type !== 'Hallway' && item.type !== 'Loc') {
+          <span>{{ item.type }} ({{ state.activeLevelView() === 'All' ? getLevelLetter(getMaxLevelAtPosition(item)) : getLevelLetter(item.level) }})</span>
+        }
+
+        <!-- SVG shapes for Wall / Door / Conveyor / Hallway -->
+        @if (item.type === 'Wall' || item.type === 'Door' || item.type === 'Conveyor' || item.type === 'Hallway') {
+          <svg width="100%" height="100%"
+            style="position:absolute; top:0; left:0; pointer-events:none; overflow:visible;">
+            @for (r of item._svgRects; track r.x + '_' + r.y) {
+              <rect [attr.x]="r.x" [attr.y]="r.y"
+                [attr.width]="r.w" [attr.height]="r.h"
+                [attr.fill]="r.fill"
+                [style.filter]="item.selected ? 'brightness(1.5)' : 'none'" />
+            }
+            @for (p of item._svgPaths; track p.d) {
+              <path [attr.d]="p.d"
+                [attr.stroke-width]="p.strokeWidth"
+                [attr.stroke]="p.stroke"
+                fill="none"
+                [style.filter]="item.selected ? 'brightness(1.5)' : 'none'" />
+            }
+
+            <!-- Door arc swing indicator -->
+            @if (item.type === 'Door') {
+              @if (getDoorCenter(item); as dc) {
+                <line
+                  [attr.x1]="dc.cx" [attr.y1]="dc.cy"
+                  [attr.x2]="dc.cx" [attr.y2]="dc.cy - dc.r"
+                  stroke="#FBBF24" stroke-width="1.5" stroke-dasharray="3 2"
+                  [style.filter]="item.selected ? 'brightness(1.5)' : 'none'" />
+                <path
+                  [attr.d]="getDoorArcPath(item)"
+                  fill="rgba(251,191,36,0.18)" stroke="#FBBF24" stroke-width="1.2"
+                  [style.filter]="item.selected ? 'brightness(1.5)' : 'none'" />
+                <text
+                  [attr.x]="dc.cx" [attr.y]="dc.cy + 3"
+                  text-anchor="middle" dominant-baseline="middle"
+                  font-size="7" font-weight="700" fill="#FBBF24" font-family="sans-serif"
+                  [style.filter]="item.selected ? 'brightness(1.5)' : 'none'">🚪</text>
+              }
+            }
+          </svg>
+        }
+
+        <!-- Resize gizmos (single selection, hand tool) -->
+        @if (item.selected && state.selectedItems().length === 1 && state.activeTool() === 'hand') {
+          @for (dir of getResizeDirsForItem(item); track dir) {
+            <div class="resize-handle" [class]="'resize-' + dir"
+              (mousedown)="onResizeStart($event, item, dir)"></div>
+          }
+        }
+
+      </div>
+    }<!-- /@for items -->
+
+    <!-- ── Row / Column selector buttons ────────────────────────────────── -->
+    @if (rowColSelectors(); as rcs) {
+
+      <!-- Row selectors: one per unique gy, positioned left of selection -->
+      @for (row of rcs.rows; track row.gy) {
+        <button class="rc-selector rc-row-btn"
+          [style.left.px]="row.left"
+          [style.top.px]="row.top"
+          (mousedown)="$event.stopPropagation()"
+          (click)="selectRow(row.gy)"
+          title="Select entire row">
+          ↔
+        </button>
+      }
+
+      <!-- Column selectors: one per unique gx, positioned above selection -->
+      @for (col of rcs.cols; track col.gx) {
+        <button class="rc-selector rc-col-btn"
+          [style.left.px]="col.left"
+          [style.top.px]="col.top"
+          (mousedown)="$event.stopPropagation()"
+          (click)="selectCol(col.gx)"
+          title="Select entire column">
+          ↕
+        </button>
+      }
+
+    }<!-- /@if rowColSelectors -->
+
+    <!-- ── Picking Mode Route Overlay ──────────────────────────────────── -->
+    @if (state.pickingMode() && pickingOverlay(); as po) {
+      <svg class="picking-route-svg"
+        [attr.width]="getPx(state.gridWidth())"
+        [attr.height]="getPx(state.gridDepth())"
+        style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible;z-index:900;">
+
+        <!-- SVG defs: arrow marker + gradient -->
+        <defs>
+          
+          <linearGradient id="pick-route-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#10B981"/>
+            <stop offset="100%" stop-color="#b83d09"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Full route preview (thin gray — behind everything) -->
+        @if (po.fullPathPoints) {
+          <polyline
+            class="picking-path-full"
+            [attr.points]="po.fullPathPoints"
+            fill="none"
+            stroke="#64748B"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            opacity="0.8"/>
+
+          <!-- Full-path stop markers (gray circles with numbers) -->
+          @for (m of po.fullPathStopMarkers; track m.order) {
+            <circle
+              [attr.cx]="m.ax"
+              [attr.cy]="m.ay"
+              r="10"
+              fill="#64748B"
+              opacity="0.85"/>
+            <text
+              [attr.x]="m.ax"
+              [attr.y]="m.ay"
+              text-anchor="middle"
+              dominant-baseline="middle"
+              fill="white"
+              font-size="10"
+              font-weight="700"
+              opacity="0.85">
+              {{ m.order }}
+            </text>
+          }
+        }
+
+        <!-- Past segments (dotted gray) -->
+        @for (p of [po.pastPoints]; track p) {
+          @if (p) {
+            <polyline
+              class="picking-path-fade"
+              [attr.points]="p"
+              fill="none"
+              stroke="#94A3B8"
+              stroke-width="3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-dasharray="4 6"/>
+          }
+        }
+
+        <!-- Current segment (solid blue) -->
+        @for (p of [po.currentPoints]; track p) {
+          @if (p) {
+            <polyline
+              class="picking-path-draw-solid"
+              [attr.points]="p"
+              [style.--path-len]="po.currentLength"
+              fill="none"
+              stroke="#3B82F6"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"/>
+          }
+        }
+
+
+
+        <!-- Stop destination highlights (pulsing halo) -->
+        @for (stop of po.stopMarkers; track stop.order) {
+          @if (stop.isVisible) {
+            <rect
+              [attr.x]="stop.px + 2"
+              [attr.y]="stop.py + 2"
+              [attr.width]="stop.pw - 4"
+              [attr.height]="stop.ph - 4"
+              fill="none"
+              [attr.stroke]="stop.isCurrent ? '#3B82F6' : '#94A3B8'"
+              stroke-width="2.5"
+              rx="4"
+              class="picking-stop-halo"
+              [class.current]="stop.isCurrent"/>
+          }
+        }
+
+        <!-- Stop order numbers (positioned at the access/hallway cell) -->
+        @for (stop of po.stopMarkers; track stop.order) {
+          @if (stop.isVisible) {
+            <!-- Circle background -->
+            <circle
+              [attr.cx]="stop.ax"
+              [attr.cy]="stop.ay"
+              r="10"
+              [attr.fill]="stop.isCurrent ? '#3B82F6' : '#94A3B8'"/>
+            <!-- Order number -->
+            <text
+              [attr.x]="stop.ax"
+              [attr.y]="stop.ay"
+              text-anchor="middle"
+              dominant-baseline="middle"
+              fill="white"
+              font-size="10"
+              font-weight="700">
+              {{ stop.order }}
+            </text>
+          }
+        }
+      </svg>
+    }<!-- /@if pickingMode overlay -->
+
+  </div><!-- /#grid-container -->
+</div><!-- /#grid-viewport -->
+
+<!-- Item Hover Tooltip (fixed, escapes overflow clipping) -->
+<div id="item-hover-tooltip" class="item-hover-tooltip"></div>
+
+<!-- Floating warning toast -->
+@if (state.warningMessage(); as msg) {
+  <div class="planner-warning-toast">
+    <i class="pi pi-exclamation-triangle"></i>
+    {{ msg }}
+  </div>
+}
+
+<!-- PrimeNG Context Menu -->
+<p-contextMenu #itemContextMenu [model]="contextMenuItems" appendTo="body" />
+
+<!-- Bin Planner Dialog -->
+<app-bin-planner-dialog
+  [(visible)]="showBinPlanner"
+  [locationCode]="binPlannerLocationCode()"
+  (applyPlan)="onBinPlannerApply($event)"
+/>
+
+<!-- Bulk Bin Planner Dialog -->
+<app-bin-planner-dialog
+  [(visible)]="showBulkBinPlanner"
+  [locationCodes]="bulkBinPlannerCodes()"
+  (applyPlan)="onBulkBinPlannerApply($event)"
+/>
+
+<!-- ── Draw-to-Create Popup ──────────────────────────────────────────── -->
+@if (state.drawPopup(); as popup) {
+  <!-- Backdrop: dismisses popup on outside click -->
+  <div class="draw-popup-backdrop"
+    (mousedown)="state.drawPopup.set(null); state.emptySelection.set(null); drawPopupPendingType = null; drawPopupStep = null">
+  </div>
+
+  <!-- Popup panel -->
+  <div class="draw-popup" [style.left.px]="popup.px" [style.top.px]="popup.py">
+
+    <!-- ── Step 0: Type picker ── -->
+    @if (!drawPopupPendingType) {
+      <div class="draw-popup-header">
+        <span class="draw-popup-header__title">Create Shape</span>
+        <span class="draw-popup-header__info">{{ popup.gw }}×{{ popup.gh }}</span>
+      </div>
+      
+      <div class="draw-popup-grid">
+        @for (t of allTypesMeta; track t.type) {
+          @if (popup.types.includes(t.type)) {
+            <button class="draw-popup-item"
+              [style.--type-color]="t.color"
+              (mousedown)="$event.stopPropagation()"
+              (click)="onDrawPopupTypeClick(t.type, popup)">
+              <i [class]="t.icon + ' draw-popup-item__icon'"></i>
+              <span class="draw-popup-item__label">{{ t.type === 'LocBody' ? 'Area' : t.type }}</span>
+            </button>
+          }
+        }
+      </div>
+    }
+
+    <!-- ── Step 1: Area name + Generate settings ── -->
+    @if ((drawPopupPendingType === 'Loc' || drawPopupPendingType === 'LocBody') && drawPopupStep === 'area-name') {
+      <div class="draw-popup-header">
+        <i class="pi pi-clone" style="color: #3B82F6; margin-right: 6px;"></i>
+        <span class="draw-popup-header__title">New Area</span>
+      </div>
+
+      <div class="popup-form">
+        <!-- Area name -->
+        <div class="popup-field">
+          <label class="popup-field-label" for="vp-popup-area-code">Area Code</label>
+          <input id="vp-popup-area-code" pInputText #areaNameInput 
+            class="w-full form-input--mono" 
+            [value]="drawPopupAreaName"
+            (input)="drawPopupAreaName = sanitizeAreaInput(areaNameInput.value); onPopupAreaChange(drawPopupAreaName)"
+            (mousedown)="$event.stopPropagation()"
+            (keydown.enter)="$event.preventDefault(); onDrawPopupConfirmArea(areaNameInput.value, popup)"
+            (keydown.escape)="drawPopupPendingType = null; drawPopupStep = null"
+            maxlength="2" placeholder="AA" />
+        </div>
+
+        <!-- Level First / Last -->
+        <div class="popup-field">
+          <label class="popup-field-label" for="vp-popup-level-start">Levels</label>
+          <div class="form-row-2">
+            <p-select inputId="vp-popup-level-start" [options]="levelOptions" optionLabel="label" optionValue="value"
+              [(ngModel)]="popupGenLevelStart"
+              (ngModelChange)="onPopupLevelStartChange()"
+              (mousedown)="$event.stopPropagation()" styleClass="w-full" />
+            <p-select [options]="levelOptions" optionLabel="label" optionValue="value"
+              [(ngModel)]="popupGenLevelEnd"
+              (mousedown)="$event.stopPropagation()" styleClass="w-full" />
+          </div>
+        </div>
+
+        <!-- Row First / Last (Loc only) -->
+        @if (drawPopupPendingType !== 'LocBody') {
+          <div class="popup-field">
+            <label class="popup-field-label" for="vp-popup-row-start">Rows (Start / End)</label>
+            <div class="form-row-2">
+              <p-inputnumber inputId="vp-popup-row-start" [min]="1" [(ngModel)]="popupGenRInit"
+                (ngModelChange)="popupGenREnd < popupGenRInit ? popupGenREnd = popupGenRInit : null"
+                (mousedown)="$event.stopPropagation()" styleClass="w-full" inputStyleClass="w-full form-input" />
+              <p-inputnumber [min]="popupGenRInit" [(ngModel)]="popupGenREnd"
+                (mousedown)="$event.stopPropagation()" styleClass="w-full" inputStyleClass="w-full form-input" />
+            </div>
+          </div>
+
+          <div class="popup-field">
+            <label class="popup-field-label" for="vp-popup-col-start">Cols (Start / End)</label>
+            <div class="form-row-2">
+              <p-inputnumber inputId="vp-popup-col-start" [min]="1" [(ngModel)]="popupGenBInit"
+                (ngModelChange)="popupGenBEnd < popupGenBInit ? popupGenBEnd = popupGenBInit : null"
+                (mousedown)="$event.stopPropagation()" styleClass="w-full" inputStyleClass="w-full form-input" />
+              <p-inputnumber [min]="popupGenBInit" [(ngModel)]="popupGenBEnd"
+                (mousedown)="$event.stopPropagation()" styleClass="w-full" inputStyleClass="w-full form-input" />
+            </div>
+          </div>
+        }
+
+        <!-- Category & Storage -->
+        <div class="popup-field">
+          <div class="form-row-2">
+            <div class="flex-1">
+              <label class="popup-field-label" for="vp-popup-category">Category</label>
+              <p-select inputId="vp-popup-category" [options]="popupBayCategories()" [(ngModel)]="popupGenCategory"
+                (mousedown)="$event.stopPropagation()" styleClass="w-full" />
+            </div>
+            <div class="flex-1">
+              <label class="popup-field-label" for="vp-popup-storage">Storage</label>
+              <p-select inputId="vp-popup-storage" [options]="popupBayTypes()" [(ngModel)]="popupGenType"
+                optionLabel="label" optionValue="value"
+                (mousedown)="$event.stopPropagation()" styleClass="w-full" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Zone -->
+        <div class="popup-field">
+          <label class="popup-field-label" for="vp-popup-zone">Zone</label>
+          <p-select inputId="vp-popup-zone" [options]="popupZoneOptions()"
+            optionLabel="label" optionValue="value"
+            [(ngModel)]="popupGenZone"
+            (mousedown)="$event.stopPropagation()" styleClass="w-full" />
+        </div>
+
+        <!-- Directions -->
+        @if (drawPopupPendingType !== 'LocBody') {
+          <div class="popup-field">
+            <span class="popup-field-label" id="vp-popup-count-dir-label">Counting Direction</span>
+            <fieldset class="toggle-group" style="margin-top: 4px;" aria-labelledby="vp-popup-count-dir-label">
+              <p-button type="button" size="small" styleClass="flex-1"
+                [outlined]="popupColDir === 'ltr'" [text]="popupColDir !== 'ltr'"
+                (mousedown)="$event.stopPropagation()" (onClick)="popupColDir = 'ltr'">1 →</p-button>
+              <p-button type="button" size="small" styleClass="flex-1"
+                [outlined]="popupColDir === 'rtl'" [text]="popupColDir !== 'rtl'"
+                (mousedown)="$event.stopPropagation()" (onClick)="popupColDir = 'rtl'">← 1</p-button>
+              
+              <div style="width: 8px;"></div>
+              
+              <p-button type="button" size="small" styleClass="flex-1"
+                [outlined]="popupRowDir === 'ttb'" [text]="popupRowDir !== 'ttb'"
+                (mousedown)="$event.stopPropagation()" (onClick)="popupRowDir = 'ttb'">↓ 1</p-button>
+              <p-button type="button" size="small" styleClass="flex-1"
+                [outlined]="popupRowDir === 'btt'" [text]="popupRowDir !== 'btt'"
+                (mousedown)="$event.stopPropagation()" (onClick)="popupRowDir = 'btt'">1 ↑</p-button>
+            </fieldset>
+          </div>
+        }
+      </div>
+
+      <div class="popup-footer">
+        <p-button size="small" severity="success" styleClass="w-full"
+          (mousedown)="$event.stopPropagation()"
+          (onClick)="onDrawPopupConfirmArea(areaNameInput.value, popup)">
+          {{ drawPopupPendingType === 'LocBody' ? 'Confirm Area' : 'Generate Locations' }}
+        </p-button>
+        <p-button size="small" severity="secondary" [text]="true" styleClass="w-full"
+          (mousedown)="$event.stopPropagation()"
+          (onClick)="drawPopupPendingType = null; drawPopupStep = null">
+          Cancel
+        </p-button>
+      </div>
+    }
+
+  </div><!-- /.draw-popup -->
+}<!-- /@if drawPopup -->

@@ -1,0 +1,129 @@
+@let f = form().controls;
+@let attrs = attributes();
+
+<!-- Left column: General Information -->
+<div
+  class="col-span-12 md:col-span-4 flex flex-col"
+  [class.gap-3]="dense()"
+  [class.gap-4]="!dense()"
+  [style.display]="hideColumns() ? 'none' : null"
+>
+  <div class="flex items-center gap-2 mb-1">
+    <i class="pi pi-cog text-primary" [class.text-sm]="dense()"></i>
+    <span class="font-semibold text-primary" [class.text-sm]="dense()">
+      {{ 'labels.general_information' | translate }}
+    </span>
+  </div>
+  <ng-content />
+  <base-form-field
+    type="text"
+    label="labels.sku"
+    [control]="f.sku_code"
+    [required]="true"
+    [placeholder]="skuPlaceholder()"
+  />
+  <base-form-field type="text" label="labels.barcode" [control]="f.barcode" />
+  <base-form-field type="text" label="labels.name" [control]="f.name" [required]="true" />
+  <base-form-field type="text" label="labels.description" [control]="f.description" />
+  <base-form-field type="text" label="labels.hs_code" [control]="f.hs_code" />
+  <base-form-field
+    type="dropdown"
+    label="labels.serial_control_mode"
+    [control]="f.serial_control_mode"
+    [options]="serialControlModeOptions"
+    optionLabel="label"
+    optionValue="value"
+  />
+</div>
+
+<!-- Center column: Dimensions, Weight, Cost & Price, Custom Attributes -->
+<div
+  class="col-span-12 md:col-span-4 flex flex-col"
+  [class.gap-3]="dense()"
+  [class.gap-4]="!dense()"
+  [style.display]="hideColumns() ? 'none' : null"
+>
+  <div class="flex items-center gap-2 mb-1">
+    <i class="pi pi-search text-primary" [class.text-sm]="dense()"></i>
+    <span class="font-semibold text-primary" [class.text-sm]="dense()">
+      {{ 'labels.dimensions_weight' | translate }}
+    </span>
+  </div>
+  <div class="grid grid-cols-3 gap-3">
+    <base-form-field type="number" label="packaging.meassurements.length" [control]="f.length" [maxFractionDigits]="3" />
+    <base-form-field type="number" label="packaging.meassurements.width" [control]="f.width" [maxFractionDigits]="3" />
+    <base-form-field type="number" label="packaging.meassurements.height" [control]="f.height" [maxFractionDigits]="3" />
+  </div>
+  <base-form-field type="number" label="labels.weight" [control]="f.weight" [maxFractionDigits]="3" />
+
+  <div class="flex items-center gap-2 mb-1 mt-1">
+    <i class="pi pi-dollar text-primary" [class.text-sm]="dense()"></i>
+    <span class="font-semibold text-primary" [class.text-sm]="dense()">
+      {{ 'labels.cost_and_price' | translate }}
+    </span>
+  </div>
+  <div class="grid grid-cols-2 gap-3">
+    <base-form-field type="number" label="labels.cost" [control]="f.cost" [maxFractionDigits]="2" [min]="0" />
+    <base-form-field type="number" label="labels.retail_price" [control]="f.retail_price" [maxFractionDigits]="2" />
+    <base-form-field type="number" label="labels.wholesale_price" [control]="f.wholesale_price" [maxFractionDigits]="2" />
+    <!-- unit_factor is an integer on the backend -->
+    <base-form-field type="number" label="labels.unit_factor" [control]="f.unit_factor" [maxFractionDigits]="0" [min]="1" />
+  </div>
+
+  <!-- Custom Attributes (below cost and price) -->
+  <div class="flex items-center justify-between mb-1 mt-1">
+    <div class="flex items-center gap-2">
+      <i class="pi pi-sliders-h text-primary" [class.text-sm]="dense()"></i>
+      <span class="font-semibold text-primary" [class.text-sm]="dense()">
+        {{ 'labels.custom_attributes' | translate }}
+      </span>
+    </div>
+    <p-button
+      icon="pi pi-plus"
+      [label]="'labels.add_attribute' | translate"
+      severity="secondary"
+      [outlined]="true"
+      (onClick)="attrs.add()"
+      styleClass="white-space-nowrap"
+    />
+  </div>
+
+  @for (attr of attrs.items(); track $index; let i = $index) {
+    <div class="flex gap-2 items-center">
+      <p-autoComplete
+        [suggestions]="attrs.filteredKeys()"
+        [ngModel]="attr.key"
+        (ngModelChange)="attrs.updateKey(i, $event)"
+        (completeMethod)="attrs.search($event)"
+        [placeholder]="'labels.key' | translate"
+        [dropdown]="false"
+        [minLength]="0"
+        appendTo="body"
+        styleClass="flex-1"
+        inputStyleClass="p-inputtext-sm w-full"
+      />
+      <input
+        type="text"
+        pInputText
+        class="p-inputtext-sm flex-1"
+        [placeholder]="'labels.value' | translate"
+        [value]="attr.value"
+        (input)="attrs.updateValue(i, $any($event.target).value)"
+      />
+      <p-button
+        icon="pi pi-trash"
+        severity="danger"
+        [text]="true"
+        size="small"
+        (onClick)="attrs.remove(i)"
+        [style]="{ 'min-width': '2rem', height: '2rem' }"
+      />
+    </div>
+  }
+
+  @if (attrs.items().length === 0) {
+    <div class="text-surface-400 text-xs italic text-center py-2">
+      {{ 'labels.no_custom_attributes' | translate }}
+    </div>
+  }
+</div>

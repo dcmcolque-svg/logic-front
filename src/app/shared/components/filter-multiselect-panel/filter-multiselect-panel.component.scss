@@ -1,0 +1,49 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+/* Standardize trigger height to match text/date filter inputs */
+:host ::ng-deep .p-multiselect-label-container {
+  height: 2.3rem;
+  min-height: 2.3rem;
+  display: flex;
+  align-items: center;
+}
+
+:host ::ng-deep .p-multiselect {
+  min-height: 2.3rem;
+}
+
+/* Normalize font-size for placeholder / selected labels */
+:host ::ng-deep .p-multiselect-label,
+:host ::ng-deep .p-multiselect-label.p-placeholder {
+  font-size: 0.8rem;
+}
+/* Active filter highlight — mirrors the blue border from filter-text-input */
+:host ::ng-deep .p-multiselect.filter-active {
+  border-color: var(--p-primary-color, var(--primary-color, #6366f1));
+}
+
+/* Hide the chip × remove button — clearing is handled by the footer Clear button */
+:host ::ng-deep .p-multiselect-label .p-chip-remove-icon {
+  display: none;
+}
+
+.filter-panel-footer {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--p-surface-200);
+  justify-content: flex-end;
+}
+
+/* Colored dot for dropdown items when colorMap is provided */
+.color-dot {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+

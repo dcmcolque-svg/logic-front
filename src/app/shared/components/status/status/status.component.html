@@ -1,0 +1,12 @@
+@if (getConfig(); as cfg) {
+  <p-chip [removable]="false" [styleClass]="cfg.chip" class="grosor-chip">
+    <i class="pi {{ cfg.icon }} mr-2"></i>
+    {{
+      'labels.' + status().toLowerCase() | translate | uppercase | capitalize
+    }}
+  </p-chip>
+} @else {
+  <p-chip [removable]="false" styleClass="chip-plomo" class="grosor-chip">
+    {{ status() }}
+  </p-chip>
+}

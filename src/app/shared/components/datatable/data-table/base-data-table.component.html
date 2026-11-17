@@ -1,0 +1,390 @@
+<!-- Skeleton when loading and no data yet -->
+@if (loading() && data().length === 0) {
+  <base-table-skeleton
+    [rows]="pagination().limit"
+    [columns]="visibleColumns().length"
+    [selectable]="selectable()"
+  />
+} @else {
+  <!-- Toolbar slot -->
+  @if (toolbarTemplate()) {
+    <div class="mb-4">
+      <ng-container *ngTemplateOutlet="toolbarTemplate()!" />
+    </div>
+  }
+
+  <!-- Filter chips (rendered automatically when activeFilterChips has items) -->
+  @if (activeFilterChips().length > 0) {
+    <div class="filter-chips-bar">
+      <i class="pi pi-filter text-surface-500"></i>
+      @for (group of chipGroups(); track $index; let gIdx = $index; let isLastGroup = $last) {
+        <!-- OR badge between groups -->
+        @if (gIdx > 0) {
+          <span class="filter-operator-badge filter-operator-badge--or">OR</span>
+        }
+
+        <!-- Group container — only styled when there are multiple groups -->
+        <div class="filter-chip-group" [class.filter-chip-group--bordered]="hasAnyOrFilter()">
+          @for (chip of group; track chip.field; let cIdx = $index; let isLastChip = $last) {
+            <ng-container *ngTemplateOutlet="filterChip; context: { $implicit: chip }" />
+            <!-- AND badge within group (only between chips, not after last) -->
+            @if (!isLastChip) {
+              <span class="filter-operator-badge">AND</span>
+            }
+          }
+        </div>
+      }
+      <!-- Chips outside the OR groups: ANDed with the whole expression -->
+      @for (chip of ungroupedChips(); track chip.field) {
+        <span class="filter-operator-badge">AND</span>
+        <ng-container *ngTemplateOutlet="filterChip; context: { $implicit: chip }" />
+      }
+      <ng-template #filterChip let-chip>
+        <p-chip
+          [label]="chip.label + ': ' + chip.displayValue"
+          [removable]="true"
+          (onRemove)="chipRemoved.emit(chip.field)"
+          [pTooltip]="chip.label + ': ' + chip.displayValue"
+          tooltipPosition="top"
+          class="custom-chip font-bold bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-0 hover:bg-surface-300 dark:hover:bg-surface-600 transition-colors cursor-pointer text-sm"
+          [style]="{ 'max-width': '18rem' }"
+        />
+      </ng-template>
+    </div>
+  }
+
+  <!-- Desktop view (>= 768px) -->
+  @if (!isMobile()) {
+    <p-table
+      [value]="visibleColumns().length > 0 ? data() : []"
+      [columns]="visibleColumns()"
+      [loading]="loading()"
+      [lazy]="true"
+      [paginator]="true"
+      [first]="(pagination().page - 1) * pagination().limit"
+      [rows]="pagination().limit"
+      [totalRecords]="visibleColumns().length > 0 ? pagination().total : 0"
+      [rowsPerPageOptions]="visibleColumns().length > 0 ? (pagination().rows_per_page || [10, 25, 50, 100]) : []"
+      [showCurrentPageReport]="true"
+      [showPageLinks]="visibleColumns().length > 0"
+      [currentPageReportTemplate]="currentPageReportTpl"
+      [scrollable]="true"
+      scrollHeight="flex"
+      [selectionMode]="selectable() ? 'multiple' : null"
+      [(selection)]="internalSelection"
+      (onSort)="onSort($event)"
+      (onFilter)="onColumnFilter($event)"
+      (onPage)="onPageChange($event)"
+      [sortField]="sort()?.field"
+      [sortOrder]="sort() ? (sort()!.order === 'asc' ? 1 : -1) : 0"
+      [filters]="columnFilters()"
+      [expandedRowKeys]="expandedRowKeys()"
+      (onRowExpand)="onRowExpandInternal($event)"
+      rowExpandMode="single"
+      [rowHover]="true"
+      styleClass="p-datatable-sm"
+      dataKey="id"
+    >
+      <!-- Header -->
+      <ng-template pTemplate="header" let-columns>
+        <!-- Row 1: Column labels -->
+        <tr>
+          <!-- Expand toggle: only when rowExpansion slot provided -->
+          @if (rowExpansionTemplate()) {
+            <th scope="col" style="width: 2.5rem"></th>
+          }
+          <!-- Actions: first col — always empty in header label row -->
+          @if (actionsTemplate()) {
+            <th scope="col" class="col-actions"></th>
+          }
+          <!-- Checkbox -->
+          @if (selectable() && visibleColumns().length > 0) {
+            <th scope="col" style="width: 3rem">
+              <p-checkbox
+                [ngModel]="isAllSelected()"
+                [binary]="true"
+                (ngModelChange)="toggleSelectAll($event)"
+              />
+            </th>
+          }
+          @for (col of columns; track col.field) {
+            <th scope="col"
+              [pSortableColumn]="col.sortable ? col.field : ''"
+              [style.width]="col.width || 'auto'"
+              [style.min-width]="col.width || 'auto'"
+              [style.text-align]="col.align || 'left'"
+            >
+              {{ col.header | translate }}
+              @if (col.sortable) {
+                <p-sortIcon [field]="col.field" />
+              }
+            </th>
+          }
+        </tr>
+
+        <!-- Row 2: Filters (custom slot OR auto-generated from filterable columns) -->
+        @if (filterRowTemplate()) {
+          <tr>
+            <ng-container
+              *ngTemplateOutlet="
+                filterRowTemplate()!;
+                context: { columns: columns }
+              "
+            />
+          </tr>
+        } @else if (hasFilterableColumns()) {
+          <tr>
+            <!-- Expand toggle: empty placeholder -->
+            @if (rowExpansionTemplate()) {
+              <th scope="col" style="width: 2.5rem"></th>
+            }
+            <!-- Actions col: ellipsis menu for bulk actions when rows selected -->
+            @if (actionsTemplate()) {
+              <th scope="col" class="col-actions p-1" style="text-align: center">
+                @if (
+                  selectable() &&
+                  internalSelection.length > 0 &&
+                  bulkActions().length > 0
+                ) {
+                  <base-action-menu [items]="bulkActions()" />
+                }
+              </th>
+            }
+            @if (selectable() && visibleColumns().length > 0) {
+              <th scope="col"></th>
+            }
+            @for (col of columns; track col.field) {
+              <th scope="col" class="p-1">
+                @if (col.filterable) {
+                  @switch (col.filterType) {
+                    @case ('numeric') {
+                      <p-columnFilter
+                        [field]="col.field"
+                        type="numeric"
+                        [showMenu]="true"
+                        [showClearButton]="false"
+                        [showOperator]="false"
+                        [showButtons]="false"
+                        [showMatchModes]="true"
+                        [matchModeOptions]="matchModesNumeric"
+                        [matchMode]="matchModesNumeric[0].value"
+                      >
+                        <ng-template pTemplate="filter" let-value let-filter="filterCallback">
+                          <shipedge-filter-text-input
+                            [value]="value"
+                            filterType="numeric"
+                            (apply)="filter($event)"
+                          />
+                        </ng-template>
+                      </p-columnFilter>
+                    }
+                    @case ('multiselect') {
+                      <p-select
+                        [ngModel]="columnFilters()[col.field]?.value ?? null"
+                        (ngModelChange)="onSelectFilter(col.field, $event)"
+                        [options]="col.filterOptions || []"
+                        optionLabel="label"
+                        optionValue="value"
+                        [placeholder]="col.header | translate"
+                        styleClass="w-full"
+                        [showClear]="true"
+                        size="small"
+                        appendTo="body"
+                      >
+                        <ng-template pTemplate="selectedItem" let-opt>
+                          {{ opt.label | translate }}
+                        </ng-template>
+                        <ng-template pTemplate="item" let-opt>
+                          {{ opt.label | translate }}
+                        </ng-template>
+                      </p-select>
+                    }
+                    @case ('date') {
+                      <p-columnFilter
+                        [field]="col.field"
+                        type="date"
+                        [showMenu]="true"
+                        [showClearButton]="false"
+                        [showOperator]="false"
+                        [showButtons]="false"
+                        [showMatchModes]="true"
+                        [matchModeOptions]="matchModesNumeric"
+                        [matchMode]="matchModesNumeric[0].value"
+                      >
+                        <ng-template
+                          pTemplate="filter"
+                          let-value
+                          let-filter="filterCallback"
+                        >
+                          <shipedge-filter-date-input
+                            [value]="value"
+                            (apply)="filter($event)"
+                          />
+                        </ng-template>
+                      </p-columnFilter>
+                    }
+                    @default {
+                      <p-columnFilter
+                        [field]="col.field"
+                        type="text"
+                        [showMenu]="true"
+                        [showClearButton]="false"
+                        [showOperator]="false"
+                        [showButtons]="false"
+                        [showMatchModes]="true"
+                        [matchModeOptions]="matchModesText"
+                        [matchMode]="matchModesText[0].value"
+                      >
+                        <ng-template pTemplate="filter" let-value let-filter="filterCallback">
+                          <shipedge-filter-text-input
+                            [value]="value"
+                            inputType="text"
+                            (apply)="filter($event)"
+                          />
+                        </ng-template>
+                      </p-columnFilter>
+                    }
+                  }
+                }
+              </th>
+            }
+          </tr>
+        }
+      </ng-template>
+
+      <!-- Body -->
+      <ng-template
+        pTemplate="body"
+        let-row
+        let-columns="columns"
+        let-rowIndex="rowIndex"
+        let-expanded="expanded"
+      >
+        <tr
+          [class.bg-primary-50]="isRowSelected(row)"
+          class="transition-colors duration-150"
+        >
+          <!-- Expand toggle: first -->
+          @if (rowExpansionTemplate()) {
+            <td style="width: 2.5rem; text-align: center">
+              @if (rowExpandable()(row)) {
+                <p-button
+                  [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
+                  [text]="true"
+                  [rounded]="true"
+                  size="small"
+                  severity="secondary"
+                  [pRowToggler]="row"
+                />
+              }
+            </td>
+          }
+          <!-- Actions: first -->
+          @if (actionsTemplate()) {
+            <td class="col-actions" style="text-align: center">
+              <ng-container
+                *ngTemplateOutlet="
+                  actionsTemplate()!;
+                  context: { $implicit: row }
+                "
+              />
+            </td>
+          }
+          <!-- Checkbox -->
+          @if (selectable()) {
+            <td style="width: 3rem">
+              @if (rowSelectable()(row)) {
+                <p-checkbox
+                  [ngModel]="isRowSelected(row)"
+                  [binary]="true"
+                  (ngModelChange)="toggleRowSelection(row, $event)"
+                />
+              }
+            </td>
+          }
+          <!-- Data cells -->
+          @for (col of columns; track col.field) {
+            <td
+              [style.width]="col.width || 'auto'"
+              [style.min-width]="col.width || 'auto'"
+              [style.text-align]="col.align || 'left'"
+            >
+              @if (col.template && cellTemplate()) {
+                <ng-container
+                  *ngTemplateOutlet="
+                    cellTemplate()!;
+                    context: { $implicit: row, col: col }
+                  "
+                />
+              } @else {
+                {{ cellValue(row, col) }}
+              }
+            </td>
+          }
+        </tr>
+
+
+      </ng-template>
+
+      <!-- Row expansion body -->
+      @if (rowExpansionTemplate()) {
+        <ng-template pTemplate="expandedrow" let-row>
+          <tr>
+            <td [attr.colspan]="totalColumnCount()" class="p-0">
+              <ng-container
+                *ngTemplateOutlet="rowExpansionTemplate()!; context: { $implicit: row }"
+              />
+            </td>
+          </tr>
+        </ng-template>
+      }
+
+      <!-- Empty -->
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td [attr.colspan]="totalColumnCount()" class="text-center py-8">
+            @if (visibleColumns().length === 0) {
+              <div class="flex flex-col items-center gap-2">
+                <i class="pi pi-table text-4xl text-surface-400"></i>
+                <span class="text-surface-500">{{ 'messages.no_columns_selected' | translate }}</span>
+              </div>
+            } @else {
+              <div class="flex flex-col items-center gap-2">
+                <i class="pi pi-inbox text-4xl text-surface-400"></i>
+                <span class="text-surface-500">{{ 'labels.no_data' | translate }}</span>
+              </div>
+            }
+          </td>
+        </tr>
+      </ng-template>
+      <!-- Paginator left: column toggle slot only -->
+      <ng-template pTemplate="paginatorleft">
+        @if (paginatorLeftTemplate()) {
+          <ng-container *ngTemplateOutlet="paginatorLeftTemplate()!" />
+        }
+      </ng-template>
+    </p-table>
+  } @else {
+    <!-- Mobile view (< 768px) -->
+    <base-data-table-mobile
+      [data]="data()"
+      [columns]="mobileColumns()"
+      [cellTemplate]="cellTemplate() || null"
+      [actionsTemplate]="actionsTemplate() || null"
+      [expandedRowTemplate]="rowExpansionTemplate() || null"
+      [expandedRowKeys]="expandedRowKeys()"
+      (toggleRowExpansion)="toggleRowExpansion.emit($event)"
+    />
+
+    <!-- Mobile paginator -->
+    <div class="mt-3">
+      <p-paginator
+        [rows]="pagination().limit"
+        [totalRecords]="pagination().total"
+        [first]="(pagination().page - 1) * pagination().limit"
+        [rowsPerPageOptions]="[10, 25, 50]"
+        (onPageChange)="onPageChange($event)"
+      />
+    </div>
+  }
+}

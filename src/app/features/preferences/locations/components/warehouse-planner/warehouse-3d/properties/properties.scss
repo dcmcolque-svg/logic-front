@@ -1,0 +1,181 @@
+// ─── Design Tokens ────────────────────────────────────────────────────────────
+$glass-bg:     rgba(13, 17, 23, 0.85);
+$glass-border: rgba(255, 255, 255, 0.12);
+$color-text:   #CBD5E1;
+$color-muted:  #94A3B8;
+$color-faint:  #64748B;
+$color-blue:   #3B82F6;
+$color-red:    #EF4444;
+$input-bg:     rgba(255, 255, 255, 0.08);
+$input-border: rgba(255, 255, 255, 0.15);
+$radius:       8px;
+
+// ─── Panel positioning ────────────────────────────────────────────────────────
+.properties-panel {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  z-index: 100;
+  width: 280px;
+}
+
+// ─── Glassmorphism card ───────────────────────────────────────────────────────
+.glass-panel {
+  background: $glass-bg;
+  border: 1px solid $glass-border;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+// ─── Panel title ──────────────────────────────────────────────────────────────
+.panel-title {
+  color: $color-text;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin: 0 0 12px;
+  letter-spacing: 0.3px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid $glass-border;
+}
+
+// ─── Form groups ──────────────────────────────────────────────────────────────
+.form-group {
+  margin-top: 12px;
+}
+
+.form-label {
+  display: block;
+  color: $color-muted;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 6px 8px;
+  background: $input-bg;
+  border: 1px solid $input-border;
+  border-radius: 5px;
+  color: white;
+  font-size: 0.8rem;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+
+  &:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.6);
+  }
+}
+
+// ─── Dimension row (ft + in inputs) ───────────────────────────────────────────
+.dimension-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 5px;
+}
+
+.axis-label {
+  color: $color-faint;
+  font-size: 0.65rem;
+  font-weight: 600;
+  min-width: 52px;
+  flex-shrink: 0;
+}
+
+.dim-input {
+  width: 52px;
+  flex-shrink: 0;
+  padding: 4px 5px;
+  background: $input-bg;
+  border: 1px solid $input-border;
+  border-radius: 4px;
+  color: white;
+  font-size: 0.75rem;
+  text-align: right;
+
+  &:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.5);
+  }
+
+  // Remove number spin buttons for cleaner look
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button { -webkit-appearance: none; }
+  &[type=number] { -moz-appearance: textfield; }
+}
+
+.unit {
+  color: $color-faint;
+  font-size: 0.7rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+// ─── Rotation input group ─────────────────────────────────────────────────────
+.input-group {
+  display: flex;
+  gap: 5px;
+}
+
+.rot-input {
+  flex: 1;
+  padding: 5px 4px;
+  background: $input-bg;
+  border: 1px solid $input-border;
+  border-radius: 4px;
+  color: white;
+  font-size: 0.75rem;
+  text-align: center;
+
+  &::placeholder { color: $color-faint; font-size: 0.65rem; }
+  &:focus { outline: none; border-color: rgba(59, 130, 246, 0.5); }
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button { -webkit-appearance: none; }
+  &[type=number] { -moz-appearance: textfield; }
+}
+
+// ─── Action buttons ───────────────────────────────────────────────────────────
+.action-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid $glass-border;
+}
+
+.btn-primary {
+  flex: 1;
+  padding: 7px 10px;
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid $color-blue;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: background 0.15s;
+
+  &:hover { background: rgba(59, 130, 246, 0.35); }
+}
+
+.btn-danger {
+  flex: 1;
+  padding: 7px 10px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #FCA5A5;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: background 0.15s;
+
+  &:hover { background: rgba(239, 68, 68, 0.3); }
+}

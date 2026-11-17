@@ -1,0 +1,191 @@
+<p-toast />
+
+<!-- ──────── Header ──────── -->
+<div class="flex justify-between items-start mb-4">
+  <div class="flex items-center gap-2">
+    <p-button
+      icon="pi pi-angle-left"
+      [rounded]="false"
+      [text]="true"
+      (onClick)="back()"
+    />
+    <div>
+      <h5 class="text-2xl font-semibold m-0">
+        {{ 'pages.receivings_details' | translate }}:
+        <span class="text-primary">{{ docNumber() || id }}</span>
+      </h5>
+      <p class="text-surface-400 text-sm m-0 mt-1">
+        {{ 'labels.receiving_lines_description' | translate }}
+      </p>
+    </div>
+  </div>
+
+  <div class="flex gap-2 items-center">
+    @if (canReceive()) {
+      <p-button
+        [label]="'inbound.receive' | translate"
+        icon="pi pi-download"
+        size="small"
+        (onClick)="goReceive()"
+      />
+    }
+    <p-button
+      [label]="'buttons.clear' | translate"
+      icon="pi pi-filter-slash"
+      severity="secondary"
+      [outlined]="true"
+      size="small"
+      (onClick)="clearFilters()"
+    />
+  </div>
+</div>
+
+<!-- ──────── Table card ──────── -->
+<div class="card">
+  <base-data-table
+    [columns]="selectedCols"
+    [data]="state().data"
+    [loading]="state().loading"
+    [pagination]="pagination()"
+    [activeFilterChips]="activeFilterChips()"
+    (stateChange)="onTableStateChange($event)"
+    (chipRemoved)="removeFilterChip($event)"
+  >
+    <!-- Paginator left: column toggle -->
+    <ng-template #paginatorLeft>
+      <div class="flex items-center gap-2">
+        <p-multiSelect
+          #colMs
+          [options]="translatedColumnDefs"
+          [ngModel]="selectedCols"
+          (ngModelChange)="onColumnSelectionChange($event)"
+          optionLabel="translatedHeader"
+          [placeholder]="'labels.choose_columns' | translate"
+          [selectedItemsLabel]="selectedCols.length + ' ' + ('labels.columns_selected' | translate)"
+          [maxSelectedLabels]="0"
+          size="small"
+          appendTo="body"
+        >
+          <ng-template let-col pTemplate="item">
+            {{ col.translatedHeader }}
+          </ng-template>
+        </p-multiSelect>
+      </div>
+    </ng-template>
+
+    <!-- Filter row -->
+    <ng-template #filterRow let-columns="columns">
+      @for (col of columns; track col.field) {
+        @switch (col.field) {
+          @case ('images') {
+            <th class="p-1" [style.width]="col.width"></th>
+          }
+          @case ('status') {
+            <th class="p-1" [style.width]="col.width">
+              <shipedge-filter-multiselect-panel
+                [options]="statusOptions()"
+                optionLabel="label"
+                optionValue="value"
+                [placeholder]="'labels.status' | translate"
+                [value]="statusFilter"
+                (apply)="onStatusFilterApply($event)"
+                (clear)="onStatusFilterClear()"
+              />
+            </th>
+          }
+          @default {
+            <th class="p-1" [style.width]="col.width">
+              @if (col.filterable) {
+                <shipedge-filter-text-input
+                  [value]="getActiveFilterValue(col.field)"
+                  [placeholder]="col.header | translate"
+                  [filterType]="col.filterType || 'text'"
+                  (applyWithMode)="onColumnFilterChange(col.field, $event)"
+                />
+              }
+            </th>
+          }
+        }
+      }
+    </ng-template>
+
+    <!-- Custom cell rendering -->
+    <ng-template #cell let-row let-col="col">
+      @switch (col.template) {
+        @case ('image') {
+          <div class="flex items-center justify-center" style="width: 48px; height: 48px;">
+            @if (getFirstImage(row)) {
+              <img
+                [src]="getFirstImage(row)"
+                alt="Product"
+                (error)="onImgError($event)"
+                style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid var(--p-surface-200);"
+              />
+              <div
+                class="flex items-center justify-center bg-surface-100 dark:bg-surface-800 text-surface-400"
+                style="display: none; width: 48px; height: 48px; border-radius: 6px;"
+              >
+                <i class="pi pi-image" style="font-size: 1.25rem;"></i>
+              </div>
+            } @else {
+              <div
+                class="flex items-center justify-center bg-surface-100 dark:bg-surface-800 text-surface-400"
+                style="width: 48px; height: 48px; border-radius: 6px;"
+              >
+                <i class="pi pi-image" style="font-size: 1.25rem;"></i>
+              </div>
+            }
+          </div>
+        }
+        @case ('status') {
+          <base-status-badge [value]="row.status" [statusMap]="lineStatusMap" />
+        }
+        @case ('sku') {
+          <div>
+            <div class="font-medium font-mono text-sm">{{ row.sku_code }}</div>
+            @if (row.barcode) {
+              <div class="text-surface-400 text-xs mt-0.5">
+                <i class="pi pi-qrcode mr-1"></i>{{ row.barcode }}
+              </div>
+            }
+          </div>
+        }
+        @case ('qty') {
+          <div class="flex flex-col gap-1">
+            <div class="text-sm">
+              <span class="text-surface-400 mr-1">{{ 'labels.expected' | translate }}:</span>
+              <strong>{{ row.qty_expected }}</strong>
+            </div>
+            <div class="text-sm">
+              <span class="text-surface-400 mr-1">{{ 'labels.received' | translate }}:</span>
+              <strong [class]="row.qty_received > row.qty_expected ? 'text-red-500' : 'text-green-600'">
+                {{ row.qty_received }}
+              </strong>
+            </div>
+            @if (row.qty_pending > 0) {
+              <div class="text-xs text-orange-500">
+                <i class="pi pi-exclamation-circle mr-1"></i>
+                {{ 'labels.pending' | translate }}: {{ row.qty_pending }}
+              </div>
+            }
+            <p-progressBar
+              [value]="getProgress(row)"
+              [showValue]="false"
+              [style]="{ height: '4px' }"
+              [styleClass]="row.qty_received > row.qty_expected ? 'progress-over' : ''"
+            />
+          </div>
+        }
+        @case ('date') {
+          <span class="text-surface-400 text-sm">
+            <i class="pi pi-calendar mr-1 text-xs"></i>
+            {{ row.created_at | dateTimeSeparate }}
+          </span>
+        }
+        @default {
+          <span class="text-sm">{{ row[col.field] ?? '—' }}</span>
+        }
+      }
+    </ng-template>
+  </base-data-table>
+</div>

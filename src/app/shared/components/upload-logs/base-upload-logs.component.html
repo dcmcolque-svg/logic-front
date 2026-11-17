@@ -1,0 +1,160 @@
+<base-data-table
+  [columns]="columns"
+  [data]="logs()"
+  [loading]="loading()"
+  [pagination]="pagination()"
+  [selectable]="false"
+  (stateChange)="onTableStateChange($event)"
+>
+  <!-- Cells -->
+  <ng-template #cell let-row let-col="col">
+    @switch (col.template) {
+      @case ('file_name') {
+        <span class="font-medium">{{ row.file_name }}</span>
+      }
+      @case ('created_at') {
+        <div class="flex flex-col text-nowrap">
+          <span class="text-surface-400">{{ row.created_at | date: 'yyyy-MM-dd' }}</span>
+          <span class="text-primary text-sm">{{ row.created_at | date: 'HH:mm' }}</span>
+        </div>
+      }
+      @case ('username') {
+        <span>{{ row.username || '—' }}</span>
+      }
+      @case ('success') {
+        <span class="font-semibold text-green-600">{{ row.success_count }}</span>
+      }
+      @case ('failed') {
+        <span class="font-semibold" [class.text-red-600]="row.failed_count > 0">
+          {{ row.failed_count }}
+        </span>
+      }
+      @case ('status') {
+        <p-tag
+          [value]="statusLabel(row.status)"
+          [severity]="severityFor(row.status)"
+        />
+      }
+    }
+  </ng-template>
+
+  <!-- Row actions -->
+  <ng-template #actions let-row>
+    <p-button
+      icon="pi pi-eye"
+      [text]="true"
+      [rounded]="true"
+      size="small"
+      severity="secondary"
+      [pTooltip]="'buttons.details' | translate"
+      tooltipPosition="top"
+      (onClick)="openDetail(row.id)"
+    />
+  </ng-template>
+</base-data-table>
+
+<!-- ──────── Detail ──────── -->
+<p-dialog
+  [visible]="!!selectedLog()"
+  (visibleChange)="$event ? null : closeDetail()"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '46rem' }"
+  [breakpoints]="{ '640px': '95vw' }"
+  [header]="'import.log_detail' | translate"
+  (onHide)="closeDetail()"
+>
+  @if (selectedLog(); as log) {
+    <div class="flex flex-col gap-4">
+      <!-- Summary -->
+      <div class="flex flex-wrap gap-4 items-center">
+        <div>
+          <div class="text-xs text-surface-500">{{ 'import.file_name' | translate }}</div>
+          <div class="font-medium">{{ log.file_name }}</div>
+        </div>
+        <div>
+          <div class="text-xs text-surface-500">{{ 'import.uploaded_at' | translate }}</div>
+          <div>{{ log.created_at | date: 'yyyy-MM-dd HH:mm' }}</div>
+        </div>
+        <div>
+          <div class="text-xs text-surface-500">{{ 'import.user' | translate }}</div>
+          <div>{{ log.username || '—' }}</div>
+        </div>
+        <div>
+          <div class="text-xs text-surface-500">{{ 'labels.status' | translate }}</div>
+          <p-tag
+            [value]="statusLabel(log.status)"
+            [severity]="severityFor(log.status)"
+          />
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <div class="flex-1 border border-surface-200 dark:border-surface-700 rounded p-3">
+          <div class="text-xs text-surface-500">{{ 'import.total_records' | translate }}</div>
+          <div class="text-xl font-semibold">{{ log.total_records }}</div>
+        </div>
+        <div class="flex-1 border border-surface-200 dark:border-surface-700 rounded p-3">
+          <div class="text-xs text-surface-500">{{ 'import.successful' | translate }}</div>
+          <div class="text-xl font-semibold text-green-600">{{ log.success_count }}</div>
+        </div>
+        <div class="flex-1 border border-surface-200 dark:border-surface-700 rounded p-3">
+          <div class="text-xs text-surface-500">{{ 'import.failed' | translate }}</div>
+          <div class="text-xl font-semibold" [class.text-red-600]="log.failed_count > 0">
+            {{ log.failed_count }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Failed rows -->
+      @if (log.errors?.length) {
+        <div class="border border-surface-200 dark:border-surface-700 rounded overflow-hidden">
+          <div class="px-3 py-2 bg-surface-100 dark:bg-surface-800 text-sm font-medium">
+            {{ 'import.errors' | translate }}
+          </div>
+          <div class="max-h-80 overflow-auto">
+            <table class="w-full text-sm">
+              <thead class="text-left text-xs text-surface-500">
+                <tr class="border-b border-surface-200 dark:border-surface-700">
+                  <th class="px-3 py-2 w-16">{{ 'import.row' | translate }}</th>
+                  <th class="px-3 py-2">{{ 'import.reference' | translate }}</th>
+                  <th class="px-3 py-2">{{ 'import.reason_label' | translate }}</th>
+                  <th class="px-3 py-2">{{ 'import.detail' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (error of log.errors; track error.row) {
+                  <tr class="border-b border-surface-100 dark:border-surface-800">
+                    <td class="px-3 py-2 text-surface-500">{{ error.row }}</td>
+                    <td class="px-3 py-2 font-mono">{{ error.reference || '—' }}</td>
+                    <td class="px-3 py-2 text-red-600">{{ reasonLabel(error.reason) }}</td>
+                    <td class="px-3 py-2 text-surface-500">{{ error.message }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      } @else {
+        <div class="text-center text-surface-400 py-4">
+          {{ 'import.no_errors' | translate }}
+        </div>
+      }
+
+      <div class="flex justify-between items-center gap-2">
+        @if (hasFailedRows) {
+          <div class="flex items-center gap-2 text-sm">
+            <i class="pi pi-download text-surface-500"></i>
+            <span class="text-surface-600">{{ 'import.download_failed' | translate }}</span>
+            <p-button label=".csv" [text]="true" size="small" (onClick)="downloadReport('csv')" />
+            <p-button label=".xlsx" [text]="true" size="small" (onClick)="downloadReport('xlsx')" />
+          </div>
+        } @else {
+          <span></span>
+        }
+        <p-button [label]="'buttons.close' | translate" size="small" (onClick)="closeDetail()" />
+      </div>
+    </div>
+  }
+</p-dialog>

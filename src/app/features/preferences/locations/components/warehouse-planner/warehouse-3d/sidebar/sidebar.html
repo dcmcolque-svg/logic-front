@@ -1,0 +1,123 @@
+<div class="sidebar glass-panel">
+
+  <!-- ── Header: title + undo ─────────────────────────────────────── -->
+  <div class="sidebar-header">
+    <h1 class="app-title">Warehouse 3D</h1>
+    <button id="btn-3d-undo" class="btn-undo" (click)="undo()">Undo</button>
+  </div>
+
+  <!-- ── Tab Row ───────────────────────────────────────────────────── -->
+  <div class="tabs">
+    <button class="tab-btn" [class.active]="activeTab() === 'generate'" (click)="setTab('generate')">Generate</button>
+    <button class="tab-btn" [class.active]="activeTab() === 'add'"      (click)="setTab('add')">Add Item</button>
+    <button class="tab-btn" [class.active]="activeTab() === 'draw'"     (click)="setTab('draw')">Draw Shape</button>
+  </div>
+
+  <!-- ── Generate Locations ────────────────────────────────────────── -->
+  @if (activeTab() === 'generate') {
+    <div class="tab-content">
+      <form (ngSubmit)="onGenerate($event)">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="sb3d-gen-area">Area</label>
+            <input id="sb3d-gen-area" type="text" class="form-input" [(ngModel)]="genArea" name="genArea"
+              maxlength="2" style="text-transform: uppercase;"
+              (input)="genArea = genArea.toUpperCase().replace('[^A-Z]','').slice(0,2); onGenAreaChange(genArea)" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="sb3d-gen-type">Type</label>
+            <select id="sb3d-gen-type" class="form-select" [(ngModel)]="genType" name="genType">
+              <option>Standard</option>
+              <option>Shelf</option>
+              <option>Pallet</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sb3d-gen-rinit">Row (Init – End)</label>
+          <div class="input-group">
+            <input id="sb3d-gen-rinit" type="number" class="form-input" [(ngModel)]="genRInit" name="genRInit" min="1" />
+            <span class="range-sep">–</span>
+            <input type="number" class="form-input" [(ngModel)]="genREnd"  name="genREnd"  min="1" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sb3d-gen-binit">Bay (Init – End)</label>
+          <div class="input-group">
+            <input id="sb3d-gen-binit" type="number" class="form-input" [(ngModel)]="genBInit" name="genBInit" min="1" />
+            <span class="range-sep">–</span>
+            <input type="number" class="form-input" [(ngModel)]="genBEnd"  name="genBEnd"  min="1" />
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary w-full">Generate Locations</button>
+      </form>
+    </div>
+  }
+
+  <!-- ── Add Item ───────────────────────────────────────────────────── -->
+  @if (activeTab() === 'add') {
+    <div class="tab-content">
+      <form (ngSubmit)="onAdd($event)">
+
+        <div class="form-group">
+          <label class="form-label" for="sb3d-add-name">Item Name</label>
+          <input id="sb3d-add-name" type="text" class="form-input" [(ngModel)]="addLocName" name="addLocName" placeholder="Item Name…" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sb3d-add-type">Type</label>
+          <select id="sb3d-add-type" class="form-select" [(ngModel)]="addItemType" name="addItemType">
+            <option value="bin">Bin</option>
+            <option value="wall">Wall</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-primary w-full">Add Item</button>
+      </form>
+    </div>
+  }
+
+  <!-- ── Draw Shape ─────────────────────────────────────────────────── -->
+  @if (activeTab() === 'draw') {
+    <div class="tab-content">
+      <div class="form-group">
+        <span class="form-label">Draw Custom Polygon</span>
+        <p class="draw-hint">
+          Trace a foundation directly on the floor. Click <strong>Finish</strong> to extrude the geometry upwards into 3D space.
+        </p>
+      </div>
+      <div class="draw-actions">
+        @if (!isDrawing()) {
+          <button id="btn-3d-draw-start" class="btn-primary" (click)="drawStart()">Start Drawing</button>
+        } @else {
+          <button id="btn-3d-draw-finish" class="btn-green" (click)="drawFinish()">Finish</button>
+          <button id="btn-3d-draw-cancel" class="btn-danger" (click)="drawCancel()">Cancel</button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Outliner ───────────────────────────────────────────────────── -->
+  <div class="outliner-container">
+    <h3 class="outliner-title">Scene Objects</h3>
+    <ul class="outliner-list">
+      @for (m of state.meshesList(); track m.id) {
+        <li class="outliner-item"
+          [class.active]="state.selectedMeshId() === m.id"
+          tabindex="0"
+          (click)="selectMesh(m.id)"
+          (keydown.enter)="selectMesh(m.id)">
+          {{ m.name }}
+        </li>
+      }
+      @if (state.meshesList().length === 0) {
+        <li class="outliner-empty">No objects in scene</li>
+      }
+    </ul>
+  </div>
+
+</div><!-- /.sidebar -->

@@ -1,0 +1,390 @@
+<p-drawer
+  [visible]="visible()"
+  position="right"
+  [style]="{ width: '30rem' }"
+  (onHide)="onHide()"
+>
+  <ng-template pTemplate="headless">
+    @if (parcel(); as p) {
+      <div class="pd-shell">
+        <!-- ══════════════════════════════════════════
+             HEADER (same for all field views)
+             ══════════════════════════════════════════ -->
+        <div class="pd-header">
+          <!-- Left column -->
+          <div class="pd-header-left">
+            <base-status-badge [value]="p.meta_data?.order_status || ''" />
+
+            @if (shippedByLabel()) {
+              <p class="pd-shipped-by">
+                Shipped by: <strong>{{ shippedByLabel() }}</strong>
+              </p>
+            }
+
+            <p class="pd-ship-id">SHIP-{{ shortId(p.id) }}</p>
+
+            @if (p.order_detail?.order_number) {
+              <p class="pd-meta-row">
+                Order #: <strong>{{ p.order_detail.order_number }}</strong>
+              </p>
+            }
+
+            <p class="pd-meta-row">
+              Reference: {{ p.order_detail?.reference_number || '—' }}
+            </p>
+          </div>
+
+          <!-- Right column -->
+          <div class="pd-header-right">
+            <button class="pd-close-btn" (click)="onHide()" aria-label="Close">
+              <i class="pi pi-times-circle"></i>
+            </button>
+
+            @if (p.meta_data?.created_at) {
+              <p class="pd-date">{{ formatDate(p.meta_data.created_at) }}</p>
+              <p class="pd-time">{{ formatTime(p.meta_data.created_at) }}</p>
+            }
+
+            @if (p.external_channel?.channel) {
+              <p class="pd-right-meta">
+                Merchant: {{ p.external_channel.channel }}
+              </p>
+            }
+
+            @if (facilityLabel()) {
+              <p class="pd-right-meta">Facility Name: {{ facilityLabel() }}</p>
+            }
+          </div>
+        </div>
+
+        <div class="pd-divider"></div>
+
+        <!-- ══════════════════════════════════════════
+             BODY — switches based on field()
+             ══════════════════════════════════════════ -->
+        <div class="pd-body">
+          <!-- ────────────────────────────────────────
+               Field: shipment
+               Mirrors the edge-frontend order_id field
+               Shows: Addresses + Other shipping info
+               ──────────────────────────────────────── -->
+          @if (field() === 'shipment') {
+            <!-- Addresses -->
+            <p-accordion [value]="['addresses']" [multiple]="true">
+              <p-accordion-panel value="addresses">
+                <p-accordion-header>
+                  <i class="pi pi-map-marker mr-2"></i>
+                  Addresses
+                </p-accordion-header>
+                <p-accordion-content>
+                  <div class="pd-accordion-body">
+                    <!-- Ship To -->
+                    <div class="pd-addr-section">
+                      <div class="pd-addr-row">
+                        <span class="pd-addr-label pd-text-xl">Ship To:</span>
+                        <span class="pd-addr-value pd-text-xl">
+                          {{ p.customer?.first_name || '' }}
+                          {{ p.customer?.last_name || '' }}
+                        </span>
+                      </div>
+                      <div class="pd-addr-row">
+                        <span class="pd-addr-detail">
+                          {{ p.customer?.country || '—' }}
+                          {{ p.customer?.city ? ', ' + p.customer.city : '' }}
+                          {{ p.customer?.state ? ', ' + p.customer.state : '' }}
+                        </span>
+                        <span class="pd-addr-detail">{{
+                          p.customer?.phone || '—'
+                        }}</span>
+                      </div>
+                      @if (p.customer?.address) {
+                        <div class="pd-addr-row">
+                          <span class="pd-addr-detail">{{
+                            p.customer.address
+                          }}</span>
+                        </div>
+                      }
+                    </div>
+
+                    <div class="pd-addr-divider"></div>
+
+                    <!-- Ship From -->
+                    <div class="pd-addr-section">
+                      <div class="pd-addr-row">
+                        <span class="pd-addr-label pd-text-xl">Ship from:</span>
+                        <span class="pd-addr-value pd-text-xl">{{
+                          facilityLabel()
+                        }}</span>
+                      </div>
+                      @if (p.operator?.storage_unit?.storage_unit_type) {
+                        <p class="pd-addr-detail">
+                          {{ p.operator?.storage_unit?.storage_unit_type }}
+                        </p>
+                      }
+                      @if (p.operator?.storage_unit?.name) {
+                        <p class="pd-addr-detail">
+                          {{ p.operator?.storage_unit?.name }}
+                        </p>
+                      }
+                    </div>
+                  </div>
+                </p-accordion-content>
+              </p-accordion-panel>
+            </p-accordion>
+
+            <!-- Other shipping info -->
+            <p-accordion [multiple]="true">
+              <p-accordion-panel value="shipping">
+                <p-accordion-header>
+                  <i class="pi pi-truck mr-2"></i>
+                  Other shipping info
+                </p-accordion-header>
+                <p-accordion-content>
+                  <div class="pd-accordion-body">
+                    <h4 class="pd-section-title">Shipping details</h4>
+                    <div class="pd-info-row">
+                      <span>Carrier:</span>
+                      <span>{{ p.shipment?.carrier || '—' }}</span>
+                    </div>
+                    <div class="pd-info-row">
+                      <span>Shipping Method:</span>
+                      <span>{{ p.shipment?.shipping_method || '—' }}</span>
+                    </div>
+
+                    <h4 class="pd-section-title">Order details</h4>
+                    <div class="pd-info-row">
+                      <span>Reference 1:</span>
+                      <span>{{ p.order_detail?.reference_number || '—' }}</span>
+                    </div>
+                    <div class="pd-info-row">
+                      <span>Reference 2:</span>
+                      <span>{{
+                        p.order_detail?.reference_number_2 || '—'
+                      }}</span>
+                    </div>
+                    <div class="pd-info-row">
+                      <span>Origin:</span>
+                      <span>{{ p.order_detail?.origin || '—' }}</span>
+                    </div>
+                    <div class="pd-info-row">
+                      <span>Merchant:</span>
+                      <span>{{ p.external_channel?.channel || '—' }}</span>
+                    </div>
+                    <div class="pd-info-row">
+                      <span>Channel id:</span>
+                      <span>{{ p.external_channel?.channel_id || '—' }}</span>
+                    </div>
+                    <div class="pd-info-row">
+                      <span>Channel label:</span>
+                      <span>{{
+                        p.external_channel?.channel_label || '—'
+                      }}</span>
+                    </div>
+
+                    <h4 class="pd-section-title">Delivery details</h4>
+                    <div class="pd-info-row">
+                      <span>Ship By Date:</span>
+                      <span>—</span>
+                    </div>
+                    <div class="pd-info-row">
+                      <span>Received by:</span>
+                      <span>{{
+                        p.shipment?.delivery_detail?.received_by || '—'
+                      }}</span>
+                    </div>
+                    <div class="pd-info-row">
+                      <span>Received at:</span>
+                      <span>{{
+                        formatDate(p.shipment?.delivery_detail?.received_at)
+                      }}</span>
+                    </div>
+                    <div class="pd-info-row">
+                      <span>User shipped:</span>
+                      <span>{{ p.operator?.username || '—' }}</span>
+                    </div>
+                    <div class="pd-info-row">
+                      <span>Delivered Date:</span>
+                      <div class="flex flex-col items-end">
+                        <span>{{
+                          formatDate(p.shipment?.delivery_detail?.date_shipped)
+                        }}</span>
+                        @if (
+                          formatTime(p.shipment?.delivery_detail?.date_shipped)
+                        ) {
+                          <span class="pd-time-inline">{{
+                            formatTime(
+                              p.shipment?.delivery_detail?.date_shipped
+                            )
+                          }}</span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </p-accordion-content>
+              </p-accordion-panel>
+            </p-accordion>
+          }
+
+          <!-- ────────────────────────────────────────
+               Field: order
+               Mirrors the edge-frontend order_number field
+               Shows: Delivery summary card
+               ──────────────────────────────────────── -->
+          @else if (field() === 'order') {
+            <div class="pd-delivery-card">
+              <p class="pd-delivery-status">
+                {{ p.meta_data?.order_status || '' }}
+              </p>
+
+              <div class="pd-delivery-row">
+                <span class="font-bold">Delivery Date:</span>
+                <span class="flex items-center gap-2">
+                  <span>{{
+                    formatDate(
+                      p.shipment?.delivery_detail?.date_shipped ||
+                        p.meta_data?.created_at
+                    )
+                  }}</span>
+                  <span class="pd-delivery-time">{{
+                    formatTime(
+                      p.shipment?.delivery_detail?.date_shipped ||
+                        p.meta_data?.created_at
+                    )
+                  }}</span>
+                </span>
+              </div>
+
+              @if (facilityLabel()) {
+                <div class="pd-delivery-row">
+                  <span class="font-bold">Facility Name:</span>
+                  <span>{{ facilityLabel() }}</span>
+                </div>
+              }
+
+              @if (p.shipment?.delivery_detail?.received_by) {
+                <div class="pd-delivery-row">
+                  <span class="font-bold">Received by:</span>
+                  <span>{{ p.shipment?.delivery_detail?.received_by }}</span>
+                </div>
+              }
+
+              @if (
+                p.operator?.storage_unit?.storage_unit_type ||
+                p.operator?.storage_unit?.name
+              ) {
+                <div class="pd-delivery-row">
+                  <span class="font-bold">From:</span>
+                  <span>{{
+                    p.operator?.storage_unit?.storage_unit_type || ''
+                  }}</span>
+                </div>
+                @if (p.operator?.storage_unit?.name) {
+                  <p class="pd-delivery-from-addr">
+                    {{ p.operator?.storage_unit?.name }}
+                  </p>
+                }
+              }
+            </div>
+          }
+
+          <!-- ────────────────────────────────────────
+               Field: ship_details
+               Mirrors the edge-frontend total_details field
+               Shows: Package contents with items
+               ──────────────────────────────────────── -->
+          @else if (field() === 'ship_details') {
+            @if (loadingItems()) {
+              @for (i of [1, 2, 3]; track i) {
+                <div class="pd-skeleton-row">
+                  <p-skeleton size="52px" styleClass="border-round" />
+                  <div class="flex flex-col gap-2 flex-1">
+                    <p-skeleton width="50%" height="0.85rem" />
+                    <p-skeleton width="75%" height="0.75rem" />
+                  </div>
+                </div>
+              }
+            } @else if (itemsError()) {
+              <p class="pd-error">{{ itemsError() }}</p>
+            } @else if (parcelItems(); as items) {
+              @if (items.packages.length === 0) {
+                <p class="pd-empty">No packages found</p>
+              } @else {
+                @for (
+                  pkg of items.packages;
+                  track pkg.tracking_number;
+                  let pi = $index
+                ) {
+                  <!-- Box card -->
+                  <div class="pd-pkg-card">
+                    <p class="pd-pkg-title">
+                      Box: {{ pkg.tracking_number || '—' }}
+                    </p>
+                    @if (pkg.type) {
+                      <p class="pd-pkg-meta">Type: {{ pkg.type }}</p>
+                    }
+                    @if (pkg.measures) {
+                      <p class="pd-pkg-meta">Dimensions: {{ pkg.measures }}</p>
+                    }
+
+                    <!-- Items sub-accordion -->
+                    <p-accordion [multiple]="true" [value]="['pkgitems']">
+                      <p-accordion-panel value="pkgitems">
+                        <p-accordion-header>
+                          <i class="pi pi-list mr-2"></i>
+                          Items ({{ pkg.items.length }})
+                        </p-accordion-header>
+                        <p-accordion-content>
+                          @for (
+                            product of pkg.items;
+                            track product.sku;
+                            let last = $last
+                          ) {
+                            <div
+                              class="pd-item-row"
+                              [class.pd-item-row--last]="last"
+                            >
+                              <div class="pd-item-img">
+                                <img
+                                  [src]="product.sku_image || FALLBACK_IMAGE"
+                                  [alt]="product.sku"
+                                  (error)="handleMissingImage($event)"
+                                />
+                              </div>
+                              <div class="pd-item-info">
+                                <span class="pd-item-sku"
+                                  >SKU: {{ product.sku }}</span
+                                >
+                                @if (product.description) {
+                                  <span class="pd-item-desc">{{
+                                    product.description
+                                  }}</span>
+                                }
+                                @if (product.barcode) {
+                                  <span class="pd-item-barcode">
+                                    <i class="pi pi-qrcode"></i>
+                                    {{ product.barcode }}
+                                  </span>
+                                }
+                              </div>
+                              <span class="pd-item-qty">{{ product.qty }}</span>
+                            </div>
+                          } @empty {
+                            <p class="pd-empty">No items</p>
+                          }
+                        </p-accordion-content>
+                      </p-accordion-panel>
+                    </p-accordion>
+                  </div>
+                }
+              }
+            } @else {
+              <p class="pd-empty">Loading package contents…</p>
+            }
+          }
+        </div>
+        <!-- /pd-body -->
+      </div>
+      <!-- /pd-shell -->
+    }
+  </ng-template>
+</p-drawer>

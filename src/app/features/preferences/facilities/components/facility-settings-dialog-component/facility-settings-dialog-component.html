@@ -1,0 +1,216 @@
+<p-toast />
+
+<form [formGroup]="form" class="flex flex-col gap-0">
+
+    <!-- ══════════ Inventory ══════════ -->
+    <div class="flex items-center gap-2 mb-4">
+        <i class="pi pi-sliders-v text-primary text-xl"></i>
+        <span class="text-lg font-semibold text-primary">{{ 'preferences.facilities.adjustments_inventory' | translate }}</span>
+    </div>
+
+    <div class="flex flex-row items-center justify-between mb-4 px-1">
+        <label for="set-auto-blocked" class="text-base">
+            {{ 'preferences.facilities.auto_blocked_expired' | translate }}
+        </label>
+        <p-toggleSwitch id="set-auto-blocked" formControlName="auto_blocked_expired" />
+    </div>
+
+    <!-- ══════════ Outbound ══════════ -->
+    <div class="flex items-center gap-2 mb-4">
+        <i class="pi pi-sliders-v text-primary text-xl"></i>
+        <span class="text-lg font-semibold text-primary">{{ 'preferences.facilities.adjustments_outbound' | translate }}</span>
+    </div>
+
+    <div class="flex flex-row items-center justify-between mb-4 px-1">
+        <label for="set-batch" class="text-base">
+            {{ 'preferences.facilities.include_batch_picking' | translate }}
+        </label>
+        <p-toggleSwitch id="set-batch" formControlName="include_batch_picking" />
+    </div>
+
+    <div class="flex flex-row items-center justify-between mb-4 px-1">
+        <label for="set-auto-proc" class="text-base">
+            {{ 'preferences.facilities.auto_processing' | translate }}
+        </label>
+        <p-toggleSwitch id="set-auto-proc" formControlName="auto_processing" />
+    </div>
+
+    <!-- ══════════ Default Location ══════════ -->
+    <div class="flex items-center gap-2 mb-4">
+        <i class="pi pi-map-marker text-primary text-xl"></i>
+        <span class="text-lg font-semibold text-primary">{{ 'preferences.facilities.default_location' | translate }}</span>
+        <p-toggleSwitch id="set-default-loc-enabled" formControlName="default_location_enabled" />
+        <i class="pi pi-info-circle text-surface-400 cursor-help"
+           [pTooltip]="'preferences.facilities.default_location_tooltip' | translate"
+           tooltipPosition="right"
+           style="font-size: 1rem;"></i>
+    </div>
+
+    @if (form.get('default_location_enabled')?.value) {
+        <div class="mb-3 px-1">
+            <p-select
+                id="set-default-location"
+                [options]="locationOptions()"
+                [ngModel]="selectedLocation()"
+                (ngModelChange)="onLocationSelected($event)"
+                [ngModelOptions]="{ standalone: true }"
+                optionLabel="location_code"
+                [filter]="true"
+                filterBy="location_code"
+                [filterPlaceholder]="'preferences.facilities.search_location_placeholder' | translate"
+                [placeholder]="'preferences.facilities.select_location_placeholder' | translate"
+                [showClear]="true"
+                [loading]="loadingLocations()"
+                (onFilter)="onFilterLocations($event)"
+                styleClass="w-full"
+                appendTo="body"
+            >
+                <ng-template #selectedItem let-loc>
+                    <div class="flex items-center gap-2">
+                        <i class="pi pi-map-marker text-surface-400 text-sm"></i>
+                        <span class="text-sm font-medium">{{ loc.location_code }}</span>
+                        @if (loc.operational_category_code) {
+                            <p-tag
+                                [value]="loc.operational_category_code"
+                                [severity]="getCategorySeverity(loc.operational_category_code)"
+                                [rounded]="true"
+                                styleClass="ml-2"
+                            />
+                        }
+                    </div>
+                </ng-template>
+                <ng-template #item let-loc>
+                    <div class="flex items-center justify-between w-full">
+                        <div class="flex items-center gap-2">
+                            <i class="pi pi-map-marker text-surface-400 text-sm"></i>
+                            <span class="text-sm font-medium">{{ loc.location_code }}</span>
+                        </div>
+                        @if (loc.operational_category_code) {
+                            <p-tag
+                                [value]="loc.operational_category_code"
+                                [severity]="getCategorySeverity(loc.operational_category_code)"
+                                [rounded]="true"
+                            />
+                        }
+                    </div>
+                </ng-template>
+            </p-select>
+        </div>
+    }
+
+    <!-- ══════════ Delivery POD Settings ══════════ -->
+    <div formGroupName="delivery_pod_setting" class="flex flex-col gap-0">
+        <div class="flex items-center gap-2 mb-4">
+            <i class="pi pi-truck text-primary text-xl"></i>
+            <span class="text-lg font-semibold text-primary">{{ 'preferences.facilities.delivery_pod_settings' | translate }}</span>
+            <p-toggleSwitch id="set-del-verification" formControlName="is_verification_required" />
+            <i class="pi pi-info-circle text-surface-400 cursor-help"
+               [pTooltip]="form.get('delivery_pod_setting.is_verification_required')?.value
+                 ? ('preferences.facilities.pod_info_on' | translate)
+                 : ('preferences.facilities.pod_info_off' | translate)"
+               tooltipPosition="right"
+               style="font-size: 1rem;"></i>
+        </div>
+
+        @if (form.get('delivery_pod_setting.is_verification_required')?.value) {
+            <div class="flex flex-row items-center justify-between mb-4 px-1">
+                <label for="set-del-id-photo" class="text-base">
+                    {{ 'preferences.facilities.is_id_photo_required' | translate }}
+                </label>
+                <p-toggleSwitch id="set-del-id-photo" formControlName="is_id_photo_required" />
+            </div>
+
+            <div class="flex flex-row items-center justify-between mb-4 px-1">
+                <label for="set-del-signature" class="text-base">
+                    {{ 'preferences.facilities.is_signature_required' | translate }}
+                </label>
+                <p-toggleSwitch id="set-del-signature" formControlName="is_signature_required" />
+            </div>
+
+            <div class="flex flex-row items-center justify-between mb-4 px-1">
+                <label for="set-del-id-val" class="text-base">
+                    {{ 'preferences.facilities.enable_id_validation' | translate }}
+                </label>
+                <p-toggleSwitch id="set-del-id-val" formControlName="enable_id_validation" />
+            </div>
+        }
+
+        <!-- GPS location toggle — always visible, independent of master switch -->
+        <div class="flex flex-row items-center justify-between mb-4 px-1">
+        <label for="set-del-ubication" class="text-base">
+                {{ 'preferences.facilities.is_location_required' | translate }}
+            </label>
+            <p-toggleSwitch id="set-del-ubication" formControlName="is_location_required" />
+        </div>
+    </div>
+
+    <!-- ══════════ Collect POD Settings ══════════ -->
+    <div formGroupName="collect_pod_setting" class="flex flex-col gap-0">
+        <div class="flex items-center gap-2 mb-4">
+            <i class="pi pi-shopping-bag text-primary text-xl"></i>
+            <span class="text-lg font-semibold text-primary">{{ 'preferences.facilities.customer_pickup_pod_settings' | translate }}</span>
+            <p-toggleSwitch id="set-col-verification" formControlName="is_verification_required" />
+            <i class="pi pi-info-circle text-surface-400 cursor-help"
+               [pTooltip]="form.get('collect_pod_setting.is_verification_required')?.value
+                 ? ('preferences.facilities.pickup_pod_info_on' | translate)
+                 : ('preferences.facilities.pickup_pod_info_off' | translate)"
+               tooltipPosition="right"
+               style="font-size: 1rem;"></i>
+        </div>
+
+        @if (form.get('collect_pod_setting.is_verification_required')?.value) {
+            <div class="flex flex-row items-center justify-between mb-4 px-1">
+                <label for="set-col-id-photo" class="text-base">
+                    {{ 'preferences.facilities.is_id_photo_required' | translate }}
+                </label>
+                <p-toggleSwitch id="set-col-id-photo" formControlName="is_id_photo_required" />
+            </div>
+
+            <div class="flex flex-row items-center justify-between mb-4 px-1">
+                <label for="set-col-signature" class="text-base">
+                    {{ 'preferences.facilities.is_signature_required' | translate }}
+                </label>
+                <p-toggleSwitch id="set-col-signature" formControlName="is_signature_required" />
+            </div>
+
+            <div class="flex flex-row items-center justify-between mb-4 px-1">
+                <label for="set-col-id-val" class="text-base">
+                    {{ 'preferences.facilities.enable_id_validation' | translate }}
+                </label>
+                <p-toggleSwitch id="set-col-id-val" formControlName="enable_id_validation" />
+            </div>
+        }
+
+        <!-- GPS location toggle — always visible, independent of master switch -->
+        <div class="flex flex-row items-center justify-between mb-4 px-1">
+        <label for="set-col-ubication" class="text-base">
+                {{ 'preferences.facilities.is_location_required' | translate }}
+            </label>
+            <p-toggleSwitch id="set-col-ubication" formControlName="is_location_required" />
+        </div>
+    </div>
+
+</form>
+
+<!-- Progress bar -->
+@if (isLoading()) {
+    <div class="mt-3">
+        <p-progressBar mode="indeterminate" [style]="{ height: '4px' }" />
+    </div>
+}
+
+<!-- Footer -->
+<div class="flex justify-end gap-2 mt-4">
+    <p-button
+        [label]="'common.cancel' | translate"
+        severity="secondary" [text]="true"
+        [disabled]="isLoading()"
+        (onClick)="cancel()"
+    />
+    <p-button
+        [label]="'common.update' | translate"
+        [disabled]="isLoading()"
+        [loading]="isLoading()"
+        (onClick)="save()"
+    />
+</div>

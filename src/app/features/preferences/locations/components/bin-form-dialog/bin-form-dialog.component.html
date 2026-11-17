@@ -1,0 +1,72 @@
+<base-dialog
+  [visible]="visible()"
+  [header]="editing() ? 'preferences.bin.title_edit' : 'preferences.bin.title_create'"
+  size="sm"
+  [loading]="saving()"
+  [saveDisabled]="!binForm?.valid"
+  (save)="onSave()"
+  (hide)="hide.emit()"
+>
+  @if (binForm) {
+    <div class="flex flex-col gap-4">
+      <!-- LPN Code -->
+      <base-form-field
+        type="text"
+        label="labels.lpn_code"
+        [control]="$any(binForm.controls['lpn_code'])"
+        [required]="true"
+      />
+
+      <!-- Type -->
+      <base-form-field
+        type="dropdown"
+        label="labels.container_type"
+        [control]="$any(binForm.controls['type'])"
+        [options]="typeOptions"
+        optionLabel="label"
+        optionValue="value"
+        [required]="true"
+      />
+
+      <!-- Tags (chips input) -->
+      <div class="flex flex-col gap-1">
+        <label for="bin-form-tags-input" class="block font-semibold text-sm">
+          {{ 'labels.tags' | translate }}
+        </label>
+        <div
+          class="flex flex-wrap items-center gap-1.5 p-2 rounded-md border border-surface-300 dark:border-surface-600 bg-surface-0 dark:bg-surface-900 cursor-text min-h-[2.5rem] focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-colors"
+          (click)="tagInputEl.focus()"
+          (keydown.enter)="tagInputEl.focus()"
+        >
+          @for (tag of tags; track tag; let i = $index) {
+            <span
+              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/15 text-primary border border-primary/25"
+            >
+              {{ tag }}
+              <button
+                type="button"
+                class="inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-primary/25 transition-colors cursor-pointer"
+                (click)="removeTag(i); $event.stopPropagation()"
+              >
+                <i class="pi pi-times text-[0.6rem]"></i>
+              </button>
+            </span>
+          }
+          <input
+            #tagInputEl
+            id="bin-form-tags-input"
+            type="text"
+            [(ngModel)]="tagInput"
+            (keydown)="onTagKeydown($event)"
+            (blur)="addTag()"
+            [placeholder]="tags.length === 0 ? ('labels.tags_placeholder' | translate) : ''"
+            class="flex-1 min-w-[8rem] border-none outline-none bg-transparent text-sm p-0 m-0"
+          />
+        </div>
+        <small class="text-surface-500 text-xs">
+          {{ 'labels.tags_hint' | translate }}
+        </small>
+      </div>
+    </div>
+  }
+</base-dialog>

@@ -1,0 +1,481 @@
+<p-toast />
+
+<div class="dashboard-page">
+
+  <!-- ── Header ─────────────────────────────────────────── -->
+  <div class="dashboard-header">
+    <div class="dashboard-header__title">
+      <i class="pi pi-chart-bar"></i>
+      <h1>{{ 'pages.dashboard' | translate }}</h1>
+    </div>
+
+    <div class="dashboard-header__controls">
+
+      <!-- Facility selector -->
+      <div class="selector-wrap">
+        <p-select
+          id="dashboard-facility-select"
+          [options]="facilitiesWithAll()"
+          optionLabel="name"
+          [loading]="loadingFacilities()"
+          [disabled]="loadingFacilities() || facilitySelectDisabled()"
+          [ngModel]="shownFacility()"
+          (ngModelChange)="selectedFacility.set($event); onFacilityChange()"
+          styleClass="selector-dropdown"
+          appendTo="body">
+          <!-- Sentinel item: "All facilities" with globe icon -->
+          <ng-template pTemplate="item" let-item>
+            @if (item.id === '') {
+              <span class="facility-all-item">
+                <i class="pi pi-globe"></i>
+                {{ 'dashboard.all_facilities' | translate }}
+              </span>
+            } @else if (item.id === noFacilityId) {
+              <span>{{ 'labels.no_facility_option' | translate }}</span>
+            } @else {
+              <span>{{ item.name }}</span>
+            }
+          </ng-template>
+          <!-- Selected value template -->
+          <ng-template pTemplate="selectedItem" let-item>
+            @if (item.id === '') {
+              <span class="facility-all-selected">
+                <i class="pi pi-globe"></i>
+                {{ 'dashboard.all_facilities' | translate }}
+              </span>
+            } @else if (item.id === noFacilityId) {
+              <span>{{ 'labels.no_facility_option' | translate }}</span>
+            } @else {
+              <span>{{ item.name }}</span>
+            }
+          </ng-template>
+        </p-select>
+      </div>
+
+      <!-- Date range selector -->
+      <div class="selector-wrap">
+        <p-select
+          id="dashboard-date-range-select"
+          [options]="dateRangeOptions"
+          optionLabel="labelKey"
+          [ngModel]="selectedDateRange()"
+          (ngModelChange)="selectedDateRange.set($event); onDateRangeChange()"
+          [disabled]="loading()"
+          styleClass="selector-dropdown"
+          appendTo="body">
+          <!-- Dropdown item template -->
+          <ng-template pTemplate="item" let-item>
+            <span class="date-range-item" [class.date-range-item--custom]="item.days === -1">
+              <i [class]="item.icon"></i>
+              {{ item.labelKey | translate }}
+            </span>
+          </ng-template>
+          <!-- Selected value template -->
+          <ng-template pTemplate="selectedItem" let-item>
+            <span class="date-range-item">
+              <i [class]="item.icon"></i>
+              {{ item.labelKey | translate }}
+            </span>
+          </ng-template>
+        </p-select>
+      </div>
+
+      <!-- Custom date range picker (shown when "Custom range" is selected) -->
+      @if (isCustomRange()) {
+        <div class="custom-range-wrap">
+          <p-datepicker
+            id="dashboard-custom-range-picker"
+            selectionMode="range"
+            [ngModel]="customRangeDates()"
+            (ngModelChange)="onCustomRangeChange($event)"
+            (onClose)="onCustomRangeClose()"
+            [minDate]="minDate"
+            [maxDate]="maxDate"
+            [showIcon]="true"
+            iconDisplay="input"
+            dateFormat="yy-mm-dd"
+            [placeholder]="'dashboard.date_custom_placeholder' | translate"
+            [readonlyInput]="true"
+            appendTo="body"
+            styleClass="custom-range-picker"
+          />
+        </div>
+      }
+
+
+      <!-- Refresh button -->
+      <button
+        id="dashboard-refresh-btn"
+        class="refresh-btn"
+        [class.spinning]="loading()"
+        (click)="loadSummary()"
+        [disabled]="loading() || loadingFacilities() || customRangeEmpty() || noFacilityOnly()"
+        title="Refresh">
+        <i class="pi pi-refresh"></i>
+      </button>
+
+    </div>
+  </div>
+
+
+  <!-- ── Only "No facility" in the topbar: no metrics to show ── -->
+  @if (noFacilityOnly()) {
+    <div class="empty-state" id="dashboard-no-facility">
+      <i class="pi pi-info-circle"></i>
+      <span>{{ 'dashboard.no_facility_scope' | translate }}</span>
+    </div>
+  <!-- ── Loading spinner ────────────────────────────────── -->
+  } @else if (loading()) {
+    <div class="dashboard-loading">
+      <p-progressSpinner strokeWidth="3" animationDuration="0.8s" />
+    </div>
+  } @else {
+
+    <!-- ── Parcels section ──────────────────────────────── -->
+    <section class="parcels-section">
+
+      <!-- Panel: Parcels - Shipped -->
+      <div class="panel">
+        <div class="panel__head">
+          <div class="panel__head-left">
+            <span class="panel__label">{{ 'dashboard.parcels_shipped' | translate }}</span>
+            <span class="panel__total">
+              {{ 'dashboard.total' | translate }}: <strong>{{ shipped.total }}</strong>
+            </span>
+          </div>
+          <button class="panel__nav-btn" (click)="navigateTo('/app/parcels')">
+            <i class="pi pi-external-link"></i>
+          </button>
+        </div>
+
+        <div class="metric-cards">
+
+          <!-- Delivery (LAST_MILE) -->
+          <div class="metric-card" id="card-shipped-delivery">
+            <div class="metric-card__icon metric-card__icon--shipped">
+              <i class="pi pi-truck"></i>
+            </div>
+            <div class="metric-card__body">
+              <span class="metric-card__count">{{ shipped.deliveries }}</span>
+              <span class="metric-card__label">{{ 'dashboard.delivery' | translate }}</span>
+            </div>
+          </div>
+
+          <!-- Pickup Customer (COLLECTED) -->
+          <div class="metric-card" id="card-shipped-pickup">
+            <div class="metric-card__icon metric-card__icon--shipped">
+              <i class="pi pi-shopping-bag"></i>
+            </div>
+            <div class="metric-card__body">
+              <span class="metric-card__count">{{ shipped.customer_pickups }}</span>
+              <span class="metric-card__label">{{ 'dashboard.pickup_customer' | translate }}</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Panel: Parcels - Ship Prepared -->
+      <div class="panel">
+        <div class="panel__head">
+          <div class="panel__head-left">
+            <span class="panel__label">{{ 'dashboard.parcels_ship_prepared' | translate }}</span>
+            <span class="panel__total">
+              {{ 'dashboard.total' | translate }}: <strong>{{ shipPrepared.total }}</strong>
+            </span>
+          </div>
+          <button class="panel__nav-btn" (click)="navigateTo('/app/parcels')">
+            <i class="pi pi-external-link"></i>
+          </button>
+        </div>
+
+        <div class="metric-cards">
+
+          <!-- Ready (fulfilled = true) -->
+          <div class="metric-card" id="card-prepared-ready">
+            <div class="metric-card__icon metric-card__icon--ready">
+              <i class="pi pi-check-circle"></i>
+            </div>
+            <div class="metric-card__body">
+              <span class="metric-card__count">{{ shipPrepared.ready }}</span>
+              <span class="metric-card__label">{{ 'dashboard.ready' | translate }}</span>
+            </div>
+          </div>
+
+          <!-- Missing Data (fulfilled ≠ true) -->
+          <div class="metric-card" id="card-prepared-missing">
+            <div class="metric-card__icon metric-card__icon--missing">
+              <i class="pi pi-exclamation-circle"></i>
+            </div>
+            <div class="metric-card__body">
+              <span class="metric-card__count">{{ shipPrepared.missing_data }}</span>
+              <span class="metric-card__label">{{ 'dashboard.missing_data' | translate }}</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ── Orders Shipped + Alerts section ─────────────── -->
+    <section class="parcels-section">
+
+      <!-- Panel: Orders Shipped -->
+      <div class="panel">
+        <div class="panel__head">
+          <div class="panel__head-left">
+            <span class="panel__label">{{ 'dashboard.orders_shipped' | translate }}</span>
+          </div>
+          <button class="panel__nav-btn" (click)="navigateTo('/app/outbound/allorders')">
+            <i class="pi pi-external-link"></i>
+          </button>
+        </div>
+
+        <div class="metric-cards">
+
+          <!-- Orders Shipped -->
+          <div class="metric-card" id="card-orders-shipped">
+            <div class="metric-card__icon metric-card__icon--orders">
+              <i class="pi pi-upload"></i>
+            </div>
+            <div class="metric-card__body">
+              <span class="metric-card__count">{{ ordersShipped.orders_shipped }}</span>
+              <span class="metric-card__label">{{ 'dashboard.orders_shipped' | translate }}</span>
+            </div>
+          </div>
+
+          <!-- Total Revenue -->
+          <div class="metric-card" id="card-orders-revenue">
+            <div class="metric-card__icon metric-card__icon--revenue">
+              <i class="pi pi-dollar"></i>
+            </div>
+            <div class="metric-card__body">
+              <span class="metric-card__count">{{ ordersShipped.total_revenue }}</span>
+              <span class="metric-card__label">{{ 'dashboard.total_revenue' | translate }}</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Panel: Alerts -->
+      <div class="panel">
+        <div class="panel__head">
+          <div class="panel__head-left">
+            <span class="panel__label">{{ 'dashboard.alerts' | translate }}</span>
+          </div>
+          <button class="panel__nav-btn" (click)="navigateTo('/app/outbound/backorders')">
+            <i class="pi pi-external-link"></i>
+          </button>
+        </div>
+
+        <div class="metric-cards">
+
+          <!-- Back Orders -->
+          <div class="metric-card" id="card-alerts-backorders">
+            <div class="metric-card__icon metric-card__icon--alert">
+              <i class="pi pi-clock"></i>
+            </div>
+            <div class="metric-card__body">
+              <span class="metric-card__count metric-card__count--alert">{{ alerts.back_orders }}</span>
+              <span class="metric-card__label metric-card__label--alert">{{ 'dashboard.back_orders' | translate }}</span>
+            </div>
+          </div>
+
+          <!-- Low Inventory -->
+          <div class="metric-card" id="card-alerts-low-inventory">
+            <div class="metric-card__icon metric-card__icon--alert">
+              <i class="pi pi-arrow-down"></i>
+            </div>
+            <div class="metric-card__body">
+              <span class="metric-card__count metric-card__count--alert">{{ alerts.low_inventory }}</span>
+              <span class="metric-card__label metric-card__label--alert">{{ 'dashboard.low_inventory' | translate }}</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ── Inventory Summary section ───────────────────── -->
+    <section class="inventory-section">
+
+      <div class="panel panel--full">
+        <div class="panel__head">
+          <div class="panel__head-left">
+            <span class="panel__label">{{ 'dashboard.inventory_summary' | translate }}</span>
+          </div>
+          <button class="panel__nav-btn" (click)="navigateTo('/app/inventory/tracecards')">
+            <i class="pi pi-external-link"></i>
+          </button>
+        </div>
+
+        <div class="metric-cards metric-cards--4col">
+
+          <!-- Total Value -->
+          <div class="metric-card" id="card-inventory-value">
+            <div class="metric-card__icon metric-card__icon--inventory">
+              <i class="pi pi-dollar"></i>
+            </div>
+            <div class="metric-card__body">
+              <span class="metric-card__count">{{ inventory.total_value | number:'1.2-2' }}</span>
+              <span class="metric-card__label">{{ 'dashboard.total_value' | translate }}</span>
+            </div>
+          </div>
+
+          <!-- SKUs -->
+          <div class="metric-card" id="card-inventory-skus">
+            <div class="metric-card__icon metric-card__icon--inventory">
+              <i class="pi pi-box"></i>
+            </div>
+            <div class="metric-card__body">
+              <span class="metric-card__count">{{ inventory.skus }}</span>
+              <span class="metric-card__label">{{ 'dashboard.skus' | translate }}</span>
+            </div>
+          </div>
+
+          <!-- Units -->
+          <div class="metric-card" id="card-inventory-units">
+            <div class="metric-card__icon metric-card__icon--inventory">
+              <i class="pi pi-align-justify"></i>
+            </div>
+            <div class="metric-card__body">
+              <span class="metric-card__count">{{ inventory.units }}</span>
+              <span class="metric-card__label">{{ 'dashboard.units' | translate }}</span>
+            </div>
+          </div>
+
+          <!-- Trace Cards -->
+          <div class="metric-card" id="card-inventory-trace">
+            <div class="metric-card__icon metric-card__icon--inventory">
+              <i class="pi pi-id-card"></i>
+            </div>
+            <div class="metric-card__body">
+              <span class="metric-card__count">{{ inventory.trace_cards }}</span>
+              <span class="metric-card__label">{{ 'dashboard.trace_cards' | translate }}</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ── Locations Summary + Best Selling section ────── -->
+    <section class="bottom-section">
+
+      <!-- Panel: Locations Summary -->
+      <div class="panel">
+        <div class="panel__head">
+          <div class="panel__head-left">
+            <span class="panel__label">{{ 'dashboard.locations_summary' | translate }}</span>
+          </div>
+          <button class="panel__nav-btn" (click)="navigateTo('/app/preferences/locations')">
+            <i class="pi pi-external-link"></i>
+          </button>
+        </div>
+
+        <div class="metric-cards metric-cards--3col">
+
+          <!-- Zones -->
+          <div class="metric-card" id="card-locations-zones">
+            <div class="metric-card__icon metric-card__icon--location">
+              <i class="pi pi-stop"></i>
+            </div>
+            <div class="metric-card__body">
+              <span class="metric-card__count">{{ locations().zones }}</span>
+              <span class="metric-card__label">{{ 'dashboard.zones' | translate }}</span>
+            </div>
+          </div>
+
+          <!-- Locations -->
+          <div class="metric-card" id="card-locations-locations">
+            <div class="metric-card__icon metric-card__icon--location">
+              <i class="pi pi-map-marker"></i>
+            </div>
+            <div class="metric-card__body">
+              <span class="metric-card__count">{{ locations().locations }}</span>
+              <span class="metric-card__label">{{ 'dashboard.locations' | translate }}</span>
+            </div>
+          </div>
+
+          <!-- Bins -->
+          <div class="metric-card" id="card-locations-bins">
+            <div class="metric-card__icon metric-card__icon--location">
+              <i class="pi pi-box"></i>
+            </div>
+            <div class="metric-card__body">
+              <span class="metric-card__count">{{ locations().bins }}</span>
+              <span class="metric-card__label">{{ 'dashboard.bins' | translate }}</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Panel: Best Selling Items -->
+      <div class="panel">
+        <div class="panel__head">
+          <div class="panel__head-left">
+            <span class="panel__label">{{ 'dashboard.best_selling_items' | translate }}</span>
+          </div>
+        </div>
+
+        @if (bestSelling().length === 0) {
+          <!-- Empty state -->
+          <div class="empty-state" id="card-best-selling-empty">
+            <i class="pi pi-inbox"></i>
+            <span>{{ 'dashboard.no_products_sold' | translate }}</span>
+          </div>
+        } @else {
+          <!-- Best selling list -->
+          <div class="best-selling-list">
+            @for (item of bestSelling(); track item.sku) {
+              <div class="best-selling-item">
+                <div class="best-selling-item__left">
+                  @if (item.image_url) {
+                    <img
+                      class="best-selling-item__img"
+                      [src]="item.image_url"
+                      [alt]="item.product_name"
+                      loading="lazy"
+                    />
+                  } @else {
+                    <div class="best-selling-item__img best-selling-item__img--placeholder">
+                      <i class="pi pi-box"></i>
+                    </div>
+                  }
+                  <div class="best-selling-item__info">
+                    <span class="best-selling-item__name">
+                      <small class="best-selling-item__label">{{ 'dashboard.product' | translate }}</small>
+                      {{ item.product_name }}
+                    </span>
+                    <span class="best-selling-item__sku">
+                      <small class="best-selling-item__label">SKU</small>
+                      {{ item.sku }}
+                    </span>
+                  </div>
+                </div>
+                <div class="best-selling-item__right">
+                  <span class="best-selling-item__qty">
+                    <small class="best-selling-item__label">{{ 'dashboard.qty_sold' | translate }}</small>
+                    {{ item.qty_sold | number:'1.0-0' }}
+                  </span>
+                  <span class="best-selling-item__amount">
+                    <small class="best-selling-item__label">{{ 'dashboard.total' | translate }}</small>
+                    ${{ item.total_amount | number:'1.2-2' }}
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+    </section>
+
+  }
+
+</div>

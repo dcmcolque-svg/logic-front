@@ -1,0 +1,113 @@
+:host {
+  display: block;
+}
+
+// ── Optional badge / icon / chips (same look as the old product section) ──
+.product-workspace__badge {
+  background: color-mix(in srgb, var(--p-primary-color) 10%, transparent);
+  color: var(--p-primary-color);
+  font-size: 0.65rem;
+}
+
+.product-workspace__icon {
+  background: color-mix(in srgb, var(--p-primary-color) 15%, transparent);
+  color: var(--p-primary-color);
+}
+
+
+
+// ── Text-style action buttons (Create / Edit / Unlink / Manage) ──
+.product-workspace__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  padding: 0.35rem 0.5rem;
+  border: 0;
+  border-radius: var(--p-button-border-radius);
+  background: transparent;
+  color: var(--p-primary-color);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  .pi {
+    font-size: inherit;
+  }
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--p-primary-color) 8%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  &--muted {
+    color: var(--p-text-muted-color);
+  }
+}
+
+// ── Step 2 enter animation ──
+.product-workspace__step {
+  animation: product-enter 180ms ease-out;
+}
+
+@keyframes product-enter {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+// ── Expanding editor / category panel ──
+.product-workspace__reveal {
+  display: grid;
+  animation: product-expand 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.product-workspace__reveal-content {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@keyframes product-expand {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Sticky Back / Cancel / Save bar
+.product-workspace__actions {
+  position: sticky;
+  bottom: 0;
+  background: var(--p-content-background);
+  padding: 1rem 0 0;
+  margin-top: 1.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-workspace__step {
+    animation: none;
+  }
+  .product-workspace__reveal {
+    animation-duration: 1ms;
+  }
+}

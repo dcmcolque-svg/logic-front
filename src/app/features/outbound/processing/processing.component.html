@@ -1,0 +1,84 @@
+<p-toast />
+<p-confirmDialog />
+<p-menu #orderMenu [popup]="true" appendTo="body" [model]="rowMenuItems" />
+
+<div class="grid grid-cols-12 gap-4">
+  <!-- Page header -->
+  <div class="col-span-12">
+    <app-order-list-header
+      titleKey="pages.processing"
+      [selectedCount]="selectedOrders().length"
+      (bulkActions)="onBulkActionsClick($event)"
+      (clearFilters)="clearFilters()"
+    >
+      <p-button
+        orderHeaderStart
+        label="Picking"
+        icon="pi pi-box"
+        severity="warn"
+        size="small"
+        (onClick)="goToPicking()"
+      />
+    </app-order-list-header>
+  </div>
+
+  <!-- Data table -->
+  <div class="col-span-12">
+    <div class="card">
+      <base-data-table
+        [columns]="selectedColumns"
+        [data]="orders()"
+        [loading]="loading()"
+        [pagination]="pagination()"
+        [sort]="currentSort()"
+        [selectable]="true"
+        [activeFilterChips]="activeFilters()"
+        (stateChange)="onTableStateChange($event)"
+        (selectionChange)="selectedOrders.set($event)"
+        (chipRemoved)="removeFilterChip($event)"
+      >
+
+        <!-- Paginator left: column toggle -->
+        <ng-template #paginatorLeft>
+          <app-order-column-toggle />
+        </ng-template>
+
+        <!-- Custom filter row -->
+        <ng-template #filterRow let-columns="columns">
+          <!-- actions col -->
+          <th class="col-actions p-1"></th>
+          <!-- checkbox col -->
+          <th class="p-1" style="width: 3rem"></th>
+          @for (col of columns; track col.field) {
+            <th class="p-1" [style.width]="col.width">
+              <app-order-column-filter [field]="col.field" />
+            </th>
+          }
+        </ng-template>
+
+        <!-- Custom cell templates -->
+        <ng-template #cell let-row let-col="col">
+          <app-order-cell
+            [row]="row"
+            [template]="col.template"
+            [createdAt]="{ showTime: true }"
+            [deliveryDate]="{ timezone: 'UTC' }"
+          />
+        </ng-template>
+
+        <!-- Row actions -->
+        <ng-template #actions let-row>
+          <app-order-menu-button [row]="row" />
+        </ng-template>
+
+      </base-data-table>
+    </div>
+  </div>
+</div>
+
+<!-- Order detail drawer -->
+<app-order-detail-dialog
+  [visible]="showDetailDrawer()"
+  [order]="selectedOrder()"
+  (hide)="closeDetailDrawer()"
+/>

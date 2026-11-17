@@ -1,0 +1,23 @@
+@for (item of enformato(); track item.key) {
+  <p-chip
+    [removable]="true"
+    class="custom-chip mr-1 font-bold bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-0 hover:bg-surface-300 dark:hover:bg-surface-600 transition-colors cursor-pointer"
+    (onRemove)="remove($event, item.key)"
+  >
+    @if (chipTemplate) {
+      <ng-container
+        [ngTemplateOutlet]="chipTemplate"
+        [ngTemplateOutletContext]="{ $implicit: item }"
+      ></ng-container>
+    } @else {
+      <i class="pi pi-filter mr-1"></i>
+      {{ item.show | translate }} :
+      {{
+        truncateText(
+          item.name ? getChipName(item) : formatValor(item.valor),
+          25
+        )
+      }}
+    }
+  </p-chip>
+}

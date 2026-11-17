@@ -1,0 +1,13 @@
+::ng-deep button.p-multiselect-close { display: none !important; }
+
+/* Standardize trigger height to match text/date filter inputs */
+:host ::ng-deep .p-multiselect-label-container {
+  height: 2.3rem;
+  min-height: 2.3rem;
+  display: flex;
+  align-items: center;
+}
+
+:host ::ng-deep .p-multiselect {
+  min-height: 2.3rem;
+}

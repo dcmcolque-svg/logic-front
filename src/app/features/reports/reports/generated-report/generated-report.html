@@ -1,0 +1,142 @@
+<!-- ── Page header ──────────────────────────────────────────────────────────── -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+  <div>
+    <h5 class="text-2xl font-semibold m-0 mb-1">{{ 'pages.generated_reports' | translate }}</h5>
+    <p class="text-surface-500 text-sm m-0">{{ 'reports.generated_reports_subtitle' | translate }}</p>
+  </div>
+  <p-button
+    [label]="'buttons.clear' | translate"
+    icon="pi pi-filter-slash"
+    [outlined]="true"
+    severity="secondary"
+    size="small"
+    (onClick)="clearFilters()"
+  />
+</div>
+
+<!-- ── Table card ───────────────────────────────────────────────────────────── -->
+<div class="card">
+  <base-data-table
+    [columns]="selectedCols"
+    [data]="rows()"
+    [loading]="loading()"
+    [pagination]="pagination()"
+    [disableMobileView]="false"
+    [initialFilters]="activeRawFilters"
+    (stateChange)="onTableStateChange($event)"
+  >
+
+    <!-- Toolbar: active filter chips -->
+    <ng-template #toolbar>
+      @if (activeFilters().length > 0) {
+        <div class="flex flex-wrap items-center justify-end gap-2">
+          <i class="pi pi-filter text-surface-500"></i>
+          @for (chip of activeFilters(); track chip.field) {
+            <p-chip
+              [label]="chip.label + ': ' + chip.displayValue"
+              [removable]="true"
+              (onRemove)="removeFilterChip(chip.field)"
+              styleClass="font-medium bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-0 text-sm"
+            />
+          }
+        </div>
+      }
+    </ng-template>
+
+    <!-- Filter row: injected as the 2nd <tr> inside the table <thead> -->
+    <ng-template #filterRow let-columns="columns">
+      @for (col of columns; track col.field) {
+        <th class="filter-th">
+          @switch (col.field) {
+
+            @case ('status') {
+              <p-select
+                [ngModel]="selectedStatus()"
+                (ngModelChange)="selectedStatus.set($event); applyCustomFilters()"
+                [options]="statusSelectOptions()"
+                optionLabel="label"
+                optionValue="value"
+                [showClear]="true"
+                [placeholder]="'labels.select_state' | translate"
+                appendTo="body"
+                styleClass="w-full"
+                size="small"
+              />
+            }
+
+            @case ('report_type') {
+              <p-select
+                [ngModel]="selectedType()"
+                (ngModelChange)="selectedType.set($event); applyCustomFilters()"
+                [options]="typeSelectOptions()"
+                optionLabel="label"
+                optionValue="value"
+                [showClear]="true"
+                [placeholder]="'labels.select' | translate"
+                appendTo="body"
+                styleClass="w-full"
+                size="small"
+              />
+            }
+
+            @case ('generated_at') {
+              <p-datepicker
+                [ngModel]="selectedDate()"
+                (ngModelChange)="selectedDate.set($event); applyCustomFilters()"
+                [showIcon]="true"
+                iconDisplay="input"
+                appendTo="body"
+                styleClass="w-full"
+                [inputStyle]="{ fontSize: '0.8rem' }"
+              />
+            }
+
+          }
+        </th>
+      }
+    </ng-template>
+
+    <!-- Paginator left: column toggle -->
+    <ng-template #paginatorLeft>
+      <div class="flex items-center gap-2">
+        <p-multiSelect
+          #ms
+          [options]="translatedColumnDefs"
+          [ngModel]="selectedCols"
+          (onChange)="onColSelectChange($event, ms)"
+          optionLabel="translatedHeader"
+          [placeholder]="'labels.choose_columns' | translate"
+          [selectedItemsLabel]="selectedCols.length + ' ' + ('labels.columns_selected' | translate)"
+          [maxSelectedLabels]="0"
+          size="small"
+          appendTo="body"
+        >
+          <ng-template let-col pTemplate="item">{{ col.translatedHeader }}</ng-template>
+        </p-multiSelect>
+      </div>
+    </ng-template>
+
+    <!-- Custom cell rendering -->
+    <ng-template #cell let-row let-col="col">
+      @switch (col.template) {
+
+        @case ('status') {
+          <base-status-badge [value]="row.status" [label]="'reports.status.' + row.status | translate" />
+        }
+
+        @case ('type') {
+          {{ 'reports.types.' + row.report_type | translate }}
+        }
+
+        @case ('datetime') {
+          <div class="flex flex-col leading-snug">
+            <span class="text-surface-500 text-xs">{{ row.generated_at | dateSeparate }}</span>
+            <span class="text-primary text-xs font-medium">{{ row.generated_at | timeSeparate }}</span>
+          </div>
+        }
+
+      }
+    </ng-template>
+
+  </base-data-table>
+</div>

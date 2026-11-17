@@ -1,0 +1,100 @@
+<!--
+  While the product workspace is open (create/edit product, manage categories)
+  the dialog swaps its header, hides the SKU columns and drops its own footer:
+  the workspace brings its own Back / Cancel / Save actions.
+  The header X (and Escape) stay available in every step and close the whole dialog.
+-->
+<base-dialog
+  [visible]="visible()"
+  [header]="dialogHeader()"
+  [size]="workspaceOpen() ? 'lg' : 'xl'"
+  [showSave]="!workspaceOpen()"
+  [showCancel]="!workspaceOpen()"
+  [dismissableMask]="false"
+  [loading]="saving()"
+  [saveDisabled]="!isValid()"
+  (save)="onSave()"
+  (hide)="onHide()"
+>
+  <!-- ═══════ SKU Section (main content) ═══════ -->
+  <div class="grid grid-cols-12 gap-8">
+    <!-- Left column: General Info / Center column: Dimensions, Weight, Cost & Price, Custom Attributes -->
+    <app-sku-fields-columns [form]="skuForm" [attributes]="customAttrs" [hideColumns]="workspaceOpen()" [dense]="true">
+      <base-form-field
+        type="dropdown"
+        label="labels.company"
+        [control]="companyControl"
+        [options]="companyOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [required]="true"
+      />
+    </app-sku-fields-columns>
+
+    <!-- Right column: Product group + Images -->
+    <div class="flex flex-col gap-6" [class]="workspaceOpen() ? 'col-span-12' : 'col-span-12 md:col-span-4'">
+      <!-- Product group (optional) — rebuilt on every open so its state starts clean -->
+      @if (visible()) {
+        <app-product-workspace
+          [companyId]="companyId()"
+          [initialProduct]="preselectedProduct()"
+          [locked]="!!preselectedProduct()"
+          (productChange)="onProductChange($event)"
+          (workspaceChange)="onWorkspaceChange($event)"
+          (editingChange)="onProductEditing($event)"
+        />
+      }
+
+      <div class="flex flex-col gap-3" [style.display]="workspaceOpen() ? 'none' : null">
+        <div class="flex items-center gap-2 mb-1">
+          <i class="pi pi-images text-primary text-sm"></i>
+          <span class="font-semibold text-primary text-sm">
+            {{ 'labels.images' | translate }}
+          </span>
+        </div>
+
+        <!-- Upload button + drop zone hint -->
+        <div class="flex items-stretch gap-3">
+          <p-fileUpload
+            class="shrink-0"
+            mode="basic"
+            accept="image/*"
+            [multiple]="true"
+            [customUpload]="true"
+            [auto]="true"
+            chooseIcon="pi pi-upload"
+            [chooseLabel]="'labels.upload' | translate"
+            (onSelect)="onImagesSelected($event)"
+          />
+          <div class="flex flex-1 min-w-0 items-center justify-center gap-2 px-3 rounded-lg border border-dashed border-surface-300 dark:border-surface-600 text-surface-400 text-sm">
+            <i class="pi pi-cloud-upload"></i>
+            <span>{{ 'labels.drag_file_here' | translate }}</span>
+          </div>
+        </div>
+
+        <!-- Pending file previews -->
+        @for (file of pendingFiles; track file.name; let fi = $index) {
+          <div class="flex items-center gap-3 p-2 rounded-lg border border-surface-200 bg-surface-50 dark:bg-surface-800">
+            <img
+              [src]="pendingPreviews[fi]"
+              alt="Preview"
+              class="w-12 h-12 object-cover rounded"
+            />
+            <div class="flex-1 min-w-0">
+              <span class="text-sm block truncate">{{ file.name }}</span>
+              <span class="text-xs text-surface-400">{{ (file.size / 1024).toFixed(1) }} KB</span>
+            </div>
+            <button
+              pButton
+              icon="pi pi-trash"
+              class="p-button-sm p-button-text p-button-danger"
+              (click)="removePendingFile(fi)"
+              type="button"
+              aria-label="Remove"
+            ></button>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</base-dialog>

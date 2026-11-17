@@ -1,0 +1,59 @@
+<p-dialog
+  [header]="header() | translate"
+  [visible]="visible()"
+  (visibleChange)="onVisibleChange($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="closable()"
+  [closeOnEscape]="closeOnEscape()"
+  [dismissableMask]="dismissableMask()"
+  [style]="dialogStyle()"
+  [breakpoints]="{ '768px': '100vw' }"
+  [maximizable]="false"
+  styleClass="base-dialog"
+  contentStyleClass="relative"
+  appendTo="body"
+>
+  <ng-template pTemplate="header">
+    <div class="base-dialog-header-group">
+      <span [id]="dialog()?.ariaLabelledBy" class="p-dialog-title">{{ header() | translate }}</span>
+      @if (subHeader()) {
+        <span class="base-dialog-sub-header">{{ subHeader() }}</span>
+      }
+    </div>
+  </ng-template>
+
+  <!-- Loading overlay -->
+  <base-loading-overlay [visible]="loading()" />
+
+  <!-- Content -->
+  <ng-content />
+
+  <!-- Footer -->
+  @if (showFooter()) {
+    <ng-template pTemplate="footer">
+      <div class="flex justify-end gap-2">
+        @if (showCancel()) {
+          <p-button
+            [label]="cancelLabel() | translate"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="loading()"
+            (onClick)="onCancel()"
+            icon="pi pi-times"
+          />
+        }
+        @if (showSave()) {
+          <p-button
+            [label]="saveLabel() | translate"
+            [loading]="loading()"
+            [disabled]="saveDisabled()"
+            (onClick)="save.emit()"
+            [icon]="saveIcon()"
+          />
+        }
+      </div>
+    </ng-template>
+  }
+</p-dialog>

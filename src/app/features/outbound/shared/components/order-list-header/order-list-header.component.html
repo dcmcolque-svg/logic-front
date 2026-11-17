@@ -1,0 +1,29 @@
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+  <h2 class="text-2xl font-bold m-0">
+    {{ titleKey() | translate | uppercase }}
+  </h2>
+  <div class="flex gap-2">
+    @if (selectedCount() > 0) {
+      <p-button
+        [label]="'labels.selected' | translate | titlecase"
+        [badge]="selectedCount().toString()"
+        badgeSeverity="warn"
+        icon="pi pi-bolt"
+        severity="secondary"
+        [outlined]="true"
+        size="small"
+        (onClick)="bulkActions.emit($event)"
+      />
+    }
+    <ng-content select="[orderHeaderStart]" />
+    <p-button
+      [label]="'buttons.clear' | translate"
+      icon="pi pi-filter-slash"
+      severity="secondary"
+      [outlined]="true"
+      size="small"
+      (onClick)="clearFilters.emit()"
+    />
+    <ng-content />
+  </div>
+</div>

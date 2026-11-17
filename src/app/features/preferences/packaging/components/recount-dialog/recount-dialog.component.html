@@ -1,0 +1,104 @@
+<div class="flex flex-col gap-5">
+
+    <!-- Instruction -->
+    <p class="text-surface-600 text-sm m-0">
+        {{ 'packaging.recount.instruction' | translate }}
+    </p>
+
+    <!-- Input + Switch row -->
+    <div class="flex items-center gap-4">
+        <div class="flex flex-col gap-1 flex-1">
+            <label for="recount-qty" class="font-semibold text-sm">
+                {{ 'packaging.recount.quantity_input' | translate }}
+            </label>
+            <p-inputNumber
+                id="recount-qty"
+                [ngModel]="quantity()"
+                (ngModelChange)="onQuantityChange($event)"
+                [showButtons]="true"
+                [min]="1"
+                [max]="maxQuantity()"
+                variant="filled"
+                class="w-full"
+            />
+        </div>
+
+        <div class="flex flex-col items-center gap-1 pt-5">
+            <p-toggleSwitch
+                [ngModel]="isIncrease()"
+                (ngModelChange)="isIncrease.set($event)"
+            />
+            <span
+                class="text-xs font-bold uppercase tracking-wide"
+                [class.text-green-500]="isIncrease()"
+                [class.text-red-500]="!isIncrease()"
+            >
+                {{ actionLabel() }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Summary cards with operator icons -->
+    <div class="flex items-center gap-2">
+        <!-- Current Quantity -->
+        <div class="summary-card flex-1">
+            <span class="summary-label">{{ 'packaging.recount.current_quantity' | translate }}</span>
+            <span class="summary-value">{{ currentQuantity() | number:'1.0-2' }}</span>
+        </div>
+
+        <!-- Operator: + or - -->
+        <i
+            class="pi text-lg font-bold"
+            [class.pi-plus]="isIncrease()"
+            [class.pi-minus]="!isIncrease()"
+            [class.text-green-500]="isIncrease()"
+            [class.text-red-500]="!isIncrease()"
+        ></i>
+
+        <!-- Quantity to change -->
+        <div class="summary-card flex-1" [class.increase]="isIncrease()" [class.reduce]="!isIncrease()">
+            <span class="summary-label">
+                {{ 'packaging.recount.quantity_to_change' | translate }} {{ actionLabel() }}
+            </span>
+            <span class="summary-value">
+                {{ quantityToChange() | number:'1.0-2' }}
+            </span>
+        </div>
+
+        <!-- Operator: = -->
+        <i class="pi pi-equals text-lg font-bold text-surface-500"></i>
+
+        <!-- Final Quantity -->
+        <div class="summary-card final flex-1">
+            <span class="summary-label">{{ 'packaging.recount.final_quantity' | translate }}</span>
+            <span class="summary-value">{{ finalQuantity() | number:'1.0-2' }}</span>
+        </div>
+    </div>
+
+    <!-- Warning: negative quantity not allowed -->
+    @if (!isIncrease() && quantity() >= currentQuantity() && quantity() > 0) {
+        <small class="text-red-500 text-xs flex items-center gap-1">
+            <i class="pi pi-exclamation-circle"></i>
+            {{ 'packaging.recount.negative_quantity_warning' | translate: { max: currentQuantity() } }}
+        </small>
+    }
+
+    <!-- Footer buttons -->
+    <div class="flex justify-end gap-2 mt-2">
+        <p-button
+            [label]="'buttons.cancel' | translate"
+            [text]="true"
+            severity="secondary"
+            (onClick)="onCancel()"
+        />
+        <p-button
+            [label]="'buttons.confirm' | translate"
+            icon="pi pi-check"
+            (onClick)="onConfirm()"
+            [disabled]="quantity() <= 0 || saving() || isNegativeResult()"
+            [loading]="saving()"
+        />
+    </div>
+</div>
+
+<p-toast />

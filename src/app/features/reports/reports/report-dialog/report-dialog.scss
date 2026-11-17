@@ -1,0 +1,123 @@
+:host {
+  display: block;
+}
+
+// ── Section heading ──────────────────────────────────────────────────────────
+.section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-color);
+  margin: 0 0 0.75rem;
+}
+
+.form-section {
+  margin-bottom: 1.5rem;
+}
+
+// ── Layout helpers ───────────────────────────────────────────────────────────
+.form-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+
+  .flex-1 { flex: 1; min-width: 10rem; }
+  .flex-2 { flex: 2; min-width: 14rem; }
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.field-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.field-hint {
+  font-size: 0.78rem;
+  color: var(--text-color-secondary);
+  margin: 0;
+}
+
+.field-error {
+  font-size: 0.78rem;
+  color: var(--red-500);
+}
+
+// ── Account + clear button row ────────────────────────────────────────────────
+.input-with-clear {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+// ── Custom parameters divider ─────────────────────────────────────────────────
+.custom-params-header {
+  padding: 1.25rem 0 0.25rem;
+}
+
+// ── Drag list ────────────────────────────────────────────────────────────────
+.drag-list {
+  min-height: 3rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.drag-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--surface-border);
+  background: var(--surface-card);
+  cursor: default;
+  transition: background 0.15s ease;
+
+  &:last-child { border-bottom: none; }
+  &:hover      { background: var(--surface-hover); }
+}
+
+.drag-handle {
+  color: var(--text-color-secondary);
+  flex-shrink: 0;
+  cursor: grab;
+
+  &:active { cursor: grabbing; }
+}
+
+.drag-label {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--text-color);
+}
+
+.fields-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+// ── CDK drag preview ─────────────────────────────────────────────────────────
+.cdk-drag-preview {
+  border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  background: var(--surface-card);
+}
+
+.cdk-drag-placeholder { opacity: 0; }
+.cdk-drag-animating   { transition: transform 250ms cubic-bezier(0, 0, 0.2, 1); }
+
+// ── Dialog footer ─────────────────────────────────────────────────────────────
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+}

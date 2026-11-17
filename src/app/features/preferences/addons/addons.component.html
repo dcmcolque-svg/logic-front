@@ -1,0 +1,143 @@
+<div class="card loading-container">
+  @if (service.loading()) {
+    <div class="loading-overlay">
+      <div class="spinner"></div>
+    </div>
+  }
+
+  <div class="flex justify-content-between mb-2">
+    <div class="flex aling-items-center">
+      <h5 class="text-2xl pb-2">
+        {{ 'preferences.addons.title' | translate }}
+      </h5>
+    </div>
+  </div>
+
+  <div>
+    <!-- AutoComplete for adding new addons -->
+    <div class="p-field mb-4 p-fluid">
+      <label for="addon-autocomplete" class="p-label">{{
+        'preferences.addons.add' | translate
+      }}</label>
+      <p-autoComplete
+        id="addon-autocomplete"
+        [(ngModel)]="selectedAddon"
+        [suggestions]="filteredAddons"
+        (completeMethod)="filterAddons($event)"
+        field="name"
+        [placeholder]="'preferences.addons.search_placeholder' | translate"
+        [dropdown]="true"
+        [forceSelection]="false"
+        styleClass="w-full"
+        inputStyleClass="w-full"
+        panelStyleClass="responsive-addon-panel"
+        (onSelect)="onAddonSelect($event)"
+      >
+        <ng-template let-addon pTemplate="item">
+          <div
+            class="flex align-items-center gap-2 p-2 sm:flex-row flex-column"
+          >
+            <img
+              [src]="addon.icon_url"
+              [alt]="addon.name"
+              class="w-1/4 h-auto"
+            />
+            <div>
+              <div class="font-medium">{{ addon.name }}</div>
+              <div class="text-sm text-color-secondary">
+                {{
+                  ('labels.' + addon.description | translate) ===
+                  'labels.' + addon.description
+                    ? addon.description
+                    : ('labels.' + addon.description | translate)
+                }}
+              </div>
+            </div>
+          </div>
+        </ng-template>
+
+        <ng-template let-addon pTemplate="selectedItem">
+          <div class="flex align-items-center gap-2" *ngIf="addon">
+            <img
+              [src]="addon.icon_url"
+              [alt]="addon.name"
+              class="w-1-5rem h-1-5rem border-round"
+            />
+            <span>{{ addon.name }}</span>
+          </div>
+        </ng-template>
+      </p-autoComplete>
+    </div>
+  </div>
+
+  <div class="contatiner_card_addon flex flex-wrap gap-4 mt-4">
+    @for (item of configuredAddons(); track item.config?.id) {
+      <div
+        class="card w-23rem card_addon cursor-pointer surface-card border-round shadow-1 p-0 hover:shadow-3 transition-duration-200"
+        (click)="openModalCreateUpdate(item)"
+        (keydown.enter)="openModalCreateUpdate(item)"
+        tabindex="0"
+        role="button"
+        style="min-width: 300px; max-width: 350px"
+      >
+        <img
+          alt="Icon-app"
+          [src]="item.icon_url"
+          class="w-full border-round-top"
+          style="height: 150px; object-fit: contain; background-color: #f8f9fa"
+        />
+
+        <div class="px-4 py-3 text-center">
+          <h4 class="mt-0 mb-2 text-xl font-semibold text-900">
+            {{ item.config?.name || '' }}
+          </h4>
+          <h3 class="mt-0 mb-2 text-lg text-700">
+            {{ item.name }}
+          </h3>
+          <p class="text-sm mt-0 mb-1 text-600">
+            {{ item.config?.endpoint_url || '' }}
+          </p>
+          <p class="text-md mt-0 mb-3 text-900 font-semibold">
+            {{ item.config?.company_name || item.config?.company_id || '' }}
+          </p>
+          <p class="text-sm text-500 mt-1 mb-4 line-height-3">
+            {{
+              ('labels.' + item.description | translate) ===
+              'labels.' + item.description
+                ? item.description
+                : ('labels.' + item.description | translate)
+            }}
+          </p>
+
+          <div class="mt-auto">
+            <span
+              class="inline-flex align-items-center px-3 py-2 border-round-3xl text-sm font-semibold text-white"
+              [ngClass]="
+                item.config?.settings?.check_connection
+                  ? 'bg-green-500'
+                  : 'bg-orange-500'
+              "
+            >
+              <i
+                class="mr-2"
+                [ngClass]="
+                  item.config?.settings?.check_connection
+                    ? 'pi pi-check-circle'
+                    : 'pi pi-clock'
+                "
+              ></i>
+              {{
+                item.config?.settings?.check_connection
+                  ? ('preferences.addons.connection_addon' | translate)
+                  : ('preferences.addons.disconnection_addon' | translate)
+              }}
+            </span>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Dialog component -->
+<app-addon-form #addonForm></app-addon-form>

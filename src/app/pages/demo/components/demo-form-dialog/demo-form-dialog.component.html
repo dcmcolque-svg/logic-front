@@ -1,0 +1,65 @@
+<base-dialog
+  [visible]="visible()"
+  [header]="editing() ? 'demo.edit_order' : 'demo.create_order'"
+  size="md"
+  [loading]="saving()"
+  [saveDisabled]="!orderForm.valid"
+  (save)="onSave()"
+  (hide)="hide.emit()"
+>
+  <base-form-group [columns]="2">
+    <base-form-field
+      type="text"
+      label="labels.order_number"
+      [control]="orderForm.controls.order_number"
+      [required]="true"
+    />
+    <base-form-field
+      type="text"
+      label="labels.customer_name"
+      [control]="orderForm.controls.customer_name"
+      [required]="true"
+    />
+    <base-form-field
+      type="dropdown"
+      label="labels.status"
+      [control]="orderForm.controls.status"
+      [options]="statusOptions"
+      optionLabel="label"
+      optionValue="value"
+      [required]="true"
+    />
+    <base-form-field
+      type="number"
+      label="labels.items_count"
+      [control]="orderForm.controls.items_count"
+    />
+    <base-form-field
+      type="number"
+      label="labels.total_amount"
+      [control]="orderForm.controls.total_amount"
+      [required]="true"
+    />
+    <base-form-field
+      type="dropdown"
+      label="labels.shipping_method"
+      [control]="orderForm.controls.shipping_method"
+      [options]="shippingOptions"
+      optionLabel="label"
+      optionValue="value"
+    />
+    <base-form-field
+      type="text"
+      label="labels.tracking_number"
+      [control]="orderForm.controls.tracking_number"
+    />
+    <base-form-field
+      type="dropdown"
+      label="labels.warehouse"
+      [control]="orderForm.controls.warehouse"
+      [options]="warehouseOptions"
+      optionLabel="label"
+      optionValue="value"
+    />
+  </base-form-group>
+</base-dialog>

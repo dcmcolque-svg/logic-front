@@ -1,0 +1,582 @@
+<p-toast />
+<p-menu #parcelMenu [popup]="true" appendTo="body" [model]="rowMenuItems" />
+
+<div class="grid grid-cols-12 gap-4">
+  <!-- Page header -->
+  <div class="col-span-12">
+    <div
+      class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2"
+    >
+      <div>
+        <h2 class="text-2xl font-bold m-0">
+          {{ 'pages.all parcels' | translate | uppercase }}
+        </h2>
+      </div>
+      <div class="flex gap-2">
+        <p-button
+          [label]="'buttons.clear' | translate"
+          icon="pi pi-filter-slash"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="clearFilters()"
+          size="small"
+        />
+        <base-import-export-menu
+          filename="all_parcels"
+          [columns]="selectedColumns"
+          [fetchPage]="fetchExportPage"
+          [sheetName]="'pages.all parcels' | translate"
+          [showImport]="true"
+          (importFile)="openImport($event)"
+          (viewLogs)="goToUploadLogs()"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Data table -->
+  <div class="col-span-12">
+    <div class="preset-table-wrapper">
+      <!-- Filter tabs — directly above the table card -->
+      <app-filter-preset-manager
+        [pageKey]="PRESET_PAGE_KEY"
+        [columns]="cols"
+        [currentFilters]="activeBackendFilters"
+        [currentSort]="currentSort()"
+        [hasActiveFilters]="activeFilters().length > 0"
+        (presetSelected)="onPresetSelected($event)"
+      />
+      <div
+        class="card"
+        [style.border-top]="activePresetColor() ? '3px solid ' + activePresetColor() : null"
+      >
+      <base-data-table
+        [columns]="selectedColumns"
+        [data]="parcels()"
+        [loading]="loading()"
+        [pagination]="pagination()"
+        [sort]="currentSort()"
+        [selectable]="false"
+        [initialFilters]="activeBackendFilters"
+        [nullableFacility]="true"
+        [activeFilterChips]="activeFilters()"
+        (stateChange)="onTableStateChange($event)"
+        (selectionChange)="onSelectionChange($event)"
+        (chipRemoved)="removeFilterChip($event)"
+      >
+        <!-- Toolbar slot -->
+        <ng-template #toolbar>
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <!-- Mobile-only: open filter drawer -->
+            <div class="sm:hidden">
+              <p-button
+                [label]="'labels.filter' | translate"
+                icon="pi pi-filter"
+                severity="secondary"
+                [outlined]="true"
+                size="small"
+                [badge]="
+                  activeFilters().length > 0
+                    ? activeFilters().length.toString()
+                    : ''
+                "
+                badgeSeverity="primary"
+                (onClick)="showMobileFilters.set(true)"
+              />
+            </div>
+          </div>
+        </ng-template>
+
+        <!-- Paginator left: column toggle -->
+        <ng-template #paginatorLeft>
+          <div class="flex items-center gap-2">
+            <p-multiSelect
+              [options]="translatedColumnDefs"
+              [ngModel]="selectedColumns"
+              optionLabel="translatedHeader"
+              [selectedItemsLabel]="
+                selectedColumns.length +
+                ' ' +
+                ('labels.columns_selected' | translate)
+              "
+              [maxSelectedLabels]="0"
+              size="small"
+              appendTo="body"
+              [placeholder]="'labels.choose_columns' | translate"
+              (ngModelChange)="onColSelectChange($event)"
+            >
+              <ng-template let-col pTemplate="item">
+                {{ col.translatedHeader }}
+              </ng-template>
+            </p-multiSelect>
+          </div>
+        </ng-template>
+
+        <!-- ── Filter row slot ── -->
+        <ng-template #filterRow let-columns="columns">
+          <!-- Empty cell to align with the actions column -->
+          <th class="col-actions p-1"></th>
+          @for (col of columns; track col.field) {
+            @switch (col.field) {
+              @case ('meta_data.order_status') {
+                <th class="p-1" [style.width]="col.width">
+                  <shipedge-filter-multiselect-panel
+                    [options]="statusOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    [placeholder]="'labels.status' | translate"
+                    [value]="statusFilter()"
+                    (apply)="
+                      onMultiselectApply('meta_data.order_status', $event)
+                    "
+                    (clear)="onMultiselectClear('meta_data.order_status')"
+                  />
+                </th>
+              }
+              @case ('facility_id') {
+                <th class="p-1" [style.width]="col.width">
+                  <shipedge-filter-multiselect-panel
+                    [options]="facilityFilterOptions()"
+                    optionLabel="name"
+                    optionValue="id"
+                    [placeholder]="'labels.facility_name' | translate"
+                    [showFilter]="facilityFilterOptions().length > 5"
+                    [value]="facilityFilter()"
+                    (apply)="onMultiselectApply('facility_id', $event)"
+                    (clear)="onMultiselectClear('facility_id')"
+                  />
+                </th>
+              }
+              @case ('created_at') {
+                <th class="p-1" [style.width]="col.width">
+                  <shipedge-filter-date-input
+                    [value]="getActiveFilterValue('created_at')"
+                    [matchMode]="getActiveFilterMatchMode('created_at')"
+                    [placeholder]="'labels.created_at' | translate"
+                    (applyWithMode)="onColumnFilterChange('created_at', $event)"
+                  />
+                </th>
+              }
+              @case ('date_shipped') {
+                <th class="p-1" [style.width]="col.width">
+                  <shipedge-filter-date-input
+                    [value]="getActiveFilterValue('date_shipped')"
+                    [matchMode]="getActiveFilterMatchMode('date_shipped')"
+                    [placeholder]="'labels.date_shipped' | translate"
+                    (applyWithMode)="onColumnFilterChange('date_shipped', $event)"
+                  />
+                </th>
+              }
+              @case ('data_status') {
+                <th class="p-1" [style.width]="col.width">
+                  <shipedge-filter-multiselect-panel
+                    [options]="dataStatusOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    [placeholder]="'labels.data_status' | translate"
+                    [value]="dataStatusFilter()"
+                    (apply)="onMultiselectApply('data_status', $event)"
+                    (clear)="onMultiselectClear('data_status')"
+                  />
+                </th>
+              }
+              @default {
+                <th class="p-1" [style.width]="col.width">
+                  <shipedge-filter-text-input
+                    [value]="getActiveFilterValue(col.field)"
+                    [matchMode]="getActiveFilterMatchMode(col.field)"
+                    [placeholder]="col.header | translate"
+                    [filterType]="col.filterType || 'text'"
+                    (applyWithMode)="onColumnFilterChange(col.field, $event)"
+                  />
+                </th>
+              }
+            }
+          }
+        </ng-template>
+
+        <!-- Custom cell templates -->
+        <ng-template #cell let-row let-col="col">
+          @switch (col.template) {
+            @case ('status') {
+              <base-status-badge [value]="row.meta_data?.order_status || ''" />
+            }
+            @case ('tracking') {
+              <div
+                class="tracking-cell flex items-start gap-2 cursor-pointer hover:underline text-primary"
+                role="button"
+                tabindex="0"
+                (click)="openDetailSidebar(row, 'shipment')"
+                (keydown.enter)="openDetailSidebar(row, 'shipment')"
+              >
+                <i class="pi pi-barcode text-lg mt-0.5"></i>
+                <span class="font-bold">{{ col.exportValue?.(row) || '—' }}</span>
+              </div>
+            }
+            @case ('order') {
+              <div class="flex flex-col">
+                <span
+                  class="font-semibold cursor-pointer hover:underline hover:text-primary"
+                  role="button"
+                  tabindex="0"
+                  (click)="openDetailSidebar(row, 'order')"
+                  (keydown.enter)="openDetailSidebar(row, 'order')"
+                >
+                  {{ row.order_detail?.order_number || '—' }}
+                </span>
+                @if (row.order_detail?.reference_number) {
+                  <span class="text-sm text-surface-500">{{
+                    row.order_detail.reference_number
+                  }}</span>
+                }
+              </div>
+            }
+            @case ('merchant') {
+              <span>{{ col.exportValue?.(row) || '—' }}</span>
+            }
+            @case ('facility') {
+              <span>{{ col.exportValue?.(row) }}</span>
+            }
+            @case ('slot_lpn') {
+              @if (row.operator?.storage_unit?.name) {
+                <div
+                  class="text-sm px-2 py-1 text-center text-white border-round inline-block"
+                  [class.bg-primary]="
+                    row.operator?.storage_unit?.storage_unit_type !== 'LPN'
+                  "
+                  [class.bg-orange-500]="
+                    row.operator?.storage_unit?.storage_unit_type === 'LPN'
+                  "
+                >
+                  {{ col.exportValue?.(row) }}
+                </div>
+              } @else {
+                <span class="text-surface-400">—</span>
+              }
+            }
+            @case ('ship_details') {
+              <div
+                class="flex flex-col gap-1 cursor-pointer hover:opacity-80"
+                style="min-width: 7rem"
+                role="button"
+                tabindex="0"
+                (click)="openDetailSidebar(row, 'ship_details')"
+                (keydown.enter)="openDetailSidebar(row, 'ship_details')"
+              >
+                <span class="flex items-center gap-2">
+                  <i
+                    class="pi pi-box text-blue-500"
+                    [pTooltip]="'labels.total_packages' | translate"
+                  ></i>
+                  <span class="font-mono">{{
+                    row.meta_data?.total_packages || 0
+                  }}</span>
+                </span>
+                <span class="flex items-center gap-2">
+                  <i
+                    class="pi pi-tag text-blue-500"
+                    [pTooltip]="'labels.total_sku' | translate"
+                  ></i>
+                  <span class="font-mono">{{
+                    row.meta_data?.total_quantity || 0
+                  }}</span>
+                </span>
+                <span class="flex items-center gap-2">
+                  <span
+                    class="font-bold text-blue-500"
+                    [pTooltip]="'labels.total_item' | translate"
+                    >U</span
+                  >
+                  <span class="font-mono">{{
+                    row.meta_data?.total_items || 0
+                  }}</span>
+                </span>
+              </div>
+            }
+            @case ('created_at') {
+              @if (row.meta_data?.created_at) {
+                <div class="flex flex-col text-nowrap">
+                  <span class="text-surface-400">{{ row.meta_data.created_at | date:'yyyy-MM-dd' }}</span>
+                  <span class="text-primary text-sm">{{ row.meta_data.created_at | date:'HH:mm' }}</span>
+                </div>
+              } @else {
+                <span class="text-surface-400">—</span>
+              }
+            }
+            @case ('date_shipped') {
+              @if (row.shipment?.delivery_detail?.date_shipped) {
+                <div class="flex flex-col text-nowrap">
+                  <span class="text-surface-400">{{ row.shipment.delivery_detail.date_shipped | date:'yyyy-MM-dd' }}</span>
+                  <span class="text-primary text-sm">{{ row.shipment.delivery_detail.date_shipped | date:'HH:mm' }}</span>
+                </div>
+              } @else {
+                <span class="text-surface-400">—</span>
+              }
+            }
+            @case ('data_status') {
+              @if (row.data_status) {
+                @if (row.data_status === 'incomplete' && row.data_requirements?.missing_fields?.length) {
+                  <div
+                    class="cursor-pointer inline-block"
+                    role="button"
+                    tabindex="0"
+                    (click)="missingFieldsPopover.toggle($event)"
+                    (keydown.enter)="missingFieldsPopover.toggle($event)"
+                  >
+                    <base-status-badge
+                      [value]="row.data_status"
+                      [statusMap]="{ complete: 'success', incomplete: 'warn' }"
+                    />
+                  </div>
+                  <p-popover
+                    #missingFieldsPopover
+                    appendTo="body"
+                    styleClass="missing-fields-popover"
+                  >
+                    <div class="missing-fields-content">
+                      <strong class="missing-fields-title">Missing Fields</strong>
+                      <ul class="missing-fields-list">
+                        @for (mf of row.data_requirements!.missing_fields!; track mf.field) {
+                          <li class="missing-fields-item">
+                            <i class="pi pi-times-circle missing-fields-icon"></i>
+                            <span>{{ mf.message || mf.field || 'Unknown field' }}</span>
+                          </li>
+                        }
+                      </ul>
+                    </div>
+                  </p-popover>
+                } @else {
+                  <base-status-badge
+                    [value]="row.data_status"
+                    [statusMap]="{ complete: 'success', incomplete: 'warn' }"
+                  />
+                }
+              } @else {
+                <span class="text-surface-400">—</span>
+              }
+            }
+          }
+        </ng-template>
+
+
+        <!-- Actions column: 3-dot menu — only for SHIP PREPARED parcels with incomplete data -->
+        <ng-template #actions let-row>
+          @if (row.meta_data?.order_status === 'SHIP PREPARED' && (!row.data_requirements?.fulfilled || row.data_status === 'incomplete')) {
+            <p-button
+              icon="pi pi-ellipsis-v"
+              [text]="true"
+              [rounded]="true"
+              size="small"
+              severity="secondary"
+              (onClick)="onParcelOptionsClick($event, row)"
+            />
+          }
+        </ng-template>
+
+      </base-data-table>
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Sidebar -->
+<app-parcel-detail-dialog
+  [visible]="showDetailSidebar()"
+  [parcel]="selectedParcel()"
+  [field]="selectedField()"
+  [facilityLabel]="facilityName(selectedParcel()?.operator?.facility_id)"
+  (hide)="closeDetailSidebar()"
+/>
+
+<!-- Edit Customer Info Dialog -->
+<app-parcel-update-costumer-dialog
+  [visible]="showEditCustomerDialog()"
+  [parcel]="parcelToEdit()"
+  (hide)="closeEditCustomerDialog()"
+  (saved)="loadData()"
+/>
+
+<!-- ── Mobile Filter Drawer ── -->
+<p-drawer
+  [visible]="showMobileFilters()"
+  (visibleChange)="showMobileFilters.set($event)"
+  position="bottom"
+  [style]="{ height: 'auto', maxHeight: '85dvh' }"
+  styleClass="mobile-filter-drawer"
+>
+  <ng-template pTemplate="header">
+    <div class="flex items-center gap-2 font-semibold text-lg">
+      <i class="pi pi-filter text-primary"></i>
+      <span>{{ 'labels.filter' | translate }}</span>
+      @if (activeFilters().length > 0) {
+        <span class="ml-auto text-sm font-normal text-surface-500">
+          {{ activeFilters().length }} {{ 'labels.records' | translate }}
+        </span>
+      }
+    </div>
+  </ng-template>
+
+  <ng-template pTemplate="content">
+    <div class="flex flex-col gap-4 pb-4 overflow-y-auto">
+      <!-- Status -->
+      <div class="flex flex-col gap-1">
+        <label for="parcels-mobile-filter-status" class="text-sm font-medium text-surface-600">
+          {{ 'labels.status' | translate }}
+        </label>
+        <shipedge-filter-multiselect-panel
+          id="parcels-mobile-filter-status"
+          [options]="statusOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [placeholder]="'labels.status' | translate"
+          [value]="statusFilter()"
+          (apply)="
+            onMultiselectApply('meta_data.order_status', $event);
+            showMobileFilters.set(false)
+          "
+          (clear)="onMultiselectClear('meta_data.order_status')"
+        />
+      </div>
+
+      <!-- Facility -->
+      <div class="flex flex-col gap-1">
+        <label for="parcels-mobile-filter-facility-name" class="text-sm font-medium text-surface-600">
+          {{ 'labels.facility_name' | translate }}
+        </label>
+        <shipedge-filter-multiselect-panel
+          id="parcels-mobile-filter-facility-name"
+          [options]="facilityFilterOptions()"
+          optionLabel="name"
+          optionValue="id"
+          [placeholder]="'labels.facility_name' | translate"
+          [showFilter]="facilityFilterOptions().length > 5"
+          [value]="facilityFilter()"
+          (apply)="
+            onMultiselectApply('facility_id', $event);
+            showMobileFilters.set(false)
+          "
+          (clear)="onMultiselectClear('facility_id')"
+        />
+      </div>
+
+      <!-- Tracking Number -->
+      <div class="flex flex-col gap-1">
+        <label for="parcels-mobile-filter-tracking" class="text-sm font-medium text-surface-600">
+          {{ 'labels.tracking' | translate }}
+        </label>
+        <shipedge-filter-text-input
+          id="parcels-mobile-filter-tracking"
+          [value]="getActiveFilterValue('tracking_number')"
+          [placeholder]="'labels.tracking' | translate"
+          (apply)="
+            onColumnFilterChange('tracking_number', $event); showMobileFilters.set(false)
+          "
+        />
+      </div>
+
+      <!-- Order Number -->
+      <div class="flex flex-col gap-1">
+        <label for="parcels-mobile-filter-order" class="text-sm font-medium text-surface-600">
+          {{ 'labels.order' | translate }}
+        </label>
+        <shipedge-filter-text-input
+          id="parcels-mobile-filter-order"
+          [value]="getActiveFilterValue('order_number')"
+          [placeholder]="'labels.order' | translate"
+          (apply)="
+            onColumnFilterChange('order_number', $event);
+            showMobileFilters.set(false)
+          "
+        />
+      </div>
+
+      <!-- Merchant -->
+      <div class="flex flex-col gap-1">
+        <label for="parcels-mobile-filter-merchant" class="text-sm font-medium text-surface-600">
+          {{ 'labels.merchant' | translate }}
+        </label>
+        <shipedge-filter-text-input
+          id="parcels-mobile-filter-merchant"
+          [value]="getActiveFilterValue('channel')"
+          [placeholder]="'labels.merchant' | translate"
+          (apply)="
+            onColumnFilterChange('channel', $event);
+            showMobileFilters.set(false)
+          "
+        />
+      </div>
+
+      <!-- Created At -->
+      <div class="flex flex-col gap-1">
+        <label for="parcels-mobile-filter-created-at" class="text-sm font-medium text-surface-600">
+          {{ 'labels.created_at' | translate }}
+        </label>
+        <shipedge-filter-date-input
+          id="parcels-mobile-filter-created-at"
+          [value]="getActiveFilterValue('created_at')"
+          [placeholder]="'labels.created_at' | translate"
+          (apply)="onColumnFilterChange('created_at', $event)"
+        />
+      </div>
+
+      <!-- Date Shipped -->
+      <div class="flex flex-col gap-1">
+        <label for="parcels-mobile-filter-date-shipped" class="text-sm font-medium text-surface-600">
+          {{ 'labels.date_shipped' | translate }}
+        </label>
+        <shipedge-filter-date-input
+          id="parcels-mobile-filter-date-shipped"
+          [value]="getActiveFilterValue('date_shipped')"
+          [placeholder]="'labels.date_shipped' | translate"
+          (apply)="onColumnFilterChange('date_shipped', $event)"
+        />
+      </div>
+
+      <!-- Data Status -->
+      <div class="flex flex-col gap-1">
+        <label for="parcels-mobile-filter-data-status" class="text-sm font-medium text-surface-600">
+          {{ 'labels.data_status' | translate }}
+        </label>
+        <shipedge-filter-multiselect-panel
+          id="parcels-mobile-filter-data-status"
+          [options]="dataStatusOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [placeholder]="'labels.data_status' | translate"
+          [value]="dataStatusFilter()"
+          (apply)="onMultiselectApply('data_status', $event)"
+          (clear)="onMultiselectClear('data_status')"
+        />
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template pTemplate="footer">
+    <div class="flex gap-3 pt-3 border-t border-surface-200">
+      <p-button
+        [label]="'buttons.clear' | translate"
+        icon="pi pi-filter-slash"
+        severity="secondary"
+        [outlined]="true"
+        styleClass="flex-1"
+        (onClick)="clearFilters(); showMobileFilters.set(false)"
+      />
+      <p-button
+        [label]="'buttons.apply' | translate"
+        icon="pi pi-check"
+        styleClass="flex-1"
+        (onClick)="showMobileFilters.set(false)"
+      />
+    </div>
+  </ng-template>
+</p-drawer>
+
+<base-import-dialog
+  module="parcels"
+  [format]="importFormat()"
+  [visible]="showImportDialog()"
+  (visibleChange)="showImportDialog.set($event)"
+  [facilities]="facilities()"
+  (imported)="onImported($event)"
+  (viewLog)="goToUploadLogs($event)"
+/>

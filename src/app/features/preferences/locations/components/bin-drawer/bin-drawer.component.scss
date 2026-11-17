@@ -1,0 +1,24 @@
+::ng-deep .p-treenode-content.p-treenode-selectable.p-treenode-label {
+  display: flex;
+}
+::ng-deep .p-treenode-label {
+  flex: 1;
+}
+
+// Efecto hover para los nodos del árbol
+::ng-deep .p-treenode-content {
+  transition: all 0.2s ease-in-out;
+  border-radius: 8px;
+  padding: 4px 8px;
+  margin: 2px 0;
+
+  &:hover {
+    transform: translateX(1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+}
+
+::ng-deep .p-tree .p-treenode {
+  position: relative;
+  padding-left: 0.5rem;
+}

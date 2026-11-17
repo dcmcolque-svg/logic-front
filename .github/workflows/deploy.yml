@@ -1,0 +1,57 @@
+name: Build and deploy
+
+on:
+  push:
+    branches:
+      - develop
+      - demo
+      - test
+      - stable
+      - stable2
+      - main
+
+jobs:
+  vars:
+    uses: altacrest/devops_automation/.github/workflows/define-vars.yml@main
+    with:
+      edge: true
+
+  test:
+    uses: altacrest/devops_automation/.github/workflows/test-scan-node.yml@main
+    needs: vars
+    with:
+      node-version: 22
+      test-command: echo "Pruebas saltadas temporalmente"
+      project-key: ${{ vars.SONAR_PROJECT_KEY }}
+      project-name: ${{ vars.SONAR_PROJECT_NAME }}
+      ref-slug: ${{ needs.vars.outputs.ref-slug }}
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  build:
+    uses: altacrest/devops_automation/.github/workflows/build-docker.yml@main
+    needs: [vars, test]
+    permissions:
+      contents: read
+      packages: write
+    with:
+      file: Dockerfile.k8s
+      image-name: edge-frontend
+      short-sha: ${{ needs.vars.outputs.short-sha }}
+      ref-slug: ${{ needs.vars.outputs.ref-slug }}
+      build-args: BUILD_CONFIG=${{ needs.vars.outputs.edge-frontend-config }}
+    secrets:
+      password: ${{ secrets.DOCKER_TOKEN }}
+
+  deploy:
+    uses: altacrest/devops_automation/.github/workflows/deploy-argocd.yml@main
+    needs: [vars, build]
+    permissions:
+      contents: write
+    with:
+      ref-slug: ${{ needs.vars.outputs.ref-slug }}
+      short-sha: ${{ needs.vars.outputs.short-sha }}
+      values-path: charts/edge/frontend
+      values-file: values-${{ github.ref_name }}.yaml
+    secrets:
+      ssh-key: ${{ secrets.SSH_KEY }}

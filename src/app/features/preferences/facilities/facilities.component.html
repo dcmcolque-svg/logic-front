@@ -1,0 +1,190 @@
+<p-menu #menuitem [popup]="true" appendTo="body" [model]="menuItems" />
+
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+    <div>
+        <h5 class="text-2xl font-semibold m-0 mb-1">{{ 'pages.facility' | translate }}</h5>
+        <p class="text-surface-500 text-sm m-0">{{ 'preferences.facilities.subtitle' | translate }}</p>
+    </div>
+    <div class="flex gap-2">
+        <p-button
+            icon="pi pi-plus"
+            [label]="'preferences.facilities.new_facility' | translate"
+            (onClick)="openCreateForm()"
+            size="small"
+        />
+        <p-button
+            [label]="'buttons.clear' | translate"
+            icon="pi pi-filter-slash"
+            [outlined]="true"
+            severity="secondary"
+            (onClick)="clearFilters()"
+            size="small"
+        />
+    </div>
+</div>
+
+<!-- ──────── Table ──────── -->
+<div class="preset-table-wrapper">
+    <app-filter-preset-manager
+        [pageKey]="PRESET_PAGE_KEY"
+        [columns]="translatedColumnDefs"
+        [currentFilters]="activeRawFilters"
+        [hasActiveFilters]="activeFilters().length > 0"
+        (presetSelected)="onPresetSelected($event)"
+    />
+<div
+    class="card"
+    [style.border-top]="activePresetColor() ? '3px solid ' + activePresetColor() : null"
+>
+    <base-data-table
+        [columns]="selectedCols"
+        [data]="facilities()"
+        [loading]="loading()"
+        [pagination]="pagination()"
+        [disableMobileView]="false"
+        [initialFilters]="activeRawFilters"
+        [activeFilterChips]="activeFilters()"
+        (stateChange)="onTableStateChange($event)"
+        (chipRemoved)="removeFilterChip($event)"
+    >
+
+
+
+        <!-- Paginator left: column toggle -->
+        <ng-template #paginatorLeft>
+            <div class="flex items-center gap-2">
+                <app-column-toggle
+                    [options]="translatedColumnDefs"
+                    [selected]="selectedCols"
+                    (selectionChange)="onColumnSelectionChange($event)"
+                />
+            </div>
+        </ng-template>
+
+
+        <!-- Custom cell rendering -->
+        <ng-template #cell let-row let-col="col">
+            @switch (col.template) {
+                @case ('account') {
+                    <div class="flex flex-col gap-0.5" style="overflow: hidden">
+                        <div class="font-semibold text-sm"
+                             style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
+                             [pTooltip]="row.name"
+                             tooltipPosition="top">{{ row.name }}</div>
+                        <div class="text-gray-500 text-xs">{{ row.code }}</div>
+                    </div>
+                }
+                @case ('address') {
+                    <div class="flex flex-col gap-1">
+                        @if (row.address?.street || row.address?.reference) {
+                            <div class="w-fit">
+                                <p-chip styleClass="!py-0 !pl-0 !pr-3">
+                                    <span class="bg-surface-300 dark:bg-surface-600 text-surface-700 dark:text-surface-100 rounded-full w-6 h-6 flex items-center justify-center">
+                                        <i class="pi pi-home text-xs"></i>
+                                    </span>
+                                    <span class="ml-2 text-xs font-medium">
+                                        {{ row.address?.reference && row.address?.street
+                                            ? row.address.street + ' · ' + row.address.reference
+                                            : (row.address?.street || row.address?.reference) }}
+                                    </span>
+                                </p-chip>
+                            </div>
+                        }
+                        @if (row.address?.city || row.address?.state_province) {
+                            <div class="w-fit">
+                                <p-chip styleClass="!py-0 !pl-0 !pr-3">
+                                    <span class="bg-surface-300 dark:bg-surface-600 text-surface-700 dark:text-surface-100 rounded-full w-6 h-6 flex items-center justify-center">
+                                        <i class="pi pi-map-marker text-xs"></i>
+                                    </span>
+                                    <span class="ml-2 text-xs font-medium">
+                                        {{ row.address?.city && row.address?.state_province
+                                            ? row.address.city + ' / ' + row.address.state_province
+                                            : (row.address?.city || row.address?.state_province) }}
+                                    </span>
+                                </p-chip>
+                            </div>
+                        }
+                        @if (row.address?.country_code) {
+                            <div class="w-fit">
+                                <p-chip styleClass="!py-0 !pl-0 !pr-3 mt-1">
+                                    <span class="bg-primary text-primary-contrast rounded-full w-6 h-6 flex items-center justify-center">
+                                        <i class="pi pi-globe text-xs"></i>
+                                    </span>
+                                    <span class="ml-2 text-xs font-medium">{{ row.address.country_code }}</span>
+                                </p-chip>
+                            </div>
+                        }
+                    </div>
+                }
+                @case ('xenvio') {
+                    <p-select
+                        [options]="xenvioOptions()"
+                        optionLabel="name"
+                        optionValue="id"
+                        optionDisabled="disabled"
+                        [ngModel]="xenvioByFacility()[row.id] ?? null"
+                        (ngModelChange)="updateFulfillmentLocation(row, $event)"
+                        [placeholder]="'preferences.facilities.select_facility' | translate"
+                        [showClear]="true"
+                        [filter]="xenvioOptions().length > 5"
+                        filterPlaceholder="Search..."
+                        appendTo="body"
+                        class="w-full"
+                        [style]="{ 'min-width': '12rem' }"
+                        [loading]="xenvioLoading()"
+                    >
+                        <ng-template let-option pTemplate="item">
+                            <div class="flex flex-col">
+                                <span class="text-sm font-medium">{{ option.name }}</span>
+                                @if (option.company) {
+                                    <span class="text-xs text-surface-400">{{ option.company }}</span>
+                                }
+                            </div>
+                        </ng-template>
+                        <ng-template let-option pTemplate="selectedItem">
+                            <span class="text-sm">{{ option.name }}</span>
+                        </ng-template>
+                    </p-select>
+                }
+                <!-- TODO: add fulfillment_location, contact_name, contact_title, email, phone, fax cases when backend supports them -->
+            }
+        </ng-template>
+
+        <!-- Row actions -->
+        <ng-template #actions let-row>
+            <p-button
+                icon="pi pi-ellipsis-v"
+                [text]="true"
+                [rounded]="true"
+                size="small"
+                severity="secondary"
+                (click)="onFacilityOptionsClick($event, row, menuitem)"
+            />
+        </ng-template>
+
+        <!-- Custom filter row: text input per filterable column -->
+        <ng-template #filterRow let-columns="columns">
+            <!-- actions col spacer -->
+            <th style="width: 4rem"></th>
+            @for (col of columns; track col.field) {
+                <th class="p-1">
+                    @if (col.filterable) {
+                        <input
+                            #filterInput
+                            pInputText
+                            type="text"
+                            [value]="getActiveFilterValue(col.field) ?? ''"
+                            (keydown.enter)="onColumnFilterChange(col.field, filterInput.value)"
+                            (keydown.escape)="onColumnFilterChange(col.field, ''); filterInput.value = ''"
+                            [placeholder]="col.header | translate"
+                            class="p-inputtext p-inputtext-sm w-full"
+                        />
+                    }
+                </th>
+            }
+        </ng-template>
+    </base-data-table>
+</div>
+</div>
+
+<p-toast />

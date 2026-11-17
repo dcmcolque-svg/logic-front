@@ -1,0 +1,142 @@
+<div class="flex flex-col gap-3 animate-fadein">
+  @for (row of data(); track $index) {
+    <div
+      class="card p-4 border border-surface rounded-border shadow-none"
+    >
+      <!-- Card header: title + actions -->
+      <div class="flex justify-between items-start mb-3">
+        <div>
+          @if (titleColumn(); as tc) {
+            @if (tc.template && cellTemplate()) {
+              <ng-container
+                *ngTemplateOutlet="
+                  cellTemplate()!;
+                  context: { $implicit: row, col: tc }
+                "
+              />
+            } @else {
+              <span class="font-semibold text-lg">
+                {{ getFieldValue(row, tc.field) }}
+              </span>
+            }
+          }
+        </div>
+        @if (actionsTemplate()) {
+          <div class="flex-shrink-0">
+            <ng-container
+              *ngTemplateOutlet="actionsTemplate()!; context: { $implicit: row }"
+            />
+          </div>
+        }
+      </div>
+
+      <!-- Visible fields -->
+      <div class="flex flex-col gap-2">
+        @for (col of mobileColumns(); track col.field) {
+          @if (!col.mobileLabel) {
+            <div class="flex justify-between items-center text-sm">
+              <span class="text-surface-500 dark:text-surface-400">
+                {{ col.header | translate }}
+              </span>
+              <span class="font-medium text-right">
+                @if (col.template && cellTemplate()) {
+                  <ng-container
+                    *ngTemplateOutlet="
+                      cellTemplate()!;
+                      context: { $implicit: row, col: col }
+                    "
+                  />
+                } @else {
+                  {{ getFieldValue(row, col.field) }}
+                }
+              </span>
+            </div>
+          }
+        }
+      </div>
+
+      <!-- Expand button for all fields -->
+      @if (hasHiddenColumns()) {
+        <div class="mt-3 pt-3 border-t border-surface">
+          <p-button
+            [label]="
+              expandedRows.has($index)
+                ? ('labels.show_less' | translate)
+                : ('labels.show_more' | translate)
+            "
+            [text]="true"
+            size="small"
+            [icon]="
+              expandedRows.has($index)
+                ? 'pi pi-chevron-up'
+                : 'pi pi-chevron-down'
+            "
+            (onClick)="toggleExpand($index)"
+          />
+          @if (expandedRows.has($index)) {
+            <div class="flex flex-col gap-2 mt-2 animate-fadein">
+              @for (col of hiddenMobileColumns(); track col.field) {
+                <div class="flex justify-between items-center text-sm">
+                  <span class="text-surface-500 dark:text-surface-400">
+                    {{ col.header | translate }}
+                  </span>
+                  <span class="font-medium text-right">
+                    @if (col.template && cellTemplate()) {
+                      <ng-container
+                        *ngTemplateOutlet="
+                          cellTemplate()!;
+                          context: { $implicit: row, col: col }
+                        "
+                      />
+                    } @else {
+                      {{ getFieldValue(row, col.field) }}
+                    }
+                  </span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Expanded row content (e.g. inline SKUs) -->
+      @if (expandedRowTemplate()) {
+        <div class="mt-3 pt-3 border-t border-surface">
+          <p-button
+            [label]="
+              expandedRowKeys()[row.id]
+                ? ('labels.show_less' | translate)
+                : ('labels.expand_skus' | translate)
+            "
+            [text]="true"
+            size="small"
+            severity="info"
+            [icon]="
+              expandedRowKeys()[row.id]
+                ? 'pi pi-chevron-up'
+                : 'pi pi-chevron-down'
+            "
+            (onClick)="toggleRowExpansion.emit(row)"
+          />
+          @if (expandedRowKeys()[row.id]) {
+            <div class="mt-2 animate-fadein overflow-x-auto -mx-4 px-4">
+              <ng-container
+                *ngTemplateOutlet="
+                  expandedRowTemplate()!;
+                  context: { $implicit: row }
+                "
+              />
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  @if (data().length === 0) {
+    <div class="card p-8 text-center">
+      <i class="pi pi-inbox text-4xl text-surface-400 mb-3"></i>
+      <p class="text-surface-500">{{ 'labels.no_data' | translate }}</p>
+    </div>
+  }
+</div>

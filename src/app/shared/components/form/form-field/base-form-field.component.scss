@@ -1,0 +1,21 @@
+:host {
+  display: block;
+}
+
+/* Consistent spacing between form fields inside a grid */
+:host ::ng-deep {
+  .p-error {
+    font-size: 0.75rem;
+    display: block;
+  }
+
+  /* Red border for invalid dirty inputs */
+  input.ng-invalid.ng-dirty,
+  textarea.ng-invalid.ng-dirty,
+  .ng-invalid.ng-dirty .p-inputtext,
+  .ng-invalid.ng-dirty .p-select,
+  .ng-invalid.ng-dirty .p-multiselect,
+  .ng-invalid.ng-dirty .p-datepicker {
+    border-color: var(--p-red-500, #ef4444) !important;
+  }
+}

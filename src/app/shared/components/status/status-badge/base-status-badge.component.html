@@ -1,0 +1,7 @@
+<p-tag
+  [value]="label() || ((translationKey() | translate) === translationKey() ? displayValue() : (translationKey() | translate))"
+  [severity]="severity()"
+  [rounded]="rounded()"
+  [icon]="icon()"
+  [ngStyle]="customStyle()"
+/>

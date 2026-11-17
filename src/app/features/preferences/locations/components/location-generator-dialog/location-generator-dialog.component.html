@@ -1,0 +1,248 @@
+<base-dialog
+  [visible]="visible()"
+  header="preferences.location.generator_title"
+  size="lg"
+  [loading]="saving()"
+  [saveDisabled]="!generatorForm.valid"
+  saveLabel="preferences.location.generate"
+  saveIcon="pi pi-bolt"
+  (save)="onGenerate()"
+  (hide)="hide.emit()"
+>
+  <div class="grid grid-cols-12 gap-4">
+    <!-- Left column: Facility, Zone, Category, Type -->
+    <div class="col-span-12 md:col-span-6 flex flex-col gap-4">
+      <!-- Facility -->
+      <base-form-field
+        type="dropdown"
+        label="labels.facility"
+        [control]="generatorForm.controls.facility_id"
+        [options]="facilityOptions"
+        optionLabel="label"
+        optionValue="value"
+        [required]="true"
+      />
+
+      <!-- Zone with inline add (disabled until facility selected) -->
+      <div class="flex flex-col gap-1">
+        <div class="flex items-end gap-2">
+          <div class="flex-1">
+            <base-form-field
+              type="dropdown"
+              label="preferences.location.zone"
+              [control]="generatorForm.controls.zone_id"
+              [options]="zoneOptions"
+              optionLabel="label"
+              optionValue="value"
+            />
+          </div>
+          <p-button
+            icon="pi pi-plus"
+            [outlined]="true"
+            severity="secondary"
+            (onClick)="toggleZoneForm()"
+            [disabled]="isZoneDisabled"
+            [style]="{ 'min-width': '2.5rem', height: '2.5rem' }"
+          />
+        </div>
+
+        <!-- Inline zone creation panel -->
+        @if (showZoneForm) {
+          <div
+            class="p-3 mt-1 rounded-lg border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800"
+          >
+            <div class="grid grid-cols-2 gap-3 mb-3">
+              <div class="flex flex-col gap-1">
+                <label for="loc-gen-zone-name" class="text-sm font-semibold">
+                  {{ 'preferences.location.zone_name' | translate }}
+                  <span class="text-red-500">*</span>
+                </label>
+                <input
+                  id="loc-gen-zone-name"
+                  pInputText
+                  [formControl]="zoneForm.controls.zone_name"
+                  [placeholder]="
+                    'preferences.location.zone_name_placeholder' | translate
+                  "
+                  class="w-full"
+                />
+              </div>
+              <div class="flex flex-col gap-1">
+                <label for="loc-gen-zone-description" class="text-sm font-semibold">
+                  {{ 'preferences.location.zone_description' | translate }}
+                </label>
+                <input
+                  id="loc-gen-zone-description"
+                  pInputText
+                  [formControl]="zoneForm.controls.zone_type"
+                  [placeholder]="
+                    'preferences.location.zone_description_placeholder'
+                      | translate
+                  "
+                  class="w-full"
+                />
+              </div>
+            </div>
+            <div class="flex justify-end gap-2">
+              <p-button
+                [label]="'buttons.cancel' | translate"
+                severity="secondary"
+                [text]="true"
+                size="small"
+                (onClick)="cancelZoneForm()"
+              />
+              <p-button
+                [label]="'buttons.save' | translate"
+                size="small"
+                [disabled]="!zoneForm.valid"
+                [loading]="savingZone()"
+                (onClick)="saveZone()"
+              />
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Category -->
+      <base-form-field
+        type="dropdown"
+        label="preferences.location.category"
+        [control]="generatorForm.controls.operational_category_code"
+        [options]="opCategoryOptions"
+        optionLabel="label"
+        optionValue="value"
+        [required]="true"
+      />
+
+      <!-- Type / Profile -->
+      <base-form-field
+        type="dropdown"
+        label="preferences.location.type"
+        [control]="generatorForm.controls.location_profile_code"
+        [options]="profileOptions"
+        optionLabel="label"
+        optionValue="value"
+        [required]="true"
+      />
+    </div>
+
+    <!-- Right column: Area, Row range, Bay range, Level range -->
+    <div class="col-span-12 md:col-span-6 flex flex-col gap-4">
+      <!-- Area -->
+      <base-form-field
+        type="text"
+        label="labels.area"
+        [control]="generatorForm.controls.aisle"
+        [required]="true"
+      />
+
+      <!-- Row Min / Row Max -->
+      <div class="grid grid-cols-2 gap-3">
+        <base-form-field
+          type="number"
+          label="labels.row_min"
+          [control]="generatorForm.controls.section_start"
+          [required]="true"
+          [showButtons]="true"
+          [min]="1"
+        />
+        <base-form-field
+          type="number"
+          label="labels.row_max"
+          [control]="generatorForm.controls.section_end"
+          [required]="true"
+          [showButtons]="true"
+          [min]="1"
+        />
+      </div>
+
+      <!-- Bay Min / Bay Max -->
+      <div class="grid grid-cols-2 gap-3">
+        <base-form-field
+          type="number"
+          label="labels.bay_min"
+          [control]="generatorForm.controls.bay_start"
+          [required]="true"
+          [showButtons]="true"
+          [min]="1"
+        />
+        <base-form-field
+          type="number"
+          label="labels.bay_max"
+          [control]="generatorForm.controls.bay_end"
+          [required]="true"
+          [showButtons]="true"
+          [min]="1"
+        />
+      </div>
+
+      <!-- Level Min / Level Max -->
+      <div class="grid grid-cols-2 gap-3">
+        <base-form-field
+          type="dropdown"
+          label="labels.level_min"
+          [control]="generatorForm.controls.level_start"
+          [options]="levelOptions"
+          optionLabel="label"
+          optionValue="value"
+          [required]="true"
+        />
+        <base-form-field
+          type="dropdown"
+          label="labels.level_max"
+          [control]="generatorForm.controls.level_end"
+          [options]="levelOptions"
+          optionLabel="label"
+          optionValue="value"
+          [required]="true"
+        />
+      </div>
+
+      <!-- Bulk Creation Summary -->
+      <div
+        class="p-4 rounded-lg border border-primary/20 bg-primary/5"
+      >
+        <div class="flex items-center gap-2 mb-3">
+          <i class="pi pi-info-circle text-primary"></i>
+          <span class="font-semibold text-sm">
+            {{ 'preferences.location.bulk_creation_summary' | translate }}
+          </span>
+        </div>
+        <div class="grid grid-cols-4 gap-3 text-sm">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-primary">
+              {{ getTotalCount() }}
+            </div>
+            <div class="text-surface-500">
+              {{ 'preferences.location.total' | translate }}
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-primary">
+              {{ getSectionRange() }}
+            </div>
+            <div class="text-surface-500">
+              {{ 'labels.rows' | translate }} ({{ getSectionRange() }})
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-primary">
+              {{ getBayRange() }}
+            </div>
+            <div class="text-surface-500">
+              {{ 'preferences.location.bays' | translate }} ({{ getBayRange() }})
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-primary">
+              {{ getLevelRange() }}
+            </div>
+            <div class="text-surface-500">
+              {{ 'preferences.location.levels' | translate }} ({{ getLevelRange() }})
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</base-dialog>

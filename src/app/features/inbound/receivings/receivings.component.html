@@ -1,0 +1,269 @@
+<p-confirmDialog appendTo="body" acceptButtonStyleClass="p-button-text" rejectButtonStyleClass="p-button-text" />
+<p-menu #rowMenu [popup]="true" appendTo="body" [model]="rowMenuItems" />
+
+<!-- ──────── Header ──────── -->
+<div class="flex justify-between items-start mb-4">
+    <div>
+        <h2 class="text-2xl font-bold m-0 mb-1">{{ 'pages.receivings' | translate }}</h2>
+        <p class="text-surface-400 text-sm m-0">{{ 'labels.receivings_description' | translate }}</p>
+    </div>
+    <div class="flex gap-2">
+        @if (selected().length > 0) {
+            <p-button
+                [label]="'labels.selected' | translate | titlecase"
+                [badge]="selected().length.toString()"
+                badgeSeverity="warn"
+                icon="pi pi-bolt"
+                severity="secondary"
+                [outlined]="true"
+                size="small"
+                (onClick)="onBulkActionsClick($event)"
+            />
+        }
+        <p-button
+            [label]="'buttons.clear' | translate"
+            icon="pi pi-filter-slash"
+            [outlined]="true"
+            severity="secondary"
+            size="small"
+            (onClick)="clearFilters()"
+        />
+        <p-button
+            [label]="'inbound.new_receiving' | translate"
+            icon="pi pi-plus"
+            size="small"
+            (onClick)="openCreate()"
+        />
+        <base-import-export-menu
+            filename="receivings"
+            [columns]="selectedCols"
+            [fetchPage]="fetchExportPage"
+            [sheetName]="'pages.receivings' | translate"
+            [showImport]="true"
+            (importFile)="openImport($event)"
+            (viewLogs)="goToUploadLogs()"
+        />
+    </div>
+</div>
+
+<!-- ──────── Table ──────── -->
+<div class="preset-table-wrapper">
+    <app-filter-preset-manager
+        [pageKey]="PRESET_PAGE_KEY"
+        [columns]="translatedColumnDefs"
+        [currentFilters]="activeRawFilters"
+        [hasActiveFilters]="activeFilters().length > 0"
+        (presetSelected)="onPresetSelected($event)"
+    />
+<div
+    class="card"
+    [style.border-top]="activePresetColor() ? '3px solid ' + activePresetColor() : null"
+>
+    <base-data-table
+        [columns]="selectedCols"
+        [data]="receivings()"
+        [loading]="loading()"
+        [pagination]="pagination()"
+        [selectable]="true"
+        [rowSelectable]="isRowSelectable"
+        [bulkActions]="bulkActions"
+        [initialFilters]="activeRawFilters"
+        (stateChange)="onTableStateChange($event)"
+        (selectionChange)="onSelectionChange($event)"
+        (chipRemoved)="removeFilterChip($event)"
+    >
+        <!-- Toolbar: active filter chips (top-right) -->
+        <ng-template #toolbar>
+            @if (activeFilters().length > 0) {
+                <div class="flex flex-wrap items-center justify-end gap-2">
+                    <i class="pi pi-filter text-surface-500"></i>
+                    @for (chip of activeFilters(); track chip.field) {
+                        <p-chip
+                            [label]="chip.label + ': ' + chip.displayValue"
+                            [removable]="true"
+                            (onRemove)="removeFilterChip(chip.field)"
+                            styleClass="font-medium bg-surface-200 dark:bg-surface-700 text-surface-700 dark:text-surface-0 text-sm"
+                        />
+                    }
+                </div>
+            }
+        </ng-template>
+
+        <!-- Paginator left: column toggle (bottom-left) -->
+        <ng-template #paginatorLeft>
+            <div class="flex items-center gap-2">
+                <p-multiSelect
+                    #colMs
+                    [options]="translatedColumnDefs"
+                    [ngModel]="selectedCols"
+                    (ngModelChange)="onColumnSelectionChange($event)"
+                    optionLabel="translatedHeader"
+                    [placeholder]="'labels.choose_columns' | translate"
+                    [selectedItemsLabel]="selectedCols.length + ' ' + ('labels.columns_selected' | translate)"
+                    [maxSelectedLabels]="0"
+                    size="small"
+                    appendTo="body"
+                >
+                    <ng-template let-col pTemplate="item">
+                        {{ col.translatedHeader }}
+                    </ng-template>
+                </p-multiSelect>
+            </div>
+        </ng-template>
+
+        <!-- Custom cell rendering -->
+        <ng-template #cell let-row let-col="col">
+            @switch (col.template) {
+                @case ('status') {
+                    <base-status-badge [value]="row.status" [statusMap]="statusMap" />
+                }
+                @case ('facility') {
+                    <div class="text-sm font-medium">{{ col.exportValue?.(row) }}</div>
+                }
+                @case ('shipment') {
+                    <div class="font-medium text-sm">{{ row.doc_number || '—' }}</div>
+                }
+                @case ('doc_number') {
+                    <div class="font-medium text-sm">{{ row.doc_number || '—' }}</div>
+                }
+                @case ('tracking') {
+                    @if (row.external_ref) {
+                        <span class="text-sm">
+                            <i class="pi pi-link mr-1 text-surface-400 text-xs"></i>{{ row.external_ref }}
+                        </span>
+                    } @else {
+                        <span class="text-surface-400 text-sm">—</span>
+                    }
+                }
+                @case ('expected_arrival') {
+                    @if (row.expected_arrival) {
+                        <div class="flex flex-col text-nowrap">
+                            <span class="text-surface-400">{{ row.expected_arrival | date:'yyyy-MM-dd':'UTC' }}</span>
+                        </div>
+                    } @else {
+                        <span class="text-surface-400 text-sm">—</span>
+                    }
+                }
+                @case ('delivery_date') {
+                    @if (row.finished_at) {
+                        <div class="flex flex-col text-nowrap">
+                            <span class="text-surface-400">{{ row.finished_at | date:'yyyy-MM-dd' }}</span>
+                            <span class="text-primary text-sm">{{ row.finished_at | date:'HH:mm' }}</span>
+                        </div>
+                    } @else {
+                        <span class="text-surface-400 text-sm">—</span>
+                    }
+                }
+                @case ('expected_qty') {
+                    <span class="text-sm font-semibold">{{ row.qty_expected_sum }}</span>
+                }
+                @case ('received_qty') {
+                    <span class="text-sm font-semibold">{{ row.qty_received_sum }}</span>
+                }
+            }
+        </ng-template>
+
+        <!-- Row actions -->
+        <ng-template #actions let-row>
+            <p-button
+                icon="pi pi-ellipsis-v"
+                [text]="true"
+                [rounded]="true"
+                size="small"
+                severity="secondary"
+                [pTooltip]="actionsTooltip"
+                tooltipPosition="top"
+                (onClick)="openRowMenu($event, row)"
+            />
+        </ng-template>
+
+        <!-- Custom filter row -->
+        <ng-template #filterRow let-columns="columns">
+            <!-- actions col spacer (width: 4rem) -->
+            <th style="width: 4rem"></th>
+            <!-- checkbox col spacer (width: 3rem, selectable=true) -->
+            <th style="width: 3rem"></th>
+            @for (col of columns; track col.field) {
+                @switch (col.field) {
+
+                    @case ('facility_id') {
+                        <th class="p-1" [style.width]="col.width">
+                            <shipedge-filter-multiselect-panel
+                                [options]="facilityFilterOptions()"
+                                optionLabel="name"
+                                optionValue="id"
+                                [placeholder]="'labels.facility' | translate"
+                                [showFilter]="true"
+                                [value]="facilityFilter()"
+                                (apply)="onMultiselectApply('facility_id', $event)"
+                                (clear)="onMultiselectClear('facility_id')"
+                            />
+                        </th>
+                    }
+
+                    @case ('status') {
+                        <th class="p-1" [style.width]="col.width">
+                            @if (translatedFilterOptionsMap[col.field]) {
+                                <shipedge-filter-multiselect-panel
+                                    [options]="translatedFilterOptionsMap['status']"
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    [placeholder]="'labels.status' | translate"
+                                    [showFilter]="true"
+                                    [value]="getActiveFilterValue('status') ?? []"
+                                    (apply)="onMultiselectApply('status', $event)"
+                                    (clear)="onMultiselectClear('status')"
+                                />
+                            }
+                        </th>
+                    }
+
+                    @default {
+                        <th class="p-1" [style.width]="col.width">
+                            @if (col.filterable && col.filterType === 'text') {
+                                <shipedge-filter-text-input
+                                    [value]="getActiveFilterValue(col.field)"
+                                    [placeholder]="col.translatedHeader || (col.header | translate)"
+                                    [filterType]="col.filterType || 'text'"
+                                    (applyWithMode)="onColumnFilterChange(col.field, $event?.value ?? $event)"
+                                />
+                            }
+                            @if (col.filterable && col.filterType === 'date') {
+                                <shipedge-filter-date-input
+                                    [value]="getActiveFilterValue(col.field)"
+                                    [matchMode]="getActiveFilterMatchMode(col.field)"
+                                    [placeholder]="col.translatedHeader || (col.header | translate)"
+                                    (applyWithMode)="onColumnFilterChange(col.field, $event)"
+                                />
+                            }
+                        </th>
+                    }
+
+                }
+            }
+        </ng-template>
+    </base-data-table>
+</div>
+</div>
+
+<p-toast />
+
+<base-import-dialog
+    module="receivings"
+    [format]="importFormat()"
+    [visible]="showImportDialog()"
+    (visibleChange)="showImportDialog.set($event)"
+    [facilities]="facilities()"
+    [companies]="companies()"
+    (imported)="onImported($event)"
+    (viewLog)="goToUploadLogs($event)"
+/>
+
+<app-receiving-form-dialog
+    [visible]="showCreateDialog()"
+    [facilities]="createFacilities()"
+    [companies]="companies()"
+    [receiving]="editingReceiving()"
+    (hide)="closeFormDialog()"
+    (saved)="onSaved($event)"
+/>

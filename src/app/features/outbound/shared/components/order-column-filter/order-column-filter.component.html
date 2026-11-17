@@ -1,0 +1,43 @@
+@if (filter(); as f) {
+  @switch (f.kind) {
+    @case ('text') {
+      <shipedge-filter-text-input
+        [value]="list.getActiveFilterValue(field())"
+        [matchMode]="list.getActiveFilterMatchMode(field())"
+        [placeholder]="f.placeholder | translate"
+        (applyWithMode)="list.onColumnFilterChange(field(), $event)"
+      />
+    }
+    @case ('numeric') {
+      <shipedge-filter-text-input
+        filterType="numeric"
+        [value]="list.getActiveFilterValue(field())"
+        [matchMode]="list.getActiveFilterMatchMode(field())"
+        [placeholder]="f.placeholder | translate"
+        (applyWithMode)="list.onColumnFilterChange(field(), $event)"
+      />
+    }
+    @case ('date') {
+      <shipedge-filter-date-input
+        [value]="list.getActiveFilterValue(field())"
+        [matchMode]="list.getActiveFilterMatchMode(field())"
+        [placeholder]="f.placeholder | translate"
+        (applyWithMode)="list.onColumnFilterChange(field(), $event)"
+      />
+    }
+    @case ('multiselect') {
+      @if (multiselect(); as m) {
+        <shipedge-filter-multiselect-panel
+          [options]="m.options()"
+          [optionLabel]="m.optionLabel"
+          [optionValue]="m.optionValue"
+          [placeholder]="m.placeholder | translate"
+          [showFilter]="m.showFilter()"
+          [value]="m.selected()"
+          (apply)="list.onMultiselectApply(field(), $event)"
+          (clear)="list.onMultiselectClear(field())"
+        />
+      }
+    }
+  }
+}

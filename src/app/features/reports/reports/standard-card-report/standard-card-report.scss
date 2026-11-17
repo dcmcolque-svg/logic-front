@@ -1,0 +1,60 @@
+:host {
+  display: block;
+}
+
+// ── Card shell (matches dashboard metric-card) ─────────────────
+
+.standard-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 14rem;
+  max-width: 24rem;
+  padding: 0.9rem 1rem;
+  border-radius: 0.6rem;
+  background: var(--surface-ground);
+  border: 1px solid var(--surface-border);
+  cursor: pointer;
+}
+
+// ── Icon bubble (matches dashboard metric-card__icon) ───────────
+
+.card-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+
+  i {
+    font-size: 1.15rem;
+  }
+}
+
+// ── Text block ──────────────────────────────────────────────────
+
+.card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.card-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-subtitle {
+  font-size: 0.72rem;
+  color: var(--text-color-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

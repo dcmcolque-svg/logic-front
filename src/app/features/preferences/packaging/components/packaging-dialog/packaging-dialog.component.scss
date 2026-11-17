@@ -1,0 +1,25 @@
+:host {
+    display: block;
+
+    // Remove blue outline from p-inputNumber — use standard surface borders
+    ::ng-deep p-inputnumber {
+        .p-inputnumber-input {
+            border-color: var(--p-surface-300);
+
+            &:focus {
+                border-color: var(--p-surface-400);
+                box-shadow: none;
+            }
+        }
+
+        .p-inputnumber-button {
+            border-color: var(--p-surface-300);
+            background: var(--p-surface-100);
+            color: var(--p-surface-600);
+
+            &:hover {
+                background: var(--p-surface-200);
+            }
+        }
+    }
+}

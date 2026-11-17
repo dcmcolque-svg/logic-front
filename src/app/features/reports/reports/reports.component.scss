@@ -1,0 +1,136 @@
+:host {
+  display: block;
+}
+
+// ================================================================
+// Reports Page — Styles
+// Matches the Dashboard design system
+// ================================================================
+
+.reports-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+// ── Header (mirrors dashboard-header) ───────────────────────────
+
+.reports-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+
+    i {
+      font-size: 1.4rem;
+      color: var(--primary-color);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-color);
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: var(--text-color-secondary);
+    }
+  }
+
+  &__controls {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+}
+
+// ── Loading overlay ─────────────────────────────────────────────
+
+.reports-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 12rem;
+}
+
+// ── Category section (panel style like dashboard) ───────────────
+
+.category-section {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.category-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-color);
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+.category-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
+  margin: 0;
+  margin-left: 0.5rem;
+}
+
+// ── Cards grid ──────────────────────────────────────────────────
+
+.cards-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+// ── Custom / empty state ────────────────────────────────────────
+
+.custom-section {
+  margin-top: 0;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 2rem 1rem;
+  color: var(--text-color-secondary);
+  background: var(--surface-ground);
+  border: 1px solid var(--surface-border);
+  border-radius: 0.6rem;
+  min-height: 6rem;
+
+  i {
+    font-size: 2.2rem;
+    opacity: 0.45;
+  }
+
+  p {
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin: 0;
+  }
+}

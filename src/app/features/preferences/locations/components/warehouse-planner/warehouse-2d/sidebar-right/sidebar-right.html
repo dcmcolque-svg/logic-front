@@ -1,0 +1,304 @@
+<!-- =====================================================
+     RIGHT SIDEBAR – 2D Warehouse Planner
+     Tabs: Generate · List
+====================================================== -->
+
+<!-- ── Header ──────────────────────────────────────── -->
+<div class="sidebar-handle">
+  <span>⠿ TOOLS ⠿</span>
+</div>
+
+<div class="sidebar-body">
+
+  <!-- ── Tab Row ──────────────────────────────────── -->
+  <div class="tab-row">
+    @for (tab of tabs; track tab.id) {
+      <p-button size="small"
+        [text]="!state.isPanelOpen(tab.id)"
+        [outlined]="state.isPanelOpen(tab.id)"
+        severity="primary"
+        styleClass="tab-btn"
+        (onClick)="switchTab(tab.id)">
+        {{ tab.label }}
+      </p-button>
+    }
+  </div>
+
+
+  <!-- ====================================================
+       GENERATE TAB
+  ===================================================== -->
+  @if (state.isPanelOpen('generate')) {
+    <form (submit)="onGenerate($event)">
+
+      <!-- Area + Zone -->
+      <div class="row-2 mb-12">
+        <div>
+          <label class="field-label" for="sr-gen-area">Area</label>
+          <input id="sr-gen-area" pInputText class="input input-mono w-full" maxlength="2" placeholder="AA"
+            [(ngModel)]="genArea" name="genArea"
+            (input)="genArea = sanitizeArea(genArea); onGenAreaChange(genArea)" />
+        </div>
+        <div>
+          <label class="field-label" for="sr-gen-zone">Zone</label>
+          <p-select inputId="sr-gen-zone" styleClass="w-full"
+            [options]="zoneOptions()"
+            optionLabel="label" optionValue="value"
+            [(ngModel)]="genZone" name="genZone" />
+        </div>
+      </div>
+
+      <!-- Orientation -->
+      <div class="field mb-12">
+        <label class="field-label" for="sr-gen-orientation">Orientation</label>
+        <p-select inputId="sr-gen-orientation" styleClass="w-full"
+          [options]="orientationOptions"
+          optionLabel="label" optionValue="value"
+          [(ngModel)]="genOrientation" name="genOrientation" />
+      </div>
+
+      <!-- Row / Col range -->
+      <div class="row-2 mb-12">
+        <div>
+          <label class="field-label" for="sr-gen-row-first">Row First</label>
+          <p-inputnumber inputId="sr-gen-row-first" [showButtons]="false" [min]="1" [(ngModel)]="genRInit" name="rInit"
+            (ngModelChange)="genREnd < genRInit ? genREnd = genRInit : null"
+            styleClass="w-full" inputStyleClass="w-full input" />
+        </div>
+        <div>
+          <label class="field-label" for="sr-gen-row-last">Row Last</label>
+          <p-inputnumber inputId="sr-gen-row-last" [showButtons]="false" [min]="genRInit" [(ngModel)]="genREnd" name="rEnd"
+            styleClass="w-full" inputStyleClass="w-full input" />
+        </div>
+        <div>
+          <label class="field-label" for="sr-gen-col-first">Col First</label>
+          <p-inputnumber inputId="sr-gen-col-first" [showButtons]="false" [min]="1" [(ngModel)]="genBInit" name="bInit"
+            (ngModelChange)="genBEnd < genBInit ? genBEnd = genBInit : null"
+            styleClass="w-full" inputStyleClass="w-full input" />
+        </div>
+        <div>
+          <label class="field-label" for="sr-gen-col-last">Col Last</label>
+          <p-inputnumber inputId="sr-gen-col-last" [showButtons]="false" [min]="genBInit" [(ngModel)]="genBEnd" name="bEnd"
+            styleClass="w-full" inputStyleClass="w-full input" />
+        </div>
+      </div>
+
+      <!-- Level range -->
+      <div class="row-2 mb-12">
+        <div>
+          <label class="field-label" for="sr-gen-level-first">Level First</label>
+          <p-select inputId="sr-gen-level-first" styleClass="w-full"
+            [options]="levelLetterOptions"
+            optionLabel="label" optionValue="value"
+            [(ngModel)]="genLevelStart" name="genLevelStart" />
+        </div>
+        <div>
+          <label class="field-label" for="sr-gen-level-last">Level Last</label>
+          <p-select inputId="sr-gen-level-last" styleClass="w-full"
+            [options]="levelLetterOptions"
+            optionLabel="label" optionValue="value"
+            [(ngModel)]="genLevelEnd" name="genLevelEnd" />
+        </div>
+      </div>
+
+      <!-- Category / Type -->
+      <div class="row-2 mb-12">
+        <div>
+          <label class="field-label" for="sr-gen-category">Category</label>
+          <p-select inputId="sr-gen-category" styleClass="w-full" [options]="bayCategories()"
+            [(ngModel)]="genCategory" name="genCategory" />
+        </div>
+        <div>
+          <label class="field-label" for="sr-gen-type">Storage Type</label>
+          <p-select inputId="sr-gen-type" styleClass="w-full" [options]="bayTypes()"
+            optionLabel="label" optionValue="value"
+            [(ngModel)]="genType" name="genType" />
+        </div>
+      </div>
+
+      <!-- Auto-Hallways -->
+      <div class="gen-card mb-12">
+        <p class="gen-card-title">🚶 Auto-Hallways</p>
+        <div class="row-2">
+          <div>
+            <label class="field-label-sm" for="sr-gen-hallway-every">
+              Cols per block
+              <span class="muted-xs">(0 = off)</span>
+            </label>
+            <p-inputnumber inputId="sr-gen-hallway-every" [min]="0" [max]="50" [showButtons]="false"
+              name="hallwayEvery"
+              [ngModel]="state.hallwayEvery()"
+              (ngModelChange)="state.hallwayEvery.set($event)"
+              styleClass="w-full" inputStyleClass="w-full input" />
+          </div>
+          <div>
+            <label class="field-label-sm" for="sr-gen-hallway-width">Hallway width</label>
+            <p-inputnumber inputId="sr-gen-hallway-width" [min]="1" [max]="10" [showButtons]="false"
+              name="hallwayWidth"
+              [ngModel]="state.hallwayWidth()"
+              (ngModelChange)="state.hallwayWidth.set($event)"
+              styleClass="w-full" inputStyleClass="w-full input" />
+          </div>
+        </div>
+        @if (state.hallwayEvery() === 0) {
+          <p class="hint hint-warn center">Hallways disabled</p>
+        } @else {
+          <p class="hint center">
+            Hallway of {{ state.hallwayWidth() }} cell(s) every {{ state.hallwayEvery() }} col(s)
+          </p>
+        }
+      </div>
+
+      <!-- Counting Direction -->
+      <div class="gen-card mb-12">
+        <p class="gen-card-title">↔ Counting Direction</p>
+        <div class="row-2">
+          <div>
+            <span class="field-label-sm" id="sr-gen-col-dir-label">Columns (X)</span>
+            <fieldset class="btn-pair" aria-labelledby="sr-gen-col-dir-label">
+              <p-button type="button" size="small" styleClass="flex-1"
+                [outlined]="genColDir === 'ltr'"
+                [text]="genColDir !== 'ltr'"
+                severity="primary"
+                pTooltip="Bay 1 on the left"
+                (onClick)="genColDir = 'ltr'">1 →</p-button>
+              <p-button type="button" size="small" styleClass="flex-1"
+                [outlined]="genColDir === 'rtl'"
+                [text]="genColDir !== 'rtl'"
+                severity="primary"
+                pTooltip="Bay 1 on the right"
+                (onClick)="genColDir = 'rtl'">← 1</p-button>
+            </fieldset>
+          </div>
+          <div>
+            <span class="field-label-sm" id="sr-gen-row-dir-label">Rows (Y)</span>
+            <fieldset class="btn-pair" aria-labelledby="sr-gen-row-dir-label">
+              <p-button type="button" size="small" styleClass="flex-1"
+                [outlined]="genRowDir === 'ttb'"
+                [text]="genRowDir !== 'ttb'"
+                severity="primary"
+                pTooltip="Row 1 at top"
+                (onClick)="genRowDir = 'ttb'">↓ 1</p-button>
+              <p-button type="button" size="small" styleClass="flex-1"
+                [outlined]="genRowDir === 'btt'"
+                [text]="genRowDir !== 'btt'"
+                severity="primary"
+                pTooltip="Row 1 at bottom"
+                (onClick)="genRowDir = 'btt'">1 ↑</p-button>
+            </fieldset>
+          </div>
+        </div>
+        <p class="hint center">
+          Col {{ genColDir === 'ltr' ? '← 1→max' : '← max→1' }}
+          &nbsp;|&nbsp;
+          Row {{ genRowDir === 'ttb' ? '↓ 1→max' : '↑ 1→max' }}
+        </p>
+      </div>
+
+      <p-button type="submit" styleClass="w-full btn-generate" severity="success">
+        Generate List
+      </p-button>
+    </form>
+  }<!-- /generate tab -->
+
+
+  <!-- ====================================================
+       LIST TAB
+  ===================================================== -->
+  @if (state.isPanelOpen('list')) {
+
+    <!-- Create folder -->
+    <div class="section">
+      <p-button id="btn-create-folder-right" styleClass="w-full" severity="secondary" size="small"
+        (onClick)="state.addFolder()">
+        + Create Folder
+      </p-button>
+    </div>
+
+    <!-- Assign to folder -->
+    <div class="field section">
+      <label class="field-label" for="folder-select-right-input">Add Selected to Folder</label>
+      <div class="input-action-row">
+        <p-select id="folder-select-right" inputId="folder-select-right-input" styleClass="flex-1"
+          [options]="folderOptions()"
+          optionLabel="label" optionValue="value"
+          [(ngModel)]="selectedFolderId" />
+        <p-button id="btn-add-to-folder-right" size="small" severity="success"
+          (onClick)="addToFolder()">Add</p-button>
+      </div>
+    </div>
+
+    <!-- List -->
+    <div class="outliner-scroll">
+      <ul class="outliner-list">
+
+        <!-- ── Folders ──────────────────────────────── -->
+        @for (folder of state.folders(); track folder.id) {
+          <li class="folder-item">
+            <div class="folder-header" tabindex="0"
+              (click)="state.toggleFolderCollapse(folder.id)"
+              (keydown.enter)="state.toggleFolderCollapse(folder.id)">
+              <span class="collapse-icon">{{ folder.collapsed ? '▶' : '▼' }}</span>
+              <span class="folder-icon">📁</span>
+              <span class="folder-name" contenteditable="true"
+                (click)="$event.stopPropagation()"
+                (keydown.enter)="$event.stopPropagation()"
+                (blur)="renameFolder(folder.id, $event)">{{ folder.name }}</span>
+              <button type="button" class="remove-btn" aria-label="Remove folder"
+                (click)="$event.stopPropagation(); state.removeFolder(folder.id)"
+                (keydown.enter)="$event.stopPropagation()">×</button>
+            </div>
+
+            @if (!folder.collapsed) {
+              <ul class="folder-items">
+                @for (item of getFolderItems(folder.id); track item.id) {
+                  <li class="outliner-item" tabindex="0"
+                    [class.outliner-item-selected]="item.selected"
+                    (click)="onListItemClick($event, item.id)"
+                    (keydown.enter)="onListItemClick($event, item.id)">
+                    <ng-container *ngTemplateOutlet="outlinerItemContent; context: { $implicit: item }" />
+                  </li>
+                }
+                @if (getFolderItems(folder.id).length === 0) {
+                  <li class="empty-folder">Empty folder</li>
+                }
+              </ul>
+            }
+          </li>
+        }
+
+        <!-- ── Unassigned section header ────────────── -->
+        @if (getUnassignedItems().length > 0 && state.folders().length > 0) {
+          <li class="unassigned-label">Unassigned</li>
+        }
+
+        <!-- ── Unassigned items ──────────────────────── -->
+        @for (item of getUnassignedItems(); track item.id) {
+          <li class="outliner-item outliner-item-unassigned" tabindex="0"
+            [class.outliner-item-selected]="item.selected"
+            (click)="onListItemClick($event, item.id)"
+            (keydown.enter)="onListItemClick($event, item.id)">
+            <ng-container *ngTemplateOutlet="outlinerItemContent; context: { $implicit: item }" />
+          </li>
+        }
+
+      </ul>
+    </div>
+  }<!-- /list tab -->
+
+</div><!-- /sidebar-body -->
+
+<!-- Shared outliner row content (folder items + unassigned items) -->
+<ng-template #outlinerItemContent let-item>
+  <span class="level-tag">[L{{ item.level }}]</span>
+  <span class="type-tag">{{ item.type }}</span>
+  @if (item.type === 'Loc') {
+    <span class="loc-code" contenteditable="true" spellcheck="false"
+      (click)="$event.stopPropagation()"
+      (keydown.enter)="$event.preventDefault(); $event.stopPropagation(); blurTarget($event)"
+      (blur)="renameBayCode(item.id, $event)"
+      title="Click to edit location code">{{ item.name }}</span>
+  } @else {
+    <span class="item-name">{{ item.name }}</span>
+  }
+</ng-template>

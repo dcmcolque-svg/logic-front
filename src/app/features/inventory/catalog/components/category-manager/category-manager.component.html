@@ -1,0 +1,166 @@
+<section [attr.aria-label]="'catalog.category.title' | translate">
+  <div class="mb-4">
+    <div class="flex items-center gap-2">
+      <i class="pi pi-tags text-primary" aria-hidden="true"></i>
+      <h3 class="m-0 text-base font-semibold text-primary">{{ 'catalog.category.title' | translate }}</h3>
+    </div>
+    <p class="text-muted-color text-sm mt-2 mb-0 leading-relaxed">
+      {{ 'catalog.category.subtitle' | translate }}
+    </p>
+  </div>
+
+  <!-- Create / edit form -->
+  @if (!formOpen()) {
+    <div class="flex justify-end mb-4">
+      <p-button
+        [label]="'catalog.category.create' | translate"
+        icon="pi pi-plus"
+        [outlined]="true"
+        (onClick)="create()"
+      />
+    </div>
+  } @else {
+    <div class="category-reveal mb-4" (animationend)="focusForm($event)">
+      <div class="category-reveal__content">
+        <div class="rounded-xl border border-surface-200 dark:border-surface-700 p-4">
+          <strong>{{ (editingId ? 'catalog.category.edit' : 'catalog.category.create') | translate }}</strong>
+          <!-- placeholder=" ": the global filled-border rule (assets/styles.scss) relies on
+               :placeholder-shown, so inputs without one look filled while empty -->
+          <div class="grid sm:grid-cols-2 gap-4 mt-4">
+            <label class="flex flex-col gap-2" for="category-name">
+              {{ 'labels.name' | translate }} *
+              <input pInputText id="category-name" [(ngModel)]="name" maxlength="100" placeholder=" " (keydown.enter)="save()" />
+            </label>
+            <label class="flex flex-col gap-2" for="category-description">
+              {{ 'catalog.category.description_optional' | translate }}
+              <input pInputText id="category-description" [(ngModel)]="description" maxlength="255" placeholder=" " (keydown.enter)="save()" />
+            </label>
+          </div>
+          <div class="flex flex-wrap justify-end gap-2 mt-4">
+            <p-button
+              [label]="'buttons.cancel' | translate"
+              icon="pi pi-times"
+              severity="secondary"
+              [outlined]="true"
+              (onClick)="clear()"
+            />
+            <p-button
+              [label]="(editingId ? 'buttons.save_changes' : 'catalog.category.create') | translate"
+              icon="pi pi-check"
+              [disabled]="!name.trim()"
+              [loading]="saving()"
+              (onClick)="save()"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (error()) {
+    <p role="alert" class="text-red-600 dark:text-red-400 mt-0 mb-4 leading-relaxed">{{ error() }}</p>
+  }
+
+  <label class="sr-only" for="category-search">{{ 'catalog.category.search' | translate }}</label>
+  <input
+    pInputText
+    id="category-search"
+    class="w-full mb-4"
+    [placeholder]="'catalog.category.search' | translate"
+    [ngModel]="query()"
+    (ngModelChange)="query.set($event)"
+  />
+
+  <!-- List -->
+  <section
+    class="max-h-60 overflow-y-auto overscroll-contain rounded-xl border border-surface-200 dark:border-surface-700 px-4"
+    style="scrollbar-gutter: stable"
+    [attr.aria-label]="'catalog.categories' | translate"
+    [attr.aria-busy]="loading()"
+  >
+    @for (row of rows(); track row.id) {
+      <div class="flex flex-wrap items-center gap-2 py-3 border-b last:border-b-0 border-surface-200 dark:border-surface-700">
+        <div class="flex-1 min-w-40">
+          <strong>{{ row.name }}</strong>
+          <div class="text-sm text-muted-color mt-1 leading-relaxed">
+            {{ row.description || ('catalog.no_description' | translate) }} ·
+            {{ 'catalog.category.products_count' | translate: { count: row.product_count } }}
+          </div>
+        </div>
+        <p-button
+          icon="pi pi-pencil"
+          [text]="true"
+          [ariaLabel]="('buttons.edit' | translate) + ' ' + row.name"
+          (onClick)="edit(row)"
+        />
+        <p-button
+          icon="pi pi-trash"
+          severity="danger"
+          [text]="true"
+          [ariaLabel]="('buttons.delete' | translate) + ' ' + row.name"
+          (onClick)="askDelete(row)"
+        />
+      </div>
+    } @empty {
+      <p class="text-muted-color my-4 leading-relaxed">
+        @if (loading()) {
+          <i class="pi pi-spin pi-spinner mr-2"></i>
+        } @else {
+          {{ 'catalog.category.no_results' | translate }}
+        }
+      </p>
+    }
+  </section>
+
+  <!-- Delete confirmation / in-use notice -->
+  @if (confirm(); as row) {
+    <p-dialog
+      [header]="(row.product_count > 0 ? 'catalog.category.cannot_delete' : 'catalog.category.confirm_delete') | translate"
+      [visible]="true"
+      (visibleChange)="!$event && confirm.set(null)"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [style]="{ width: '460px', maxWidth: 'calc(100vw - 2rem)' }"
+      appendTo="body"
+    >
+      <div class="flex gap-4 items-start">
+        <div
+          class="shrink-0 flex items-center justify-center w-12 h-12 rounded-full"
+          [class]="row.product_count > 0 ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'"
+        >
+          <i class="pi text-xl" [class]="row.product_count > 0 ? 'pi-exclamation-triangle' : 'pi-trash'" aria-hidden="true"></i>
+        </div>
+        <div>
+          <p class="mt-0 mb-2 font-semibold">{{ row.name }}</p>
+          <p class="m-0 text-muted-color leading-relaxed">
+            @if (row.product_count > 0) {
+              {{ 'catalog.category.in_use' | translate: { count: row.product_count } }}
+            } @else {
+              {{ 'catalog.category.delete_question' | translate }}
+            }
+          </p>
+        </div>
+      </div>
+      <ng-template #footer>
+        @if (row.product_count > 0) {
+          <p-button [label]="'catalog.category.understood' | translate" (onClick)="confirm.set(null)" />
+        } @else {
+          <p-button
+            [label]="'buttons.cancel' | translate"
+            severity="secondary"
+            [outlined]="true"
+            (onClick)="confirm.set(null)"
+          />
+          <p-button
+            [label]="'buttons.delete' | translate"
+            icon="pi pi-trash"
+            severity="danger"
+            [loading]="saving()"
+            (onClick)="remove(row)"
+          />
+        }
+      </ng-template>
+    </p-dialog>
+  }
+</section>

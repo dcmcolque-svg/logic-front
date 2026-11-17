@@ -1,0 +1,10 @@
+<base-confirm-dialog
+  [visible]="visible()"
+  title="demo.confirm_delete"
+  message="demo.confirm_delete_message"
+  severity="danger"
+  confirmLabel="labels.delete"
+  confirmIcon="pi pi-trash"
+  (confirm)="confirm.emit()"
+  (hide)="hide.emit()"
+/>

@@ -1,0 +1,60 @@
+<base-dialog
+  [visible]="visible()"
+  header="branding.dialog_title"
+  size="md"
+  [loading]="saving() || loadingBranding()"
+  [saveDisabled]="!canSave"
+  (save)="onSave()"
+  (hide)="hide.emit()"
+>
+
+  <div class="grid grid-cols-1 gap-6">
+
+    <!-- ── Light logo ─────────────────────────────────────────── -->
+    <div class="logo-section">
+      <p class="logo-label">
+        <i class="pi pi-image"></i>
+        {{ 'branding.logo_light' | translate }}
+        <span class="logo-hint">{{ 'branding.logo_light_hint' | translate }}</span>
+      </p>
+
+      <div class="logo-preview-wrap logo-preview-light">
+        <img [src]="previewFor(light(), defaultLogoLight)"
+             alt="Logo Light" class="logo-preview-img" />
+      </div>
+
+      <div class="logo-actions">
+        @if (!light().previewUrl && !light().savedUrl) {
+          <button id="btn-upload-light" class="upload-btn" type="button"
+            [disabled]="saving()" (click)="fileLightRef.nativeElement.click()">
+            <i class="pi pi-upload"></i>
+            {{ 'branding.choose_image' | translate }}
+          </button>
+          <input #fileLight type="file" accept="image/*" class="hidden-input"
+            (change)="onFileSelected('light', $event)" />
+        }
+        @if (light().previewUrl) {
+          <span class="file-chip">
+            <i class="pi pi-image"></i> {{ light().pendingFile?.name }}
+          </span>
+          <p-button icon="pi pi-times" severity="secondary" [text]="true"
+            [rounded]="true" (onClick)="clearSlot('light')" [disabled]="saving()" />
+        }
+        @if (!light().previewUrl && light().savedUrl) {
+          <span class="file-chip saved-chip">
+            <i class="pi pi-check-circle"></i>
+            {{ light().savedUrl | slice:-24 }}
+          </span>
+          <p-button icon="pi pi-pencil" severity="secondary" [text]="true"
+            [rounded]="true" (onClick)="fileLightRef.nativeElement.click()" [disabled]="saving()" />
+          <input #fileLight type="file" accept="image/*" class="hidden-input"
+            (change)="onFileSelected('light', $event)" />
+          <p-button icon="pi pi-trash" severity="danger" [text]="true"
+            [rounded]="true" (onClick)="removeBackendImage('light')" [disabled]="saving()" />
+        }
+      </div>
+    </div>
+
+  </div>
+
+</base-dialog>

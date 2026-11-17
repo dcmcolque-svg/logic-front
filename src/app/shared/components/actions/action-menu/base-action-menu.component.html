@@ -1,0 +1,14 @@
+<p-button
+  [icon]="icon()"
+  [label]="showLabel() ? label() : ''"
+  [rounded]="iconOnly()"
+  [text]="iconOnly()"
+  [outlined]="!iconOnly()"
+  [severity]="severity()"
+  [disabled]="disabled()"
+  [size]="size()"
+  [pTooltip]="iconOnly() ? tooltip() : ''"
+  tooltipPosition="top"
+  (onClick)="toggleMenu($event)"
+/>
+<p-menu #menuRef [model]="menuItems()" [popup]="true" appendTo="body" />

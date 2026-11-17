@@ -1,0 +1,669 @@
+<p-toast />
+
+<div class="grid grid-cols-12 gap-4">
+  <!-- Header with back button and view toggles -->
+  <div class="col-span-12">
+    <div
+      class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2"
+    >
+      <div class="flex items-center gap-2">
+        <p-button
+          icon="pi pi-angle-left"
+          [rounded]="true"
+          [text]="true"
+          (onClick)="goBack()"
+          severity="secondary"
+        />
+        <h2 class="text-2xl font-bold m-0">
+          {{ pageTitle | translate | uppercase }}
+        </h2>
+      </div>
+      <div class="flex items-center gap-2">
+        <p-button
+          [label]="'buttons.clear' | translate"
+          icon="pi pi-filter-slash"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="clearFilters()"
+          size="small"
+        />
+        <!-- rowCount: la tabla desaparece al pasar a timeline, y los mismos
+             eventos siguen ahí para exportar. La vista lo sabe; su tabla no.
+             Es null mientras carga o si la carga falló: ahí nadie sabe, y null
+             corta la pregunta en vez de pasársela a la tabla. -->
+        <base-import-export-menu
+          [filename]="exportFilename"
+          [columns]="selectedColumns"
+          [fetchPage]="fetchExportPage"
+          [rowCount]="exportableCount()"
+          [sheetName]="pageTitle | translate"
+        />
+        @if (showTimeline()) {
+          <!-- Sort order toggle (only in timeline view) -->
+          <p-button
+            [icon]="currentSort()?.order === 'asc' ? 'pi pi-sort-amount-up-alt' : 'pi pi-sort-amount-down'"
+            [rounded]="true"
+            [outlined]="true"
+            (onClick)="toggleSortOrder()"
+            severity="secondary"
+            [pTooltip]="'buttons.sort' | translate"
+            tooltipPosition="top"
+          />
+        }
+        <!-- Toggle table / timeline -->
+        <p-button
+          [icon]="showTimeline() ? 'pi pi-eye' : 'pi pi-eye-slash'"
+          [rounded]="true"
+          (onClick)="toggleView()"
+          severity="secondary"
+          [pTooltip]="showTimeline() ? ('labels.table_view' | translate) : ('labels.timeline_view' | translate)"
+          tooltipPosition="top"
+        />
+      </div>
+    </div>
+  </div>
+
+  @if (showTimeline()) {
+    <!-- ============================================================ -->
+    <!-- TIMELINE VIEW  (like v1 history)                             -->
+    <!-- ============================================================ -->
+
+    <!-- Context card (sidebar style — left column) -->
+    <div class="col-span-12 lg:col-span-3">
+      @if (contextLoading()) {
+        <ng-container *ngTemplateOutlet="contextSkeleton" />
+      } @else if (contextItem()) {
+        <div class="card p-4">
+          <div class="flex flex-col items-center gap-4">
+            <!-- Image: warehouse image for location/bin, product image for tracecard/sku -->
+            @if (historySource() === 'location' || historySource() === 'bin') {
+              <img
+                src="layout/images/warehouse.png"
+                alt="Warehouse"
+                class="rounded-lg"
+                style="width: 100px; max-height: 140px; object-fit: contain"
+              />
+            } @else {
+              <img
+                [src]="contextItem()!.image_path || 'layout/images/kardex.png'"
+                alt="Product"
+                class="rounded-lg"
+                style="width: 100px; max-height: 140px; object-fit: contain"
+              />
+            }
+            <div class="w-full flex flex-col gap-2">
+              <!-- Facility name, then the fields of the history source (location, bin, tracecard or sku) -->
+              @for (field of contextFields(); track field.label) {
+                <div>
+                  <b>{{ field.label | translate }} : </b>
+                  <span>{{ field.value }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Timeline -->
+    <div class="col-span-12 lg:col-span-9 relative">
+      @if (loading()) {
+        <div class="flex justify-center items-center p-8">
+          <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
+        </div>
+      }
+      @if (flowItems().length > 0) {
+        <p-timeline [value]="flowItems()" [align]="timelineAlign()">
+          <!-- Marker icon -->
+          <ng-template pTemplate="marker" let-item>
+            <p-tag [style]="{ 'background-color': getEventColor(item.transaction_type) }">
+              <i class="pi {{ getEventIcon(item.transaction_type) }} text-2xl p-2" style="color: #ffffff"></i>
+            </p-tag>
+          </ng-template>
+
+          <!-- Card content -->
+          <ng-template pTemplate="content" let-item>
+            <p-card>
+              <!-- Header: action + date -->
+              <div class="flex flex-col md:flex-row justify-between items-start gap-1">
+                <base-status-badge
+                  [value]="item.transaction_type"
+                  [label]="getActionCode(item.transaction_type)"
+                  [colorMap]="actionColors"
+                />
+                <div class="font-bold text-surface-400 text-sm" style="white-space: pre-wrap">
+                  {{ formatDateTime(item.created_at) }}
+                </div>
+              </div>
+
+              <!-- Data fields — mirrors the table columns per source type -->
+              <div class="pt-3 flex flex-col gap-2 text-sm">
+                <!-- Number Event -->
+                <div class="flex justify-between">
+                  <b>{{ 'labels.number_event' | translate }} :</b>
+                  <a class="font-semibold text-primary cursor-pointer" (click)="selectFlowItem(item)" [pTooltip]="item.id" tooltipPosition="top">
+                    <u>{{ getEventReference(item) }}</u>
+                  </a>
+                </div>
+
+                <!-- User -->
+                <div class="flex justify-between">
+                  <b>{{ 'labels.user' | translate }} :</b>
+                  <span [pTooltip]="item.user_id ?? ''" tooltipPosition="top">{{ item.user_name || '—' }}</span>
+                </div>
+
+                <!-- Source-dependent columns -->
+                @if (historySource() === 'tracecard') {
+                  <!-- Tracecard history: show Location + SKU (tracecard is in context) -->
+                  <div class="flex justify-between">
+                    <b>{{ 'labels.location' | translate }} :</b>
+                    <span>{{ item.location_code || '—' }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <b>{{ 'labels.sku' | translate }} :</b>
+                    <span>{{ item.sku || '—' }}</span>
+                  </div>
+                } @else if (historySource() === 'sku') {
+                  <!-- SKU history: show Tracecard (sku is in context) -->
+                  <div class="flex justify-between">
+                    <b>{{ 'labels.tracecard' | translate }} :</b>
+                    <span>{{ item.tracecard || '—' }}</span>
+                  </div>
+                } @else {
+                  <!-- Location / Bin history: show Tracecard + SKU -->
+                  <div class="flex justify-between">
+                    <b>{{ 'labels.tracecard' | translate }} :</b>
+                    <span>{{ item.tracecard || '—' }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <b>{{ 'labels.sku' | translate }} :</b>
+                    <span>{{ item.sku || '—' }}</span>
+                  </div>
+                }
+
+                <!-- Qty Available -->
+                <div class="flex justify-between">
+                  <b>{{ 'labels.qty_available' | translate }} :</b>
+                  <span class="font-bold">{{ item.balance_after }}</span>
+                </div>
+
+                <!-- Qty Event -->
+                <div class="flex justify-between">
+                  <b>{{ 'labels.qty_event' | translate }} :</b>
+                  <span
+                    class="font-bold"
+                    [class.text-green-600]="item.qty_change > 0"
+                    [class.text-red-600]="item.qty_change < 0"
+                  >
+                    {{ item.qty_change > 0 ? '+' : '' }}{{ item.qty_change }}
+                  </span>
+                </div>
+              </div>
+            </p-card>
+          </ng-template>
+        </p-timeline>
+      } @else if (!loading()) {
+        <div class="card p-8">
+          <div class="flex flex-col items-center justify-center">
+            <i class="pi pi-inbox text-6xl text-surface-400 mb-3"></i>
+            <h3 class="text-2xl text-surface-600">
+              {{ 'messages.no_data' | translate }}
+            </h3>
+          </div>
+        </div>
+      }
+    </div>
+
+  } @else {
+    <!-- ============================================================ -->
+    <!-- TABLE VIEW                                                    -->
+    <!-- ============================================================ -->
+
+    <!-- Context card (full width — info bar) -->
+    <div class="col-span-12">
+      @if (contextLoading()) {
+        <ng-container *ngTemplateOutlet="contextSkeleton" />
+      } @else if (contextItem()) {
+        <div class="card p-4">
+          <div class="flex flex-col sm:flex-row items-start gap-4">
+            <!-- Image -->
+            <div class="flex-shrink-0">
+              @if (historySource() === 'location' || historySource() === 'bin') {
+                <img
+                  src="layout/images/warehouse.png"
+                  alt="Warehouse"
+                  class="rounded-lg"
+                  style="width: 100px; object-fit: cover"
+                />
+              } @else {
+                <img
+                  [src]="contextItem()!.image_path || 'layout/images/kardex.png'"
+                  alt="Product"
+                  class="rounded-lg"
+                  style="width: 100px; object-fit: cover"
+                />
+              }
+            </div>
+            <!-- Info fields (same logic as timeline sidebar) -->
+            <div class="flex-1 flex flex-col gap-2" style="overflow-wrap: break-word">
+              @for (field of contextFields(); track field.label) {
+                <div class="text-xl">
+                  <b>{{ field.label | translate }} : </b>
+                  <span>{{ field.value }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Flow history table -->
+    <div class="col-span-12">
+      <div class="card">
+        <base-data-table
+          [columns]="selectedColumns"
+          [data]="flowItems()"
+          [loading]="loading()"
+          [pagination]="pagination()"
+          [sort]="currentSort()"
+          [selectable]="false"
+          [activeFilterChips]="activeFilters()"
+          (stateChange)="onTableStateChange($event)"
+          (chipRemoved)="removeFilterChip($event)"
+        >
+          <!-- Paginator left: column toggle (same pattern as warehouse) -->
+          <ng-template #paginatorLeft>
+            <div class="flex items-center gap-2">
+              <p-multiSelect [options]="cols" [(ngModel)]="selectedColumns" optionLabel="header" [selectedItemsLabel]="
+                  selectedColumns.length +
+                  ' ' +
+                  ('labels.columns_selected' | translate)
+                " [maxSelectedLabels]="0" size="small" appendTo="body"
+                [placeholder]="'labels.choose_columns' | translate">
+                <ng-template let-col pTemplate="item">
+                  {{ col.header | translate }}
+                </ng-template>
+              </p-multiSelect>
+            </div>
+          </ng-template>
+
+          <!-- Custom filter row (same pattern as tracecards/parcels) -->
+          <ng-template #filterRow let-columns="columns">
+            @for (col of columns; track col.field) {
+              @switch (col.field) {
+                @case ('created_at') {
+                  <th class="p-1" [style.width]="col.width">
+                    <shipedge-filter-date-input
+                      [value]="getActiveFilterValue('created_at')"
+                      [matchMode]="getActiveFilterMatchMode('created_at')"
+                      [placeholder]="'labels.timestamp' | translate"
+                      (applyWithMode)="onTimestampFilterChange('created_at', $event)"
+                    />
+                  </th>
+                }
+                @default {
+                  @if (col.filterable) {
+                    <th class="p-1" [style.width]="col.width">
+                      <shipedge-filter-text-input
+                        [value]="getActiveFilterValue(col.field)"
+                        [matchMode]="getActiveFilterMatchMode(col.field)"
+                        [placeholder]="col.header | translate"
+                        [filterType]="col.filterType || 'text'"
+                        (applyWithMode)="onColumnFilterChange(col.field, $event)"
+                      />
+                    </th>
+                  } @else {
+                    <th class="p-1" [style.width]="col.width"></th>
+                  }
+                }
+              }
+            }
+          </ng-template>
+
+          <!-- Custom cell templates -->
+          <ng-template #cell let-row let-col="col">
+            @switch (col.template) {
+              @case ('event_link') {
+                <a class="font-semibold text-primary cursor-pointer" (click)="selectFlowItem(row)" [pTooltip]="row.id" tooltipPosition="top">
+                  <u>{{ truncateUuid(col.exportValue?.(row)) }}</u>
+                </a>
+              }
+              @case ('timestamp') {
+                <div class="flex flex-col">
+                  <span class="text-sm text-surface-500">
+                    {{ formatDate(row.created_at) }}
+                  </span>
+                  <span class="text-sm font-semibold text-primary">
+                    {{ formatTime(row.created_at) }}
+                  </span>
+                </div>
+              }
+              @case ('action') {
+                <base-status-badge
+                  [value]="row.transaction_type"
+                  [label]="getActionCode(row.transaction_type)"
+                  [colorMap]="actionColors"
+                />
+              }
+              @case ('qty') {
+                <span
+                  class="font-bold"
+                  [class.text-green-600]="row.qty_change > 0"
+                  [class.text-red-600]="row.qty_change < 0"
+                >
+                  {{ row.qty_change > 0 ? '+' : '' }}{{ row.qty_change }}
+                </span>
+              }
+              @case ('number') {
+                {{ row[col.field] }}
+              }
+              @case ('user') {
+                <span [pTooltip]="row.user_id ?? ''" tooltipPosition="top">
+                  {{ row.user_name || '—' }}
+                </span>
+              }
+              @case ('text') {
+                {{ row[col.field] || '—' }}
+              }
+              @default {
+                {{ row[col.field] }}
+              }
+            }
+          </ng-template>
+        </base-data-table>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- ============================================================ -->
+<!-- DETAIL DRAWER (event detail sidebar)                          -->
+<!-- ============================================================ -->
+<p-drawer
+  [visible]="showDetailDrawer()"
+  (visibleChange)="showDetailDrawer.set($event)"
+  position="right"
+  [modal]="true"
+  [style]="{ width: '36rem', maxWidth: '100vw' }"
+  (onHide)="closeDetail()"
+>
+  <ng-template pTemplate="header">
+    @if (selectedFlowItem(); as item) {
+      <div class="flex flex-col items-center w-full gap-1">
+        <span class="text-lg font-semibold text-primary">
+          {{ getActionLabel(item.transaction_type) }}
+        </span>
+        <span
+          class="text-2xl font-bold text-primary underline decoration-2 underline-offset-4"
+          [pTooltip]="item.id"
+          tooltipPosition="bottom"
+        >
+          {{ getEventReference(item) }}
+        </span>
+      </div>
+    }
+  </ng-template>
+
+  @if (selectedFlowItem(); as item) {
+    <div class="flex flex-col">
+      <!-- Product card -->
+      <div
+        class="flex gap-4 items-start rounded-xl bg-surface-0 dark:bg-surface-800 shadow-md p-4"
+      >
+        <img
+          [src]="item.image_path || 'layout/images/kardex.png'"
+          alt="Product"
+          class="rounded-lg shrink-0 w-28 max-h-36 object-contain"
+          (error)="handleMissingImage($event)"
+        />
+        <div class="flex flex-col gap-1 min-w-0">
+          <span class="text-base font-bold">
+            {{ 'labels.tracecard' | translate }} : {{ item.tracecard || '—' }}
+          </span>
+          <span class="text-sm text-surface-500">{{ item.description || '—' }}</span>
+          <span class="text-sm">
+            <span class="font-bold">{{ 'labels.sku' | translate }}:</span>
+            {{ item.sku || '—' }}
+          </span>
+          <span class="text-sm break-all">
+            <span class="font-bold">{{ 'labels.barcode' | translate }}:</span>
+            {{ item.barcode || '—' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Qty Available -->
+      <section class="py-4 border-b border-surface-200 dark:border-surface-700">
+        <h3 class="text-base font-bold m-0">
+          {{ 'labels.qty_available' | translate }}:
+        </h3>
+        <span class="block text-xl font-bold text-primary pl-3 mt-1">{{
+          item.balance_after
+        }}</span>
+      </section>
+
+      <!-- Event location -->
+      <section class="py-4 border-b border-surface-200 dark:border-surface-700">
+        <h3 class="text-base font-bold m-0">
+          {{ 'labels.event_location' | translate }}
+        </h3>
+        <div class="grid grid-cols-2 gap-4 mt-3">
+          <ng-container
+            *ngTemplateOutlet="
+              detailField;
+              context: {
+                icon: 'pi-map-marker',
+                label: 'labels.zone',
+                value: item.zone_name,
+              }
+            "
+          />
+          <ng-container
+            *ngTemplateOutlet="
+              detailField;
+              context: {
+                icon: 'pi-box',
+                label: 'labels.location_bin',
+                value: item.location_code,
+              }
+            "
+          />
+        </div>
+      </section>
+
+      <!-- Reference document (depends on reference_doc_type) -->
+      @switch (getDetailKind(item)) {
+        @case ('receiving') {
+          <section
+            class="py-4 border-b border-surface-200 dark:border-surface-700"
+          >
+            <h3 class="text-base font-bold m-0">
+              {{ 'labels.receivings_detail' | translate }}
+            </h3>
+            <div class="grid grid-cols-2 gap-4 mt-3">
+              <ng-container
+                *ngTemplateOutlet="
+                  detailField;
+                  context: {
+                    icon: 'pi-receipt',
+                    label: 'labels.shipment',
+                    value: item.shipment_number,
+                  }
+                "
+              />
+              <ng-container
+                *ngTemplateOutlet="
+                  detailField;
+                  context: {
+                    icon: 'pi-calendar',
+                    label: 'labels.delivery_date',
+                    value: item.delivery_date
+                      ? formatDateTime(item.delivery_date)
+                      : null,
+                  }
+                "
+              />
+            </div>
+          </section>
+        }
+        @case ('order') {
+          <section
+            class="py-4 border-b border-surface-200 dark:border-surface-700"
+          >
+            <h3 class="text-base font-bold m-0">
+              {{ 'labels.order_details' | translate }}
+            </h3>
+            <div class="grid grid-cols-2 gap-4 mt-3">
+              <ng-container
+                *ngTemplateOutlet="
+                  detailField;
+                  context: {
+                    icon: 'pi-shopping-cart',
+                    label: 'labels.order_number',
+                    value: item.order_number,
+                  }
+                "
+              />
+              <ng-container
+                *ngTemplateOutlet="
+                  detailField;
+                  context: {
+                    icon: 'pi-hashtag',
+                    label: 'labels.reference_number',
+                    value: item.reference_number,
+                  }
+                "
+              />
+            </div>
+          </section>
+        }
+        @case ('move') {
+          <section
+            class="py-4 border-b border-surface-200 dark:border-surface-700"
+          >
+            <h3 class="text-base font-bold m-0">
+              {{ 'labels.move_detail' | translate }}
+            </h3>
+            <div class="grid grid-cols-2 gap-4 mt-3">
+              @if (isMoveOut(item)) {
+                <ng-container
+                  *ngTemplateOutlet="
+                    detailField;
+                    context: {
+                      icon: 'pi-sign-out',
+                      label: 'labels.from_location',
+                      value: item.location_code,
+                    }
+                  "
+                />
+                <ng-container
+                  *ngTemplateOutlet="
+                    detailField;
+                    context: {
+                      icon: 'pi-sign-in',
+                      label: 'labels.to_location',
+                      value: item.related_location_code,
+                    }
+                  "
+                />
+              } @else {
+                <ng-container
+                  *ngTemplateOutlet="
+                    detailField;
+                    context: {
+                      icon: 'pi-sign-out',
+                      label: 'labels.from_location',
+                      value: item.related_location_code,
+                    }
+                  "
+                />
+                <ng-container
+                  *ngTemplateOutlet="
+                    detailField;
+                    context: {
+                      icon: 'pi-sign-in',
+                      label: 'labels.to_location',
+                      value: item.location_code,
+                    }
+                  "
+                />
+              }
+            </div>
+          </section>
+        }
+        @case ('recount') {
+          <section
+            class="py-4 border-b border-surface-200 dark:border-surface-700"
+          >
+            <h3 class="text-base font-bold m-0">
+              {{ 'labels.recount_detail' | translate }}
+            </h3>
+            <div class="grid grid-cols-2 gap-4 mt-3">
+              <ng-container
+                *ngTemplateOutlet="
+                  detailField;
+                  context: {
+                    icon: 'pi-replay',
+                    label: 'labels.reason',
+                    value: item.adjustment_reason,
+                  }
+                "
+              />
+              <ng-container
+                *ngTemplateOutlet="
+                  detailField;
+                  context: {
+                    icon: 'pi-sort-alt',
+                    label: 'labels.qty_event',
+                    value: (item.qty_change > 0 ? '+' : '') + item.qty_change,
+                  }
+                "
+              />
+            </div>
+          </section>
+        }
+      }
+
+      <!-- User -->
+      <section class="py-4">
+        <h3 class="text-base font-bold m-0">{{ 'labels.user' | translate }}</h3>
+        <div class="flex items-center gap-2 mt-3">
+          <i class="pi pi-user text-primary"></i>
+          <span class="text-xs text-surface-500"
+            >{{ 'labels.user' | translate }}:</span
+          >
+          <span
+            class="text-sm font-medium"
+            [pTooltip]="item.user_id ?? ''"
+            tooltipPosition="top"
+          >
+            {{ item.user_name || '—' }}
+          </span>
+        </div>
+      </section>
+    </div>
+  }
+</p-drawer>
+
+<!-- Icon + small label + value, used by every section of the detail drawer -->
+<ng-template #detailField let-icon="icon" let-label="label" let-value="value">
+  <div class="flex items-start gap-2 min-w-0">
+    <i class="pi text-primary mt-1" [ngClass]="icon"></i>
+    <div class="flex flex-col min-w-0">
+      <span class="text-xs text-surface-500">{{ label | translate }}</span>
+      <span class="text-sm font-medium break-words">{{ value || '—' }}</span>
+    </div>
+  </div>
+</ng-template>
+
+<!-- Context card placeholder while the history context loads -->
+<ng-template #contextSkeleton>
+  <div class="card p-4">
+    <div class="flex flex-col gap-3">
+      <p-skeleton width="15rem" height="1.5rem" />
+      <p-skeleton width="20rem" height="1.5rem" />
+      <p-skeleton width="12rem" height="1.5rem" />
+    </div>
+  </div>
+</ng-template>

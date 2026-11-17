@@ -1,0 +1,83 @@
+<base-dialog
+  [visible]="visible()"
+  [header]="editing() ? 'preferences.rotations.edit' : 'preferences.rotations.create'"
+  size="md"
+  [loading]="saving()"
+  [saveDisabled]="!rotationForm.valid"
+  (save)="onSave()"
+  (hide)="hide.emit()"
+>
+  <base-form-group [columns]="2">
+    <base-form-field
+      type="dropdown"
+      label="labels.facility"
+      [control]="rotationForm.controls.facility_id"
+      [options]="facilitiesList()"
+      optionLabel="name"
+      optionValue="id"
+      [required]="true"
+    />
+    <base-form-field
+      type="text"
+      label="preferences.rotations.name"
+      [control]="rotationForm.controls.name"
+      [required]="true"
+    />
+    <base-form-field
+      type="dropdown"
+      label="preferences.rotations.tracecards_sort"
+      [control]="rotationForm.controls.kardex_sort"
+      [options]="sortOptions"
+      optionLabel="label"
+      optionValue="value"
+      [required]="true"
+    />
+    <base-form-field
+      type="dropdown"
+      label="preferences.rotations.first_rotation"
+      [control]="rotationForm.controls.first_rotation"
+      [options]="firstRotationOptions"
+      optionLabel="label"
+      optionValue="value"
+      [required]="true"
+    />
+    @if (showSecondRotation) {
+      <base-form-field
+        type="dropdown"
+        label="preferences.rotations.second_rotation"
+        [control]="rotationForm.controls.second_rotation"
+        [options]="secondRotationOptions"
+        optionLabel="label"
+        optionValue="value"
+      />
+    }
+    <base-form-field
+      type="multiselect"
+      label="preferences.rotations.zone"
+      placeholder="Select Zones"
+      [control]="rotationForm.controls.zones"
+      [options]="filteredZonesList()"
+      optionLabel="name"
+      optionValue="id"
+    />
+    <base-form-field
+      type="dropdown"
+      label="labels.company"
+      [control]="rotationForm.controls.company_id"
+      [options]="companiesList()"
+      optionLabel="name"
+      optionValue="id"
+      [required]="true"
+    />
+    <base-form-field
+      type="switch"
+      label="preferences.rotations.default"
+      [control]="rotationForm.controls.default"
+    />
+    <base-form-field
+      type="switch"
+      label="preferences.rotations.category"
+      [control]="rotationForm.controls.category"
+    />
+  </base-form-group>
+</base-dialog>

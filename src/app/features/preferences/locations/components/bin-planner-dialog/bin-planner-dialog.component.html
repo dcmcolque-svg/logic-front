@@ -1,0 +1,366 @@
+<p-toast />
+
+<p-dialog
+  [header]="'preferences.bin_planner.title' | translate"
+  [(visible)]="visible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '85vw', height: '80vh' }"
+  [contentStyle]="{ overflow: 'hidden', height: '100%' }"
+  (onShow)="onDialogShow()"
+  (onHide)="onDialogHide()"
+>
+  <div class="planner-layout">
+    <!-- ═══ LEFT PANEL: Controls ═══ -->
+    <div class="planner-controls">
+
+      <!-- Bulk mode banner -->
+      @if (isBulkMode()) {
+        <div class="bulk-banner">
+          <i class="pi pi-objects-column"></i>
+          <span>{{ bulkCount() }} locations {{ 'labels.selected' | translate | lowercase }}</span>
+        </div>
+      }
+
+      <!-- Rows & Columns (side by side) -->
+      <div class="control-row">
+        <div class="control-group">
+          <label class="control-label" for="bin-planner-rows">
+            <i class="pi pi-arrows-v"></i>
+            {{ 'preferences.bin_planner.rows' | translate }}
+          </label>
+          <p-inputNumber
+            inputId="bin-planner-rows"
+            [ngModel]="rows()"
+            (ngModelChange)="onRowsChange($event)"
+            [min]="1"
+            [max]="maxRows()"
+            [showButtons]="true"
+            [step]="1"
+            inputStyleClass="w-full"
+            styleClass="w-full"
+          />
+        </div>
+        <div class="control-group">
+          <label class="control-label" for="bin-planner-cols">
+            <i class="pi pi-arrows-h"></i>
+            {{ 'preferences.bin_planner.columns' | translate }}
+          </label>
+          <p-inputNumber
+            inputId="bin-planner-cols"
+            [ngModel]="cols()"
+            (ngModelChange)="onColsChange($event)"
+            [min]="1"
+            [max]="maxCols()"
+            [showButtons]="true"
+            [step]="1"
+            inputStyleClass="w-full"
+            styleClass="w-full"
+          />
+        </div>
+      </div>
+
+      @if (gridError()) {
+        <div class="grid-error-msg">
+          <i class="pi pi-exclamation-circle"></i>
+          {{ gridError() }}
+        </div>
+      }
+
+      <hr class="control-divider" />
+
+      <!-- Orientation (side by side) -->
+      <div class="control-row">
+        <div class="control-group">
+          <label class="control-label" for="bin-planner-vertical-order">
+            <i class="pi pi-arrows-h"></i>
+            {{ 'preferences.bin_planner.vertical_orientation' | translate }}
+          </label>
+          <p-button
+            id="bin-planner-vertical-order"
+            [label]="verticalOrder() === 'ltr' ? 'A → Z' : 'Z → A'"
+            [icon]="verticalOrder() === 'ltr' ? 'pi pi-arrow-right' : 'pi pi-arrow-left'"
+            severity="secondary"
+            [outlined]="true"
+            size="small"
+            styleClass="w-full"
+            (onClick)="toggleVerticalOrder()"
+          />
+        </div>
+        <div class="control-group">
+          <label class="control-label" for="bin-planner-horizontal-order">
+            <i class="pi pi-arrows-v"></i>
+            {{ 'preferences.bin_planner.horizontal_orientation' | translate }}
+          </label>
+          <p-button
+            id="bin-planner-horizontal-order"
+            [label]="horizontalOrder() === 'ttb' ? '↓ Top → Bot' : '↑ Bot → Top'"
+            [icon]="horizontalOrder() === 'ttb' ? 'pi pi-arrow-down' : 'pi pi-arrow-up'"
+            severity="secondary"
+            [outlined]="true"
+            size="small"
+            styleClass="w-full"
+            (onClick)="toggleHorizontalOrder()"
+          />
+        </div>
+      </div>
+
+      <hr class="control-divider" />
+
+      <!-- Type -->
+      <div class="control-group">
+        <label class="control-label" for="bin-planner-type">
+          <i class="pi pi-box"></i>
+          Type
+        </label>
+        <p-select
+          inputId="bin-planner-type"
+          [options]="binTypeOptions"
+          [ngModel]="binType()"
+          (ngModelChange)="onBinTypeChange($event)"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="w-full"
+        />
+      </div>
+
+      <!-- Tags -->
+      <div class="control-group">
+        <label class="control-label" for="bin-planner-tags">
+          <i class="pi pi-hashtag"></i>
+          Tags
+        </label>
+        <div class="tags-input-container">
+          @for (t of tags(); track t) {
+            <span class="tag-chip">
+              {{ t }}
+              <button type="button" class="tag-remove" aria-label="Remove tag" (click)="removeTag(t)"><i class="pi pi-times"></i></button>
+            </span>
+          }
+          <input
+            id="bin-planner-tags"
+            type="text"
+            class="tags-inline-input"
+            [ngModel]="tagInput()"
+            (ngModelChange)="tagInput.set($event)"
+            (keydown.enter)="addTag()"
+            [placeholder]="tags().length === 0 ? 'Type and press Enter' : ''"
+          />
+        </div>
+      </div>
+
+      <!-- Name Format -->
+      <div class="control-group">
+        <label class="control-label" for="bin-planner-name-format">
+          <i class="pi pi-tag"></i>
+          {{ 'preferences.bin_planner.name_format' | translate }}
+          <span class="char-counter">{{ nameFormat().length }}/{{ MAX_NAME_FORMAT_LENGTH }}</span>
+        </label>
+        <div class="format-builder">
+          <input
+            id="bin-planner-name-format"
+            type="text"
+            class="format-input"
+            [ngModel]="nameFormat()"
+            (ngModelChange)="onNameFormatChange($event)"
+            [maxlength]="MAX_NAME_FORMAT_LENGTH"
+            placeholder="{loc}/{bin}"
+          />
+          <div class="format-tokens">
+            <button type="button" class="token-btn token-loc" (click)="insertToken('{loc}')"
+              pTooltip="Insert location code" tooltipPosition="top">
+              &#123;loc&#125;
+            </button>
+            <button type="button" class="token-btn token-bin" (click)="insertToken('{bin}')"
+              pTooltip="Insert bin number" tooltipPosition="top">
+              &#123;bin&#125;
+            </button>
+          </div>
+        </div>
+        @if (nameFormatError()) {
+          <div class="grid-error-msg">
+            <i class="pi pi-exclamation-circle"></i>
+            {{ nameFormatError() }}
+          </div>
+        }
+        <div class="format-preview">
+          <span class="preview-label">Preview:</span>
+          <span class="preview-value">{{ namePreview() }}</span>
+        </div>
+      </div>
+
+      <hr class="control-divider" />
+
+      <!-- Total Items -->
+      <div class="control-group">
+        <label class="control-label" for="bin-planner-total-items">
+          <i class="pi pi-box"></i>
+          {{ 'preferences.bin_planner.total_items' | translate }}
+        </label>
+        <div id="bin-planner-total-items" class="items-counter">
+          {{ totalItems() }}
+        </div>
+      </div>
+
+
+      <div class="flex-grow-1"></div>
+
+      <!-- Action buttons -->
+      <div class="control-actions-row">
+        <p-button
+          [label]="'labels.cancel' | translate"
+          severity="secondary"
+          [text]="true"
+          styleClass="w-full"
+          (onClick)="onCancel()"
+        />
+        <p-button
+          [label]="'preferences.bin_planner.apply_plan' | translate"
+          icon="pi pi-check"
+          styleClass="w-full"
+          (onClick)="onApply()"
+        />
+      </div>
+    </div>
+
+    <!-- ═══ RIGHT PANEL: Canvas ═══ -->
+    <div class="planner-canvas-container">
+      <div class="canvas-hint">
+        <i class="pi pi-info-circle"></i>
+        {{ 'preferences.bin_planner.canvas_hint' | translate }} · {{ 'preferences.bin_planner.canvas_hint_extra' | translate }}
+      </div>
+      @if (unorderedBinsWarning()) {
+        <div class="unordered-warning">
+          <i class="pi pi-exclamation-triangle"></i>
+          {{ 'preferences.bin_planner.unordered_warning' | translate }}
+        </div>
+      }
+      <div class="canvas-wrapper">
+        <canvas #plannerCanvas></canvas>
+      </div>
+    </div>
+  </div>
+</p-dialog>
+
+<!-- ═══ Confirmation Dialog ═══ -->
+<p-dialog
+  [header]="'preferences.bin_planner.confirm_title' | translate"
+  [(visible)]="confirmVisible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '420px' }"
+  [closable]="true"
+>
+  <div class="confirm-content">
+    <div class="confirm-icon">
+      <i class="pi pi-exclamation-triangle"></i>
+    </div>
+    <p class="confirm-message">
+      {{ 'preferences.bin_planner.confirm_about_to_create' | translate }}
+      <strong>{{ totalBinsToCreate() }}</strong> bins
+      @if (isBulkMode()) {
+        <span>({{ totalItems() }} bins × {{ bulkCount() }} locations)</span>
+      }
+    </p>
+    @if (tags().length > 0) {
+      <div class="confirm-tag">
+        <i class="pi pi-hashtag"></i>
+        Tags:
+        @for (t of tags(); track t) {
+          <strong>{{ t }}</strong>
+        }
+      </div>
+    }
+    <p class="confirm-question">{{ 'preferences.bin_planner.confirm_proceed' | translate }}</p>
+  </div>
+  <ng-template #footer>
+    <div class="confirm-actions">
+      <p-button
+        [label]="'labels.cancel' | translate"
+        severity="secondary"
+        [text]="true"
+        (onClick)="onCancelConfirm()"
+      />
+      <p-button
+        [label]="'labels.confirm' | translate"
+        icon="pi pi-check"
+        (onClick)="onConfirmApply()"
+      />
+    </div>
+  </ng-template>
+</p-dialog>
+
+
+<!-- ═══ Bin Context Menu ═══ -->
+<p-contextMenu #binContextMenu [model]="contextMenuItems()" appendTo="body" />
+
+<!-- ═══ Edit Bin Type & Tags Dialog ═══ -->
+<p-dialog
+  [header]="'preferences.bin_planner.edit_bin_properties' | translate"
+  [(visible)]="editBinDialogVisible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '380px' }"
+  [closable]="true"
+>
+  <div class="edit-bin-content">
+    <div class="control-group">
+      <label class="control-label" for="bin-planner-edit-type">
+        <i class="pi pi-box"></i>
+        Type
+      </label>
+      <p-select
+        inputId="bin-planner-edit-type"
+        [options]="binTypeOptions"
+        [ngModel]="editBinType()"
+        (ngModelChange)="editBinType.set($event)"
+        optionLabel="label"
+        optionValue="value"
+        styleClass="w-full"
+      />
+    </div>
+
+    <div class="control-group">
+      <label class="control-label" for="bin-planner-edit-tags">
+        <i class="pi pi-hashtag"></i>
+        Tags
+      </label>
+      <div class="tags-input-container">
+        @for (t of editBinTags(); track t) {
+          <span class="tag-chip">
+            {{ t }}
+            <button type="button" class="tag-remove" aria-label="Remove tag" (click)="removeEditTag(t)"><i class="pi pi-times"></i></button>
+          </span>
+        }
+        <input
+          id="bin-planner-edit-tags"
+          type="text"
+          class="tags-inline-input"
+          [ngModel]="editBinTagInput()"
+          (ngModelChange)="editBinTagInput.set($event)"
+          (keydown.enter)="addEditTag()"
+          placeholder="Type and press Enter"
+        />
+      </div>
+    </div>
+  </div>
+
+  <ng-template #footer>
+    <div class="confirm-actions">
+      <p-button
+        [label]="'labels.cancel' | translate"
+        severity="secondary"
+        [text]="true"
+        (onClick)="editBinDialogVisible.set(false)"
+      />
+      <p-button
+        [label]="'preferences.bin_planner.apply_plan' | translate"
+        icon="pi pi-check"
+        (onClick)="applyEditBin()"
+      />
+    </div>
+  </ng-template>
+</p-dialog>

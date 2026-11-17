@@ -1,0 +1,185 @@
+<p-menu #menuitem [popup]="true" appendTo="body" [model]="menuItems" />
+
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+    <div>
+        <h5 class="text-2xl font-semibold m-0 mb-1">{{ 'packaging.title' | translate }}</h5>
+        <p class="text-surface-500 text-sm m-0">{{ 'packaging.subtitle' | translate }}</p>
+    </div>
+    <div class="flex gap-2">
+        <p-button
+            icon="pi pi-plus"
+            [label]="'packaging.new_packaging' | translate"
+            (onClick)="openCreateForm()"
+            size="small"
+        />
+        <p-button
+            [label]="'buttons.clear' | translate"
+            icon="pi pi-filter-slash"
+            [outlined]="true"
+            severity="secondary"
+            (onClick)="clearFilters()"
+            size="small"
+        />
+    </div>
+</div>
+
+<!-- ──────── Table ──────── -->
+<div class="card">
+    <base-data-table
+        [columns]="selectedCols"
+        [data]="items()"
+        [loading]="loading()"
+        [pagination]="pagination()"
+        [disableMobileView]="false"
+        [initialFilters]="activeRawFilters"
+        [activeFilterChips]="activeFilters()"
+        (stateChange)="onTableStateChange($event)"
+        (chipRemoved)="removeFilterChip($event)"
+    >
+
+        <!-- Paginator left: column toggle -->
+        <ng-template #paginatorLeft>
+            <div class="flex items-center gap-2">
+                <app-column-toggle
+                    [options]="translatedColumnDefs"
+                    [selected]="selectedCols"
+                    (selectionChange)="onColumnSelectionChange($event)"
+                />
+            </div>
+        </ng-template>
+
+        <!-- Custom cell rendering -->
+        <ng-template #cell let-row let-col="col">
+            @switch (col.field) {
+
+                @case ('package_type') {
+                    <span>{{ getContainerProfileName(row.container_profile_id) }}</span>
+                }
+                @case ('quantity') {
+                    <span class="font-medium">{{ row.quantity | number:'1.0-2' }}</span>
+                }
+                @case ('weight') {
+                    <span>{{ row.weight | number:'1.0-4' }}</span>
+                }
+                @default {
+                    {{ row[col.field] }}
+                }
+            }
+        </ng-template>
+
+        <!-- Row actions -->
+        <ng-template #actions let-row>
+            <p-button
+                icon="pi pi-ellipsis-v"
+                [text]="true"
+                [rounded]="true"
+                size="small"
+                severity="secondary"
+                (click)="onItemOptionsClick($event, row, menuitem)"
+                (keydown.enter)="$event.preventDefault(); onItemOptionsClick($event, row, menuitem)"
+            />
+        </ng-template>
+
+        <!-- Custom filter row -->
+        <ng-template #filterRow let-columns="columns">
+            <!-- actions col spacer -->
+            <th style="width: 4rem"></th>
+            @for (col of columns; track col.field) {
+                <th class="filter-th">
+                    @switch (col.field) {
+
+                        @case ('facility') {
+                            <shipedge-filter-multiselect-panel
+                                [options]="getFacilityOptions()"
+                                optionLabel="label"
+                                optionValue="value"
+                                [placeholder]="'packaging.columns.facility' | translate"
+                                [showFilter]="getFacilityOptions().length > 5"
+                                [value]="facilityFilter()"
+                                (apply)="onFacilityFilterChange($event)"
+                                (clear)="onFacilityFilterChange([])"
+                            />
+                        }
+
+
+
+                        @case ('barcode') {
+                            <shipedge-filter-text-input
+                                [value]="getActiveFilterValue('barcode')"
+                                [matchMode]="getActiveFilterMatchMode('barcode')"
+                                [placeholder]="'packaging.columns.barcode' | translate"
+                                [filterType]="'text'"
+                                (applyWithMode)="onColumnFilterChange('barcode', $event)"
+                            />
+                        }
+
+                        @case ('package_type') {
+                            <shipedge-filter-multiselect-panel
+                                [options]="getContainerProfileOptions()"
+                                optionLabel="label"
+                                optionValue="value"
+                                [placeholder]="'packaging.columns.package_type' | translate"
+                                [showFilter]="getContainerProfileOptions().length > 5"
+                                [value]="containerProfileFilter()"
+                                (apply)="onContainerProfileFilterChange($event)"
+                                (clear)="onContainerProfileFilterChange([])"
+                            />
+                        }
+
+                        @case ('sku_name') {
+                            <shipedge-filter-text-input
+                                [value]="getActiveFilterValue('sku_name')"
+                                [matchMode]="getActiveFilterMatchMode('sku_name')"
+                                [placeholder]="'packaging.columns.name' | translate"
+                                [filterType]="'text'"
+                                (applyWithMode)="onColumnFilterChange('sku_name', $event)"
+                            />
+                        }
+
+                        @case ('sku_description') {
+                            <shipedge-filter-text-input
+                                [value]="getActiveFilterValue('sku_description')"
+                                [matchMode]="getActiveFilterMatchMode('sku_description')"
+                                [placeholder]="'packaging.columns.description' | translate"
+                                [filterType]="'text'"
+                                (applyWithMode)="onColumnFilterChange('sku_description', $event)"
+                            />
+                        }
+
+                        @case ('quantity') {
+                            <shipedge-filter-text-input
+                                [value]="getActiveFilterValue('quantity')"
+                                [matchMode]="getActiveFilterMatchMode('quantity')"
+                                [placeholder]="'packaging.columns.quantity' | translate"
+                                [filterType]="'numeric'"
+                                (applyWithMode)="onColumnFilterChange('quantity', $event)"
+                            />
+                        }
+
+                        @case ('weight') {
+                            <shipedge-filter-text-input
+                                [value]="getActiveFilterValue('weight')"
+                                [matchMode]="getActiveFilterMatchMode('weight')"
+                                [placeholder]="'packaging.columns.weight' | translate"
+                                [filterType]="'numeric'"
+                                (applyWithMode)="onColumnFilterChange('weight', $event)"
+                            />
+                        }
+
+                        @case ('location') {
+                            <shipedge-filter-text-input
+                                [value]="getActiveFilterValue('location')"
+                                [matchMode]="getActiveFilterMatchMode('location')"
+                                [placeholder]="'packaging.columns.location' | translate"
+                                [filterType]="'text'"
+                                (applyWithMode)="onColumnFilterChange('location', $event)"
+                            />
+                        }
+                    }
+                </th>
+            }
+        </ng-template>
+    </base-data-table>
+</div>
+
+<p-toast />

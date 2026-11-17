@@ -1,0 +1,21 @@
+// Parcels component styles
+
+// ── Preset table wrapper ───────────────────────────────────────────────────
+.preset-table-wrapper {
+  position: relative;
+}
+
+// ── Tracking cell: override base-data-table truncation so long
+//    tracking numbers wrap instead of being clipped ─────────────────────────
+.tracking-cell {
+  white-space: normal;
+
+  > i {
+    flex-shrink: 0;
+  }
+
+  > span {
+    min-width: 0;
+    word-break: break-all;
+  }
+}

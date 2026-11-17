@@ -1,0 +1,190 @@
+<p-toast />
+
+<form [formGroup]="form" (ngSubmit)="save()" class="flex flex-col gap-0">
+
+    <div class="grid grid-cols-2 gap-2">
+        <div class="col-span-1">
+            <!-- ══════════════════════ GENERAL ══════════════════════ -->
+            <div class="flex items-center gap-2 mb-3">
+                <i class="pi pi-building text-primary text-xl"></i>
+                <span class="text-lg font-semibold text-primary">{{ 'preferences.facilities.general_information' | translate }}</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+
+                <!-- Code -->
+                <div class="flex flex-col gap-1">
+                    <label for="fac-code" class="font-medium text-sm">{{ 'preferences.facilities.code' | translate }} <span class="text-red-500 ml-1">*</span></label>
+                    <input pInputText [pKeyFilter]="codeKeyFilter" id="fac-code" formControlName="code" [class.ng-invalid]="isInvalid('code')"
+                        [class.ng-dirty]="isInvalid('code')" placeholder="{{ 'preferences.facilities.code' | translate }}"
+                        class="w-full" />
+                    @if (isInvalid('code')) { <small class="text-red-500 text-xs">{{ getError('code') }}</small> }
+                </div>
+
+                <!-- Name -->
+                <div class="flex flex-col gap-1">
+                    <label for="fac-name" class="font-medium text-sm">{{ 'preferences.facilities.name' | translate }} <span class="text-red-500 ml-1">*</span></label>
+                    <input pInputText id="fac-name" formControlName="name" [class.ng-invalid]="isInvalid('name')"
+                        [class.ng-dirty]="isInvalid('name')" placeholder="{{ 'preferences.facilities.name' | translate }}"
+                        class="w-full" maxlength="50" />
+                    @if (isInvalid('name')) { <small class="text-red-500 text-xs">{{ getError('name') }}</small> }
+                </div>
+
+                <!-- External Ref ID -->
+                <div class="flex flex-col gap-1 md:col-span-2">
+                    <label for="fac-ext" class="font-medium text-sm">{{ 'preferences.facilities.external_ref_id' | translate }}</label>
+                    <input pInputText id="fac-ext" formControlName="external_ref_id"
+                        placeholder="{{ 'preferences.facilities.external_ref_id' | translate }}" class="w-full" />
+                </div>
+
+            </div>
+
+            <!-- ══════════════════════ ADDRESS ══════════════════════ -->
+            <div class="flex items-center gap-3 mb-3">
+                <i class="pi pi-map-marker text-primary text-xl"></i>
+                <span class="text-lg font-semibold text-primary">{{ 'preferences.facilities.address' | translate }}</span>
+                <div class="ml-auto flex items-center gap-2">
+                    <span class="text-xs text-surface-400">{{ 'buttons.edit' | translate }}</span>
+                    <p-toggleswitch
+                        [ngModel]="addressEnabled()"
+                        (ngModelChange)="toggleAddressFields($event)"
+                        [ngModelOptions]="{standalone: true}"
+                    />
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+
+                <!-- Street -->
+                <div class="flex flex-col gap-1 md:col-span-2">
+                    <label for="fac-street" class="font-medium text-sm">{{ 'preferences.facilities.street' | translate }} <span class="text-red-500 ml-1">*</span></label>
+                    <input pInputText id="fac-street" formControlName="street" [class.ng-invalid]="isInvalid('street')"
+                        [class.ng-dirty]="isInvalid('street')" placeholder="{{ 'preferences.facilities.street' | translate }}"
+                        class="w-full" />
+                    @if (isInvalid('street')) { <small class="text-red-500 text-xs">{{ getError('street') }}</small> }
+                </div>
+
+                <!-- City -->
+                <div class="flex flex-col gap-1">
+                    <label for="fac-city" class="font-medium text-sm">{{ 'preferences.facilities.city' | translate }} <span class="text-red-500 ml-1">*</span></label>
+                    <input pInputText id="fac-city" formControlName="city" [class.ng-invalid]="isInvalid('city')"
+                        [class.ng-dirty]="isInvalid('city')" placeholder="{{ 'preferences.facilities.city' | translate }}"
+                        class="w-full" />
+                    @if (isInvalid('city')) { <small class="text-red-500 text-xs">{{ getError('city') }}</small> }
+                </div>
+
+                <!-- State / Province -->
+                <div class="flex flex-col gap-1">
+                    <label for="fac-state" class="font-medium text-sm">{{ 'preferences.facilities.state_province' | translate }} <span class="text-red-500 ml-1">*</span></label>
+                    <input pInputText id="fac-state" formControlName="state_province"
+                        [class.ng-invalid]="isInvalid('state_province')" [class.ng-dirty]="isInvalid('state_province')"
+                        placeholder="{{ 'preferences.facilities.state_province' | translate }}" class="w-full" />
+                    @if (isInvalid('state_province')) { <small class="text-red-500 text-xs">{{ getError('state_province') }}</small> }
+                </div>
+
+                <!-- Zip Code -->
+                <div class="flex flex-col gap-1">
+                    <label for="fac-zip" class="font-medium text-sm">{{ 'preferences.facilities.zip_code' | translate }} <span class="text-red-500 ml-1">*</span></label>
+                    <input pInputText pKeyFilter="int" id="fac-zip" formControlName="zip_code" [class.ng-invalid]="isInvalid('zip_code')"
+                        [class.ng-dirty]="isInvalid('zip_code')" placeholder="{{ 'preferences.facilities.zip_code' | translate }}"
+                        class="w-full" inputmode="numeric" />
+                    @if (isInvalid('zip_code')) { <small class="text-red-500 text-xs">{{ getError('zip_code') }}</small> }
+                </div>
+
+                <!-- Country -->
+                <div class="flex flex-col gap-1">
+                    <label for="fac-country" class="font-medium text-sm">{{ 'preferences.facilities.country' | translate }} <span class="text-red-500 ml-1">*</span></label>
+                    <p-select id="fac-country" formControlName="country_code" [options]="countries" optionLabel="label"
+                        optionValue="value" [filter]="true" filterBy="label"
+                        [placeholder]="'preferences.facilities.select_country' | translate" [showClear]="true"
+                        styleClass="w-full" appendTo="body" />
+                    @if (isInvalid('country_code')) { <small class="text-red-500 text-xs">{{ getError('country_code') }}</small> }
+                </div>
+
+                <!-- Reference -->
+                <div class="flex flex-col gap-1 md:col-span-2">
+                    <label for="fac-ref" class="font-medium text-sm">{{ 'preferences.facilities.reference' | translate }}</label>
+                    <input pInputText id="fac-ref" formControlName="reference"
+                        placeholder="{{ 'preferences.facilities.reference' | translate }}" class="w-full" />
+                </div>
+
+            </div>
+        </div>
+        <div class="col-span-1 flex flex-col">
+            <!-- ══════════════════════ MAP ══════════════════════ -->
+            <div class="flex items-center gap-2 mb-2">
+                <i class="pi pi-map text-primary text-xl"></i>
+                <span class="text-lg font-semibold text-primary">{{ 'preferences.facilities.map_title' | translate }} <span class="text-red-500 ml-1">*</span></span>
+            </div>
+            <p class="text-sm text-surface-400 mb-3">{{ 'preferences.facilities.map_subtitle' | translate }}</p>
+
+            <!-- ── Geocoding search bar + suggestions ────────────────────── -->
+            <div class="map-search-wrapper">
+                <div class="map-search-bar">
+                    <span class="map-search-icon pi pi-search"></span>
+                    <input
+                        id="map-geocoder-input"
+                        type="search"
+                        class="map-search-input"
+                        [placeholder]="'preferences.facilities.geocoding.placeholder' | translate"
+                        [value]="searchQuery()"
+                        (input)="onSearchInput($any($event.target).value)"
+                        (keydown.enter)="buscarDireccion(searchQuery())"
+                        (blur)="cerrarSugerencias()"
+                        [disabled]="isSearching()"
+                        autocomplete="off"
+                    />
+                    <button
+                        type="button"
+                        class="map-search-btn"
+                        (click)="buscarDireccion(searchQuery())"
+                        [disabled]="isSearching() || !searchQuery()"
+                    >
+                        @if (isSearching()) {
+                            <i class="pi pi-spin pi-spinner"></i>
+                        } @else {
+                            <span>{{ 'preferences.facilities.geocoding.search_btn' | translate }}</span>
+                        }
+                    </button>
+                </div>
+
+                <!-- Suggestions dropdown -->
+                @if (showSuggestions() && searchResults().length > 0) {
+                <ul class="map-suggestions">
+                    @for (result of searchResults(); track result.place_id) {
+                    <li class="map-suggestion-item" (mousedown)="seleccionarResultado(result)">
+                        <i class="pi pi-map-marker map-suggestion-icon"></i>
+                        <span class="map-suggestion-text">{{ result.display_name }}</span>
+                    </li>
+                    }
+                </ul>
+                }
+            </div>
+
+            <div id="facility-map" class="facility-map"></div>
+
+            @if (lat()) {
+            <div class="flex gap-4 text-sm text-surface-500 pt-3">
+                <span><strong>Lat:</strong> {{ lat() | number:'1.6-6' }}</span>
+                <span><strong>Lng:</strong> {{ lng() | number:'1.6-6' }}</span>
+            </div>
+            }
+            @if (isInvalid('lat')) {
+            <small class="text-red-500 text-xs pt-2 block">{{ getError('lat') }}</small>
+            }
+        </div>
+    </div>
+
+</form>
+
+<!-- Progress bar -->
+@if (isLoading()) {
+<p-progressBar mode="indeterminate" [style]="{ height: '3px' }" class="mb-2" />
+}
+
+<!-- Footer -->
+<div class="flex justify-end gap-2 mt-2">
+    <p-button [label]="'common.cancel' | translate" severity="secondary" [text]="true" [disabled]="isLoading()"
+        (onClick)="cancel()" />
+    <p-button [label]="(facility?.id ? 'common.update' : 'common.create') | translate"
+        [disabled]="!isFormValid() || isLoading()" [loading]="isLoading()" (onClick)="save()" />
+</div>

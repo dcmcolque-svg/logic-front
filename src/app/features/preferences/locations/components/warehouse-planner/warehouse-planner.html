@@ -1,0 +1,1131 @@
+<div class="wh-wrapper">
+
+<!-- ── Generate: Duplicate Location Codes dialog ──────────────────────────── -->
+<p-dialog
+  header="Duplicate Location Codes (Generate)"
+  [visible]="genDupDialogVisible()"
+  (visibleChange)="genDupDialogVisible.set($event)"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '480px', 'max-width': '95vw' }"
+  appendTo="body">
+
+  <div class="gen-dup-dialog-body">
+    <p class="gen-dup-dialog-msg">
+      The following location codes already exist and <strong>will not be created</strong>:
+    </p>
+    <ul class="gen-dup-dialog-list">
+      @for (code of genDupCodes(); track code) {
+        <li>{{ code }}</li>
+      }
+    </ul>
+    @if (genDupHasRemaining()) {
+      <p class="gen-dup-dialog-note">
+        Click <strong>Create Remaining</strong> to create only the non-duplicate locs
+        along with their area and hallways, or <strong>Cancel</strong> to create nothing.
+      </p>
+    } @else {
+      <p class="gen-dup-dialog-note gen-dup-dialog-note--warn">
+        All locations in this batch already exist. Nothing will be created.
+      </p>
+    }
+  </div>
+
+  <ng-template pTemplate="footer">
+    @if (genDupHasRemaining()) {
+      <p-button
+        label="Create Remaining"
+        severity="success"
+        (onClick)="finalizeGenDuplicateConfirm()" />
+      <p-button
+        label="Cancel"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="finalizeGenDuplicateCancel()" />
+    } @else {
+      <p-button
+        label="OK"
+        severity="secondary"
+        (onClick)="finalizeGenDuplicateCancel()" />
+    }
+  </ng-template>
+</p-dialog>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       2D MODE
+  ══════════════════════════════════════════════════════════════════════ -->
+  @if (viewMode() === '2d') {
+    <div class="wh-2d-layout">
+
+      <!-- ── Canvas Area ───────────────────────────────────────────── -->
+      <div class="wh-canvas-area"
+           [style.width]="canvasWidth() > 0 ? canvasWidth() + 'px' : null">
+
+
+
+        <!-- Top toolbar: tools + brush type pills (hidden in picking mode) -->
+        @if (!isPickingMode()) {
+        <div class="toolbar-top">
+          <button type="button" class="toolbar-toggle" (click)="toolbarCollapsed = !toolbarCollapsed"
+            [attr.aria-label]="toolbarCollapsed ? 'Show toolbar' : 'Hide toolbar'"
+            [pTooltip]="toolbarCollapsed ? 'Show toolbar' : 'Hide toolbar'" tooltipPosition="bottom">
+            <i [class]="'pi ' + (toolbarCollapsed ? 'pi-chevron-down' : 'pi-chevron-up')"></i>
+          </button>
+          @if (!toolbarCollapsed) {
+          <div class="toolbar-pill">
+
+            <!-- Arrow / Create -->
+            <p-button id="tool-arrow" size="small"
+              [text]="stateService.activeTool() !== 'arrow'"
+              [outlined]="stateService.activeTool() === 'arrow'"
+              severity="primary"
+              pTooltip="Draw / Select (V)" tooltipPosition="bottom"
+              (onClick)="stateService.activeTool.set('arrow')">
+              <i class="pi pi-pencil tool-btn__icon"></i>
+              <span>Create</span>
+            </p-button>
+
+            <!-- Hand / Select -->
+            <p-button id="tool-hand" size="small"
+              [text]="stateService.activeTool() !== 'hand'"
+              [outlined]="stateService.activeTool() === 'hand'"
+              severity="success"
+              pTooltip="Move items (H)" tooltipPosition="bottom"
+              (onClick)="stateService.activeTool.set('hand')">
+              <i class="pi pi-arrows-alt tool-btn__icon"></i>
+              <span>Select</span>
+            </p-button>
+
+            <!-- Brush / Draw -->
+            <p-button id="tool-brush" size="small"
+              [text]="stateService.activeTool() !== 'brush'"
+              [outlined]="stateService.activeTool() === 'brush'"
+              severity="primary"
+              pTooltip="Paint cells (B)" tooltipPosition="bottom"
+              (onClick)="stateService.activeTool.set('brush')">
+              <i class="pi pi-palette tool-btn__icon"></i>
+              <span>Draw</span>
+            </p-button>
+
+            <!-- Hallway -->
+            <p-button id="tool-hallway" size="small"
+              [text]="stateService.activeTool() !== 'hallway'"
+              [outlined]="stateService.activeTool() === 'hallway'"
+              severity="secondary"
+              pTooltip="Insert hallway/aisle" tooltipPosition="bottom"
+              (onClick)="stateService.activeTool.set('hallway')">
+              <i class="pi pi-arrows-h tool-btn__icon"></i>
+              <span>Add Aisle</span>
+            </p-button>
+
+            <div class="toolbar-sep"></div>
+
+            <!-- Brush type pills (only when brush active) -->
+            @if (stateService.activeTool() === 'brush') {
+              @for (t of brushTypes; track t.type) {
+                <p-button size="small"
+                  [text]="stateService.brushType() !== t.type"
+                  [outlined]="stateService.brushType() === t.type"
+                  severity="secondary"
+                  (onClick)="stateService.brushType.set(t.type)">
+                  <i [class]="t.icon + ' tool-btn__icon'"></i>
+                  <span>{{ t.label }}</span>
+                </p-button>
+              }
+            }
+
+            <!-- Hallway orientation pills (only when hallway tool active) -->
+            @if (stateService.activeTool() === 'hallway') {
+              <p-button id="hw-orient-h" size="small"
+                [text]="stateService.hallwayOrientation() !== 'horizontal'"
+                [outlined]="stateService.hallwayOrientation() === 'horizontal'"
+                severity="secondary"
+                pTooltip="Horizontal aisle (—)" tooltipPosition="bottom"
+                (onClick)="stateService.hallwayOrientation.set('horizontal')">
+                <i class="pi pi-arrows-h tool-btn__icon"></i>
+                <span>H</span>
+              </p-button>
+              <p-button id="hw-orient-v" size="small"
+                [text]="stateService.hallwayOrientation() !== 'vertical'"
+                [outlined]="stateService.hallwayOrientation() === 'vertical'"
+                severity="secondary"
+                pTooltip="Vertical aisle (|)" tooltipPosition="bottom"
+                (onClick)="stateService.hallwayOrientation.set('vertical')">
+                <i class="pi pi-arrows-v tool-btn__icon"></i>
+                <span>V</span>
+              </p-button>
+            }
+
+          </div>
+          }
+        </div><!-- /.toolbar-top -->
+        }<!-- /@if !pickingMode -->
+
+        <!-- Bottom: layer / view-mode switcher -->
+        @if (!isStandalonePicker) {
+          <div class="toolbar-bottom">
+            <div class="view-pill">
+
+              <p-button id="view-layout" size="small"
+                [text]="!(viewMode() === '2d' && stateService.activeLayer() === 'floor')"
+                [outlined]="viewMode() === '2d' && stateService.activeLayer() === 'floor'"
+                severity="primary"
+                pTooltip="Floor Plan — Walls, Doors, Locs, Conveyors, Pallets, Bins" tooltipPosition="top"
+                (onClick)="setView('2d', 'floor')">
+                <i class="pi pi-building view-btn__icon"></i>
+                <span>Layout</span>
+              </p-button>
+
+              <p-button id="view-areas" size="small"
+                [text]="!(viewMode() === '2d' && stateService.activeLayer() === 'zones')"
+                [outlined]="viewMode() === '2d' && stateService.activeLayer() === 'zones'"
+                severity="help"
+                pTooltip="Zones &amp; Areas only" tooltipPosition="top"
+                (onClick)="setView('2d', 'zones')">
+                <i class="pi pi-map view-btn__icon"></i>
+                <span>Areas</span>
+              </p-button>
+
+              <p-button id="view-all" size="small"
+                [text]="!(viewMode() === '2d' && stateService.activeLayer() === 'all')"
+                [outlined]="viewMode() === '2d' && stateService.activeLayer() === 'all'"
+                severity="success"
+                pTooltip="All layers visible" tooltipPosition="top"
+                (onClick)="setView('2d', 'all')">
+                <i class="pi pi-eye view-btn__icon"></i>
+                <span>All</span>
+              </p-button>
+
+              <p-button id="view-3d" size="small"
+                [text]="viewMode() !== '3d'"
+                [outlined]="viewMode() === '3d'"
+                severity="warn"
+                pTooltip="3D Scene view" tooltipPosition="top"
+                (onClick)="viewMode.set('3d')">
+                <i class="pi pi-box view-btn__icon"></i>
+                <span>3D</span>
+              </p-button>
+
+            </div>
+          </div><!-- /.toolbar-bottom -->
+        }
+
+        <!-- Floating Zoom Controls -->
+        <div class="floating-zoom-controls">
+          <p-button 
+            [icon]="'pi pi-arrows-alt'"
+            (onClick)="stateService.panLockMode.set(!stateService.panLockMode())"
+            [rounded]="true"
+            [text]="!stateService.panLockMode()"
+            [outlined]="stateService.panLockMode()"
+            [severity]="stateService.panLockMode() ? 'primary' : 'secondary'"
+            pTooltip="Pan Camera (left + right click)" tooltipPosition="left"
+            styleClass="zoom-fab" />
+          <div class="zoom-divider"></div>
+          <p-button icon="pi pi-plus" (onClick)="onZoomIn()" [rounded]="true" [text]="true" 
+            pTooltip="Zoom In" tooltipPosition="left" styleClass="zoom-fab" />
+          <p-button icon="pi pi-minus" (onClick)="onZoomOut()" [rounded]="true" [text]="true" 
+            pTooltip="Zoom Out" tooltipPosition="left" styleClass="zoom-fab" />
+        </div>
+
+        <!-- 2D Planner -->
+        <app-warehouse-2d-planner />
+
+      </div><!-- /.wh-canvas-area -->
+
+      <!-- Draggable divider -->
+      <div class="resize-divider" (mousedown)="startResizeDivider($event)"></div>
+
+      <!-- ── Right Panel ─────────────────────────────────────────────── -->
+      <div class="right-panel" [style.width.px]="rightPanelWidth()">
+
+        <!-- ╔══════ PICKING MODE PANEL ══════╗ -->
+        @if (isPickingMode()) {
+
+          <div class="picking-panel">
+
+            <!-- Header -->
+            <div class="picking-panel-header">
+              <div>
+                <div class="picking-panel-title">Picking Route</div>
+                @if (pickingService.route(); as r) {
+                  <div class="picking-panel-subtitle">{{ r.orderIds.join(', ') }}</div>
+                }
+              </div>
+              <div class="picking-panel-actions">
+                <button class="picking-settings-btn" (click)="pickerSettingsVisible = true"
+                  pTooltip="Picker Settings" tooltipPosition="left">
+                  <i class="pi pi-cog"></i>
+                </button>
+                @if (!isStandalonePicker) {
+                  <button class="picking-exit-btn" (click)="togglePickingMode()">✕ Exit</button>
+                }
+              </div>
+            </div>
+
+            @if (pickingService.route(); as route) {
+
+              <!-- Stats cards -->
+              <div class="picking-stats-row">
+                <div class="picking-stat-card">
+                  <span class="picking-stat-value">{{ route.stops.length }}</span>
+                  <span class="picking-stat-label">Stops</span>
+                </div>
+                <div class="picking-stat-card">
+                  <span class="picking-stat-value">{{ toFeet(route.totalCells) }} ft</span>
+                  <div class="picking-stat-value">{{ route.totalCells }} m</div>
+                  <span class="picking-stat-label">Distance</span>
+                </div>
+                <div class="picking-stat-card">
+                  <span class="picking-stat-value">~{{ route.estimatedTime }}m</span>
+                  <span class="picking-stat-label">Est. Time</span>
+                </div>
+              </div>
+
+              <!-- Route indicator bar -->
+              <div class="picking-route-bar">
+                <div class="picking-route-bar-fill"
+                  [style.width.%]="route.stops.length > 1 ? (pickingService.currentStopIndex() / (route.stops.length - 1)) * 100 : 100">
+                </div>
+              </div>
+              <div class="picking-route-bar-labels">
+                <span><i class="pi pi-map-marker"></i> {{ route.startPoint.name }}</span>
+                <span><i class="pi pi-flag"></i> {{ route.endPoint.name }}</span>
+              </div>
+
+              <!-- Stop list -->
+              <div class="picking-stops-title">Picks</div>
+              <div class="picking-stops-list">
+                @for (stop of route.stops; track stop.order; let i = $index) {
+                  <div class="picking-stop-item"
+                    [class.picked]="stop.picked"
+                    [class.current]="i === pickingService.currentStopIndex() && !stop.picked"
+                    [class.future]="i > pickingService.currentStopIndex() && !stop.picked"
+                    (click)="i <= pickingService.currentStopIndex() ? onStopCardClick(stop) : null"
+                    (keydown.enter)="i <= pickingService.currentStopIndex() ? onStopCardClick(stop) : null"
+                    tabindex="0"
+                    [style.cursor]="i <= pickingService.currentStopIndex() ? 'pointer' : 'default'">
+                    <div class="picking-stop-number">{{ stop.order }}</div>
+                    <div class="picking-stop-body">
+                      <div class="picking-stop-loc">{{ stop.locName }}</div>
+                      <div class="picking-stop-sku">SKU: {{ stop.sku }}</div>
+                      <div class="picking-stop-order-tag">
+                        <span class="order-badge">{{ stop.orderId }}</span>
+                        @if (stop.picked) {
+                          <span class="tote-badge">{{ stop.tote }}</span>
+                        }
+                      </div>
+                      <div class="picking-stop-pkg-chip" [class.done]="stop.picked">
+                        {{ stop.picked ? stop.packageCount : 0 }}/{{ stop.packageCount }}
+                      </div>
+                    </div>
+                    <div class="picking-stop-status" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
+                      @if (pickingService.anyScanEnabled()) {
+                        @if (stop.picked) {
+                          <i class="pi pi-check-circle" style="color: #10B981; font-size: 1.2rem"></i>
+                        } @else if (i === pickingService.currentStopIndex()) {
+                          <i class="pi pi-qrcode" style="color: var(--primary-color); font-size: 1.2rem"
+                            pTooltip="Tap card to scan"></i>
+                        } @else {
+                          <i class="pi pi-lock" style="color: #cbd5e1; font-size: 1rem"></i>
+                        }
+                      } @else {
+                        @if (i <= pickingService.currentStopIndex()) {
+                          <p-checkbox
+                            [binary]="true"
+                            [ngModel]="stop.picked"
+                            (onChange)="pickingService.toggleStopPicked(stop.order)"/>
+                        } @else {
+                          <i class="pi pi-lock" style="color: #cbd5e1; font-size: 1rem"></i>
+                        }
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Next button -->
+              @if (!pickingService.allPicked()) {
+                <button class="picking-next-btn"
+                  (click)="onNextStop()"
+                  [disabled]="!canAdvanceToNext()">
+                  <i class="pi pi-arrow-right"></i>
+                  Next
+                </button>
+              }
+
+              <!-- Mock refresh button -->
+              @if (!isStandalonePicker) {
+                <button class="picking-regen-btn" (click)="pickingService.generateMockRoute()">
+                  🔄 Regenerate Mock Route
+                </button>
+              }
+
+            } @else {
+              <div class="picking-empty">
+                <span>⚠️ No route data.<br>Add at least one Loc and connected Hallways to the warehouse.</span>
+              </div>
+            }
+
+          </div><!-- /.picking-panel -->
+
+          <!-- ═══ Picker Settings Dialog ═══ -->
+          <p-dialog
+            header="Picker Settings"
+            [(visible)]="pickerSettingsVisible"
+            [modal]="true"
+            [style]="{ width: '380px' }"
+            [dismissableMask]="true">
+            <div class="picker-settings-body">
+              <div class="picker-setting-row">
+                <p-toggleSwitch
+                  [ngModel]="pickingService.showFullPath()"
+                  (onChange)="pickingService.showFullPath.set($event.checked)"
+                  inputId="settShowPath"/>
+                <label for="settShowPath">Show all the path</label>
+              </div>
+
+              <div class="picker-settings-divider"></div>
+              <div class="picker-settings-section-title">Scan Verification</div>
+
+              <div class="picker-setting-row">
+                <p-toggleSwitch
+                  [ngModel]="pickingService.scanLocationEnabled()"
+                  (onChange)="pickingService.scanLocationEnabled.set($event.checked)"
+                  inputId="settScanLoc"/>
+                <label for="settScanLoc">Enable Location scanning</label>
+              </div>
+              <div class="picker-setting-row">
+                <p-toggleSwitch
+                  [ngModel]="pickingService.scanSkuEnabled()"
+                  (onChange)="pickingService.scanSkuEnabled.set($event.checked)"
+                  inputId="settScanSku"/>
+                <label for="settScanSku">Enable SKU scanning</label>
+              </div>
+              <div class="picker-setting-row">
+                <p-toggleSwitch
+                  [ngModel]="pickingService.scanToteEnabled()"
+                  (onChange)="pickingService.scanToteEnabled.set($event.checked)"
+                  inputId="settScanTote"/>
+                <label for="settScanTote">Enable Tote scanning</label>
+              </div>
+
+              <div class="picker-settings-divider"></div>
+              <div class="picker-settings-section-title">Input Mode</div>
+
+              <div class="picker-setting-row">
+                <p-toggleSwitch
+                  [ngModel]="pickingService.manualInputMode()"
+                  (onChange)="pickingService.manualInputMode.set($event.checked)"
+                  inputId="settManualInput"/>
+                <label for="settManualInput">Manual input instead of camera</label>
+              </div>
+            </div>
+          </p-dialog>
+
+          <!-- ═══ Pick Scanner Dialog ═══ -->
+          <app-pick-scanner-dialog
+            #pickScannerRef
+            [(visible)]="pickScannerVisible"
+            [stepLabel]="pickScanStepLabel"
+            [expectedValue]="pickScanExpectedValue"
+            [acceptAny]="pickScanAcceptAny"
+            [manualInput]="pickingService.manualInputMode()"
+            [scanType]="pickScanCurrentType"
+            (verified)="onPickScanVerified()"
+            (failed)="onPickScanFailed($event)"/>
+
+
+        } @else {
+
+        <!-- Tab Row (normal mode) -->
+        <div class="right-panel-tabs">
+          @for (btn of panelButtons; track btn.id) {
+            <p-button
+              [text]="activeRightPanel() !== btn.id"
+              [outlined]="activeRightPanel() === btn.id"
+              severity="secondary"
+              size="small"
+              styleClass="right-panel-tab"
+              (onClick)="activeRightPanel.set(btn.id)">
+              <i [class]="btn.icon + ' right-panel-tab__icon'"></i>
+              <span class="right-panel-tab__label">{{ btn.label }}</span>
+            </p-button>
+          }
+        </div>
+
+        <!-- Panel Content -->
+        <div class="right-panel-content">
+
+          <!-- ╔══════ DATA PANEL ══════╗ -->
+          @if (activeRightPanel() === 'data') {
+
+            <!-- Empty selection hint -->
+            @if (stateService.activeTool() === 'arrow' && stateService.emptySelection() && stateService.selectedItems().length === 0) {
+              <div style="margin-bottom:16px;">
+                <h3 class="section-title">Create From Selection</h3>
+                <p class="text-muted-sm">
+                  {{ stateService.emptySelection()?.w }}' × {{ stateService.emptySelection()?.h }}'
+                  &nbsp;({{ (stateService.emptySelection()?.w || 0) * (stateService.emptySelection()?.h || 0) }} sq mt)
+                </p>
+              </div>
+            }
+
+            <!-- Selected items -->
+            @if (stateService.selectedItems().length > 0) {
+              <h3 class="section-title">
+                {{ stateService.selectedItems().length === 1 ? 'Selected Item' : stateService.selectedItems().length + ' Items Selected' }}
+              </h3>
+
+              <!-- Single item properties -->
+              @if (stateService.selectedItems().length === 1) {
+                <div style="margin-bottom:12px;">
+
+                  <div class="form-group">
+                    @if (stateService.selectedItems()[0].type === 'Area') {
+                      <label class="field-label" for="wp-item-area-name">Name</label>
+                      <input id="wp-item-area-name" pInputText class="form-input"
+                        maxlength="2"
+                        [ngModel]="stateService.selectedItems()[0].name"
+                        (ngModelChange)="updateAreaName($event)" />
+                    } @else {
+                      <label class="field-label" for="wp-item-name">Name</label>
+                      <input id="wp-item-name" pInputText class="form-input"
+                        maxlength="15"
+                        [ngModel]="stateService.selectedItems()[0].name"
+                        (ngModelChange)="updateSingle('name', $event)" />
+                    }
+                  </div>
+
+                  <div class="form-group">
+                    <label class="field-label" for="wp-item-type">Type</label>
+                    <input id="wp-item-type" pInputText class="form-input" disabled
+                      [value]="stateService.selectedItems()[0].type" />
+                  </div>
+
+                  <!-- Loc: category + storage type -->
+                  @if (stateService.selectedItems()[0].type === 'Loc') {
+                    <div class="form-group">
+                      <label class="field-label" for="wp-item-category">Category</label>
+                      <p-select inputId="wp-item-category"
+                        [options]="bayCategories()"
+                        [ngModel]="stateService.selectedItems()[0].category"
+                        (ngModelChange)="updateSingle('category', $event)"
+                        styleClass="w-full" />
+                    </div>
+                    <div class="form-group">
+                      <label class="field-label" for="wp-item-storage-type">Storage Type</label>
+                      <p-select inputId="wp-item-storage-type"
+                        [options]="bayTypes()"
+                        optionLabel="label" optionValue="value"
+                        [ngModel]="stateService.selectedItems()[0].bayType"
+                        (ngModelChange)="updateSingle('bayType', $event)"
+                        styleClass="w-full" />
+                    </div>
+                  }
+
+                  <!-- Area: row/col start -->
+                  @if (stateService.selectedItems()[0].type === 'Area') {
+                    <div class="form-group">
+                      <h4 class="field-label">Location Numbering</h4>
+                      <div class="form-row-2">
+                        <div>
+                          <label class="field-label-sm" for="wp-area-row-start">Row Start</label>
+                          <p-inputnumber inputId="wp-area-row-start"
+                            [min]="1" [showButtons]="false"
+                            [ngModel]="stateService.selectedItems()[0].rowStart ?? 1"
+                            (ngModelChange)="updateSingle('rowStart', $event)"
+                            styleClass="w-full" inputStyleClass="w-full form-input form-input--accent" />
+                        </div>
+                        <div>
+                          <label class="field-label-sm" for="wp-area-col-start">Col Start</label>
+                          <p-inputnumber inputId="wp-area-col-start"
+                            [min]="1" [showButtons]="false"
+                            [ngModel]="stateService.selectedItems()[0].colStart ?? 1"
+                            (ngModelChange)="updateSingle('colStart', $event)"
+                            styleClass="w-full" inputStyleClass="w-full form-input form-input--accent" />
+                        </div>
+                      </div>
+                      <p style="font-size:0.65rem; color:#64748B; margin:4px 0 0;">Set starting numbers for rows and columns within this Area</p>
+                    </div>
+                  }
+
+                  <!-- Width / Height -->
+                  <div class="form-row-2">
+                    <div>
+                      <label class="field-label" for="wp-item-width">Width</label>
+                      <p-inputnumber inputId="wp-item-width" [min]="1" [showButtons]="false"
+                        [ngModel]="stateService.selectedItems()[0].gw"
+                        (ngModelChange)="updateSingle('gw', $event)"
+                        styleClass="w-full" inputStyleClass="w-full form-input" />
+                    </div>
+                    <div>
+                      <label class="field-label" for="wp-item-height">Height</label>
+                      <p-inputnumber inputId="wp-item-height" [min]="1" [showButtons]="false"
+                        [ngModel]="stateService.selectedItems()[0].gh"
+                        (ngModelChange)="updateSingle('gh', $event)"
+                        styleClass="w-full" inputStyleClass="w-full form-input" />
+                    </div>
+                  </div>
+
+                  <!-- Position (read-only) -->
+                  <div class="form-group">
+                    <label class="field-label" for="wp-item-position">Position (X, Y)</label>
+                    <input id="wp-item-position" pInputText class="form-input" disabled
+                      [value]="stateService.selectedItems()[0].gx + ', ' + stateService.selectedItems()[0].gy" />
+                  </div>
+
+                </div><!-- /single item -->
+              }<!-- /@if single -->
+
+              <!-- Conveyor connections -->
+              @if (stateService.selectedItems().length === 1 && stateService.selectedItems()[0].type === 'Conveyor') {
+                <div style="margin-bottom:12px;">
+                  <h4 class="field-label">Conveyor Connections</h4>
+                  <div class="conn-grid">
+                    @for (dir of conveyorDirs; track dir.key) {
+                      <p-button size="small"
+                        [outlined]="getConnection(dir.key)"
+                        [text]="!getConnection(dir.key)"
+                        severity="warn"
+                        styleClass="w-full"
+                        (onClick)="stateService.toggleConveyorConnection(stateService.selectedItems()[0].id, dir.key)">
+                        {{ dir.label }}
+                      </p-button>
+                    }
+                  </div>
+                  <p style="font-size:0.65rem; color:#64748B; margin:6px 0 0;">Click to toggle connections</p>
+                </div>
+              }
+
+
+
+
+              <!-- Batch Loc row/col edit — shown when a row or column selector was used -->
+              @if (selectedLocCount() >= 1 && (locBatchSharedRow() !== null || locBatchSharedCol() !== null)) {
+                <div class="batch-loc-box">
+                  <p class="text-batch-label">
+                    📍 {{ batchLocLabel() }}
+                    <span class="text-batch-count">
+                      — {{ selectedLocCount() }} loc{{ selectedLocCount() === 1 ? '' : 's' }}
+                    </span>
+                  </p>
+                  <div style="display:flex; gap:8px;">
+                    @if (locBatchSharedRow() !== null) {
+                      <div style="flex:1;">
+                        <label class="field-label-xs" for="batch-row-input-rp-field">Row number</label>
+                        <div class="batch-input-row">
+                          <p-inputnumber id="batch-row-input-rp" inputId="batch-row-input-rp-field" [min]="1" [max]="9999" [showButtons]="false"
+                            [(ngModel)]="batchRowValRp"
+                            [ngModelOptions]="{standalone: true}"
+                            styleClass="flex-1" inputStyleClass="w-full" />
+                          <p-button size="small" severity="success" pTooltip="Apply row to all selected Locs"
+                            (onClick)="applyLocBatchRow(batchRowValRp ?? 1)">✓</p-button>
+                        </div>
+                      </div>
+                    }
+                    @if (locBatchSharedCol() !== null) {
+                      <div style="flex:1;">
+                        <label class="field-label-xs" for="batch-col-input-rp-field">Col number</label>
+                        <div class="batch-input-row">
+                          <p-inputnumber id="batch-col-input-rp" inputId="batch-col-input-rp-field" [min]="1" [max]="99" [showButtons]="false"
+                            [(ngModel)]="batchColValRp"
+                            [ngModelOptions]="{standalone: true}"
+                            styleClass="flex-1" inputStyleClass="w-full" />
+                          <p-button size="small" severity="success" pTooltip="Apply col to all selected Locs"
+                            (onClick)="applyLocBatchCol(batchColValRp ?? 1)">✓</p-button>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                  <p class="text-hint-lock">Edit applies to all selected Locs · changes are locked</p>
+                </div>
+              }
+
+
+
+            }<!-- /@if selectedItems -->
+
+            <!-- No selection hint -->
+            @if (!stateService.emptySelection() && stateService.selectedItems().length === 0) {
+              <div class="hint-box">
+                @switch (stateService.activeTool()) {
+                  @case ('arrow') { <span>Drag on the grid to draw a region, then choose a shape type to create.</span> }
+                  @case ('hand')  { <span>Click a shape to select it. Drag to move. Hold Shift to add to selection.</span> }
+                  @case ('brush') { <span>Click on the grid to paint items. Hold and drag to paint multiple.</span> }
+                }
+              </div>
+            }
+
+            <!-- Loc count info -->
+            <div class="loc-count-box">
+              <div class="loc-count-title">📦 Location Count</div>
+              <div class="loc-count-row">
+                <span>Total Locs</span>
+                <span>{{ totalLocCount() }}</span>
+              </div>
+              <div class="loc-count-row">
+                <span>Unique Areas</span>
+                <span>{{ uniqueAreaCount() }}</span>
+              </div>
+            </div>
+          }<!-- /@if data panel -->
+
+          <!-- ╔══════ SETTINGS PANEL ══════╗ -->
+          @if (activeRightPanel() === 'settings') {
+
+            <!-- View level selector -->
+            <div style="margin-bottom:14px;">
+              <label class="section-label" for="wp-view-level">View Level</label>
+              <p-select inputId="wp-view-level"
+                [options]="levelViewOptions"
+                optionLabel="label" optionValue="value"
+                [ngModel]="stateService.activeLevelView()"
+                (ngModelChange)="stateService.activeLevelView.set($event)"
+                styleClass="w-full" />
+            </div>
+
+            <!-- Auto-hallways -->
+            <div class="settings-sub" style="margin-bottom:14px;">
+              <p class="text-section-hdr">Auto-Hallways/Aisles</p>
+
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label class="field-label-sm" for="wp-settings-hw-every-col">
+                    Cols per block
+                    <span class="text-hallway-label">(0 = off)</span>
+                  </label>
+                  <p-inputnumber inputId="wp-settings-hw-every-col" [min]="0" [max]="50" [showButtons]="false"
+                    [ngModel]="stateService.hallwayEveryCol()"
+                    (ngModelChange)="stateService.hallwayEveryCol.set($event)"
+                    styleClass="w-full" inputStyleClass="w-full form-input" />
+                </div>
+                <div class="form-group">
+                  <label class="field-label-sm" for="wp-settings-hw-every-row">
+                    Rows per block
+                    <span class="text-hallway-label">(0 = off)</span>
+                  </label>
+                  <p-inputnumber inputId="wp-settings-hw-every-row" [min]="0" [max]="50" [showButtons]="false"
+                    [ngModel]="stateService.hallwayEveryRow()"
+                    (ngModelChange)="stateService.hallwayEveryRow.set($event)"
+                    styleClass="w-full" inputStyleClass="w-full form-input" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <span class="field-label-sm">Hallway Width</span>
+                <div class="hallway-width-group">
+                  @for (w of [1,2,3,4]; track w) {
+                    <p-button size="small" styleClass="flex-1"
+                      [outlined]="stateService.hallwayWidth() === w"
+                      [text]="stateService.hallwayWidth() !== w"
+                      severity="help"
+                      (onClick)="stateService.hallwayWidth.set(w)">
+                      {{ w }} cell{{ w > 1 ? 's' : '' }}
+                    </p-button>
+                  }
+                </div>
+              </div>
+
+              @if (stateService.hallwayEveryCol() === 0 && stateService.hallwayEveryRow() === 0) {
+                <p style="font-size:0.65rem; color:#F59E0B; margin-top:4px;">Hallways disabled</p>
+              } @else {
+                <p style="font-size:0.65rem; color:#64748B; margin-top:4px; text-align:center;">
+                  @if (stateService.hallwayEveryCol() > 0) {
+                    Col hallway every {{ stateService.hallwayEveryCol() }} col(s)
+                  }
+                  @if (stateService.hallwayEveryCol() > 0 && stateService.hallwayEveryRow() > 0) {
+                    &nbsp;·&nbsp;
+                  }
+                  @if (stateService.hallwayEveryRow() > 0) {
+                    Row hallway every {{ stateService.hallwayEveryRow() }} row(s)
+                  }
+                </p>
+              }
+            </div><!-- /.settings-sub -->
+
+            <!-- Nomenclature -->
+            <div class="settings-divider" style="margin-bottom:20px;">
+              <span class="section-label">Nomenclature Format</span>
+
+              <div class="nomenclature-btns">
+                @for (fmt of nomenclatureFormats; track fmt) {
+                  <p-button size="small" styleClass="flex-1"
+                    [outlined]="stateService.nomenclatureFormat() === fmt"
+                    [text]="stateService.nomenclatureFormat() !== fmt"
+                    severity="primary"
+                    (onClick)="stateService.nomenclatureFormat.set(fmt)">
+                    {{ fmt | titlecase }}
+                  </p-button>
+                }
+              </div>
+
+              @if (stateService.nomenclatureFormat() === 'custom') {
+                <div class="form-group">
+                  <label class="field-label-xs" for="wp-nomenclature-template">
+                    Template — use <code class="code-accent">{{'{'}}A{{'}'}}</code> area,
+                    <code class="code-accent">{{'{'}}C{{'}'}}</code> col,
+                    <code class="code-accent">{{'{'}}R{{'}'}}</code> row,
+                    <code class="code-accent">{{'{'}}L{{'}'}}</code> level
+                  </label>
+                  <input id="wp-nomenclature-template" pInputText class="form-input form-input--mono"
+                    [ngModel]="stateService.nomenclatureCustom()"
+                    (ngModelChange)="stateService.nomenclatureCustom.set($event)" />
+                </div>
+              }
+
+              <div class="nomenclature-preview">
+                <span class="nomenclature-preview__label">Preview&nbsp;</span>
+                <code class="nomenclature-preview__code">{{ stateService.formatLocationCode('AA', 1, 1, 'A') }}</code>
+              </div>
+
+              <div class="nomenclature-legend">
+                <span><b>{{'{'}}A{{'}'}}</b> Area (AA–ZZ)</span>
+                <span><b>{{'{'}}C{{'}'}}</b> Col (00–99)</span>
+                <span><b>{{'{'}}R{{'}'}}</b> Row (0000–9999)</span>
+                <span><b>{{'{'}}L{{'}'}}</b> Level (A–Z)</span>
+              </div>
+            </div>
+
+            <!-- Unit system -->
+            <div style="margin-bottom:14px;">
+              <span class="section-label">Unit System</span>
+              <div class="toggle-group">
+                <p-button size="small" styleClass="flex-1"
+                  [outlined]="useMeters()"
+                  [text]="!useMeters()"
+                  severity="primary"
+                  (onClick)="useMeters.set(true)">Meters</p-button>
+                <p-button size="small" styleClass="flex-1"
+                  [outlined]="!useMeters()"
+                  [text]="useMeters()"
+                  severity="primary"
+                  (onClick)="useMeters.set(false)">Feet</p-button>
+              </div>
+              <p class="text-unit-hint">
+                1 cell = {{ useMeters() ? '1 meter' : '4 feet' }}
+              </p>
+            </div>
+
+
+
+          }<!-- /@if settings panel -->
+
+
+
+          <!-- ╔══════ GENERATE PANEL ══════╗ -->
+          @if (activeRightPanel() === 'generate') {
+            <form (submit)="onGenerate($event)">
+
+              <!-- Area + Zone -->
+              <div class="form-row-2" style="margin-bottom:12px;">
+                <div>
+                  <label class="field-label" for="wp-gen-area">Area</label>
+                  <input id="wp-gen-area" pInputText class="form-input form-input--mono" maxlength="2" placeholder="AA"
+                    [(ngModel)]="genArea" name="genArea"
+                    (input)="genArea = sanitizeArea(genArea); onGenAreaChange(genArea)" />
+                </div>
+                <div>
+                  <label class="field-label" for="wp-gen-zone">Zone</label>
+                  <p-select inputId="wp-gen-zone" styleClass="w-full"
+                    [options]="genZoneOptions()"
+                    optionLabel="label" optionValue="value"
+                    [(ngModel)]="genZone" name="genZone" />
+                </div>
+              </div>
+
+              <!-- Orientation -->
+              <div class="form-group" style="margin-bottom:12px;">
+                <label class="field-label" for="wp-gen-orientation">Orientation</label>
+                <p-select inputId="wp-gen-orientation" styleClass="w-full"
+                  [options]="genOrientationOptions"
+                  optionLabel="label" optionValue="value"
+                  [(ngModel)]="genOrientation" name="genOrientation" />
+              </div>
+
+              <!-- Row / Col range -->
+              <div class="form-row-2" style="margin-bottom:12px;">
+                <div>
+                  <label class="field-label" for="wp-gen-row-first">Row First</label>
+                  <p-inputnumber inputId="wp-gen-row-first" [showButtons]="false" [min]="1" [(ngModel)]="genRInit" name="rInit"
+                    (ngModelChange)="genREnd < genRInit ? genREnd = genRInit : null"
+                    styleClass="w-full" inputStyleClass="w-full form-input" />
+                </div>
+                <div>
+                  <label class="field-label" for="wp-gen-row-last">Row Last</label>
+                  <p-inputnumber inputId="wp-gen-row-last" [showButtons]="false" [min]="genRInit" [(ngModel)]="genREnd" name="rEnd"
+                    styleClass="w-full" inputStyleClass="w-full form-input" />
+                </div>
+                <div>
+                  <label class="field-label" for="wp-gen-col-first">Col First</label>
+                  <p-inputnumber inputId="wp-gen-col-first" [showButtons]="false" [min]="1" [(ngModel)]="genBInit" name="bInit"
+                    (ngModelChange)="genBEnd < genBInit ? genBEnd = genBInit : null"
+                    styleClass="w-full" inputStyleClass="w-full form-input" />
+                </div>
+                <div>
+                  <label class="field-label" for="wp-gen-col-last">Col Last</label>
+                  <p-inputnumber inputId="wp-gen-col-last" [showButtons]="false" [min]="genBInit" [(ngModel)]="genBEnd" name="bEnd"
+                    styleClass="w-full" inputStyleClass="w-full form-input" />
+                </div>
+              </div>
+
+              <!-- Level range -->
+              <div class="form-row-2" style="margin-bottom:12px;">
+                <div>
+                  <label class="field-label" for="wp-gen-level-first">Level First</label>
+                  <p-select inputId="wp-gen-level-first" styleClass="w-full"
+                    [options]="genLevelLetterOptions"
+                    optionLabel="label" optionValue="value"
+                    [(ngModel)]="genLevelStart" name="genLevelStart"
+                    (ngModelChange)="onGenLevelStartChange()" />
+                </div>
+                <div>
+                  <label class="field-label" for="wp-gen-level-last">Level Last</label>
+                  <p-select inputId="wp-gen-level-last" styleClass="w-full"
+                    [options]="genLevelLetterOptions"
+                    optionLabel="label" optionValue="value"
+                    [(ngModel)]="genLevelEnd" name="genLevelEnd" />
+                </div>
+              </div>
+
+              <!-- Category / Type -->
+              <div class="form-row-2" style="margin-bottom:12px;">
+                <div>
+                  <label class="field-label" for="wp-gen-category">Category</label>
+                  <p-select inputId="wp-gen-category" styleClass="w-full" [options]="bayCategories()"
+                    [(ngModel)]="genCategory2" name="genCategory2" />
+                </div>
+                <div>
+                  <label class="field-label" for="wp-gen-storage-type">Storage Type</label>
+                  <p-select inputId="wp-gen-storage-type" styleClass="w-full" [options]="bayTypes()"
+                    optionLabel="label" optionValue="value"
+                    [(ngModel)]="genType2" name="genType2" />
+                </div>
+              </div>
+
+              <!-- Auto-Hallways -->
+              <div class="settings-sub" style="margin-bottom:12px;">
+                <p class="text-section-hdr">Auto-Hallways/Aisles</p>
+                <div class="form-row-2">
+                  <div>
+                    <label class="field-label-sm" for="wp-gen-hw-every-col">
+                      Cols per block
+                      <span class="text-hallway-label">(0 = off)</span>
+                    </label>
+                    <p-inputnumber inputId="wp-gen-hw-every-col" [min]="0" [max]="50" [showButtons]="false"
+                      name="genHwEveryCol"
+                      [(ngModel)]="genHwEveryCol"
+                      styleClass="w-full" inputStyleClass="w-full form-input" />
+                  </div>
+                  <div>
+                    <label class="field-label-sm" for="wp-gen-hw-every-row">
+                      Rows per block
+                      <span class="text-hallway-label">(0 = off)</span>
+                    </label>
+                    <p-inputnumber inputId="wp-gen-hw-every-row" [min]="0" [max]="50" [showButtons]="false"
+                      name="genHwEveryRow"
+                      [(ngModel)]="genHwEveryRow"
+                      styleClass="w-full" inputStyleClass="w-full form-input" />
+                  </div>
+                  <div>
+                    <label class="field-label-sm" for="wp-gen-hallway-width">Hallway width</label>
+                    <p-inputnumber inputId="wp-gen-hallway-width" [min]="1" [max]="10" [showButtons]="false"
+                      name="hallwayWidth"
+                      [ngModel]="stateService.hallwayWidth()"
+                      (ngModelChange)="stateService.hallwayWidth.set($event)"
+                      styleClass="w-full" inputStyleClass="w-full form-input" />
+                  </div>
+                </div>
+                @if (genHwEveryCol === 0 && genHwEveryRow === 0) {
+                  <p style="font-size:0.65rem; color:#F59E0B; margin-top:4px;">Hallways disabled</p>
+                } @else {
+                  <p style="font-size:0.65rem; color:#64748B; margin-top:4px; text-align:center;">
+                    @if (genHwEveryCol > 0) {
+                      Col hallway every {{ genHwEveryCol }} col(s)
+                    }
+                    @if (genHwEveryCol > 0 && genHwEveryRow > 0) {
+                      &nbsp;·&nbsp;
+                    }
+                    @if (genHwEveryRow > 0) {
+                      Row hallway every {{ genHwEveryRow }} row(s)
+                    }
+                  </p>
+                }
+              </div>
+
+              <!-- Counting Direction -->
+              <div class="settings-sub" style="margin-bottom:12px;">
+                <p class="text-section-hdr">↔ Counting Direction</p>
+                <div class="form-row-2">
+                  <div>
+                    <span class="field-label-sm">Columns (X)</span>
+                    <div class="toggle-group">
+                      <p-button type="button" size="small" styleClass="flex-1"
+                        [outlined]="genColDir === 'ltr'"
+                        [text]="genColDir !== 'ltr'"
+                        severity="primary"
+                        pTooltip="Bay 1 on the left"
+                        (onClick)="genColDir = 'ltr'">1 →</p-button>
+                      <p-button type="button" size="small" styleClass="flex-1"
+                        [outlined]="genColDir === 'rtl'"
+                        [text]="genColDir !== 'rtl'"
+                        severity="primary"
+                        pTooltip="Bay 1 on the right"
+                        (onClick)="genColDir = 'rtl'">← 1</p-button>
+                    </div>
+                  </div>
+                  <div>
+                    <span class="field-label-sm">Rows (Y)</span>
+                    <div class="toggle-group">
+                      <p-button type="button" size="small" styleClass="flex-1"
+                        [outlined]="genRowDir === 'ttb'"
+                        [text]="genRowDir !== 'ttb'"
+                        severity="primary"
+                        pTooltip="Row 1 at top"
+                        (onClick)="genRowDir = 'ttb'">↓ 1</p-button>
+                      <p-button type="button" size="small" styleClass="flex-1"
+                        [outlined]="genRowDir === 'btt'"
+                        [text]="genRowDir !== 'btt'"
+                        severity="primary"
+                        pTooltip="Row 1 at bottom"
+                        (onClick)="genRowDir = 'btt'">1 ↑</p-button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p-button type="submit" styleClass="w-full" severity="help">
+                ✨ Generate List
+              </p-button>
+            </form>
+          }<!-- /@if generate panel -->
+
+          <!-- ╔══════ BINS PANEL ══════╗ -->
+          @if (activeRightPanel() === 'bins') {
+
+
+            <!-- List -->
+
+            <!-- List -->
+            <ul class="outliner-list">
+
+              @for (folder of stateService.folders(); track folder.id) {
+                <li class="folder-item">
+                  <div class="folder-header" tabindex="0"
+                    (click)="stateService.toggleFolderCollapse(folder.id)"
+                    (keydown.enter)="stateService.toggleFolderCollapse(folder.id)">
+                    <span class="collapse-icon">{{ folder.collapsed ? '▶' : '▼' }}</span>
+                    <span>📁</span>
+                    <span class="folder-name" contenteditable="true"
+                      (click)="$event.stopPropagation()"
+                      (keydown.enter)="$event.stopPropagation()"
+                      (blur)="renameFolder(folder.id, $event)">{{ folder.name }}</span>
+                    <button type="button" class="remove-btn" aria-label="Remove folder"
+                      (click)="$event.stopPropagation(); stateService.removeFolder(folder.id)"
+                      (keydown.enter)="$event.stopPropagation()">×</button>
+                  </div>
+                  @if (!folder.collapsed) {
+                    <ul class="folder-items">
+                      @for (item of getFolderItems(folder.id); track item!.id) {
+                        <li class="outliner-item" tabindex="0"
+                          [class.outliner-item--selected]="item!.selected"
+                          (click)="onListItemClick($event, item!.id)"
+                          (keydown.enter)="onListItemClick($event, item!.id)"
+                          (dblclick)="onListItemDblClick(item!.id)">
+                          <span class="level-tag">[L{{ item!.level }}]</span>
+                          <span class="type-tag">{{ item!.type }}</span>
+                          @if (item!.type === 'Loc') {
+                            <span class="loc-code" contenteditable="true" spellcheck="false"
+                              (click)="$event.stopPropagation()"
+                              (keydown)="limitInput($event)"
+                              (keydown.enter)="$event.preventDefault(); $event.stopPropagation(); blurTarget($event)"
+                              (blur)="renameBayCode(item!.id, $event)">{{ item!.name }}</span>
+                          } @else {
+                            <span class="item-name">{{ item!.name }}</span>
+                          }
+                        </li>
+                      }
+                      @if (getFolderItems(folder.id).length === 0) {
+                        <li class="empty-folder">Empty folder</li>
+                      }
+                    </ul>
+                  }
+                </li>
+              }
+
+              @if (getUnassignedItems().length > 0 && stateService.folders().length > 0) {
+                <li class="unassigned-label">Unassigned</li>
+              }
+
+              @for (item of getUnassignedItems(); track item.id) {
+                <li class="outliner-item" tabindex="0"
+                  [class.outliner-item--selected]="item.selected"
+                  (click)="onListItemClick($event, item.id)"
+                  (keydown.enter)="onListItemClick($event, item.id)"
+                  (dblclick)="onListItemDblClick(item.id)">
+                  <span class="level-tag">[L{{ item.level }}]</span>
+                  <span class="type-tag">{{ item.type }}</span>
+                  @if (item.type === 'Loc') {
+                    <span class="loc-code" contenteditable="true" spellcheck="false"
+                      (click)="$event.stopPropagation()"
+                      (keydown)="limitInput($event)"
+                      (keydown.enter)="$event.preventDefault(); $event.stopPropagation(); blurTarget($event)"
+                      (blur)="renameBayCode(item.id, $event)">{{ item.name }}</span>
+                  } @else {
+                    <span class="item-name">{{ item.name }}</span>
+                  }
+                </li>
+              }
+
+            </ul>
+          }<!-- /@if bins panel -->
+
+          <!-- ╔══════ FACILITIES PANEL ══════╗ -->
+          @if (activeRightPanel() === 'facilities') {
+            <div class="hint-box">
+              <span>🏢 Facilities panel — coming soon.</span>
+            </div>
+          }<!-- /@if facilities panel -->
+
+        </div><!-- /.right-panel-content -->
+        }<!-- /@else normal panel (not picking mode) -->
+      </div><!-- /.right-panel -->
+
+    </div><!-- /.wh-2d-layout -->
+  }<!-- /@if 2d -->
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       3D MODE
+  ══════════════════════════════════════════════════════════════════════ -->
+  @if (viewMode() === '3d') {
+    <div style="display:flex; width:100%; height:100%; position:relative;">
+
+      <!-- 3D Viewer -->
+      <div class="wh-canvas-area">
+        <app-warehouse-3d-viewer />
+        <app-warehouse-3d-properties />
+
+        <!-- Floating view-mode pill (same style as 2D layer switcher) -->
+        <div class="toolbar-bottom">
+          <div class="view-pill">
+            <p-button id="view-back-2d" size="small"
+              [outlined]="true"
+              severity="primary"
+              pTooltip="Switch to 2D Planner" tooltipPosition="top"
+              (onClick)="viewMode.set('2d')">
+              <i class="pi pi-building view-btn__icon"></i>
+              <span>2D</span>
+            </p-button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  }<!-- /@if 3d -->
+
+</div><!-- /.wh-wrapper -->
+
+<!-- Clear-all confirmation dialog -->
+<p-confirmDialog appendTo="body" />

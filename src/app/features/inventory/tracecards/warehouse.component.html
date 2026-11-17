@@ -1,0 +1,296 @@
+<p-toast />
+
+<div class="grid grid-cols-12 gap-4">
+  <!-- Page header -->
+  <div class="col-span-12">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+      <div>
+        <h2 class="text-2xl font-bold m-0">
+          {{ 'pages.tracecards' | translate | uppercase }}
+        </h2>
+      </div>
+      <div class="flex gap-2">
+        @if (selectedItems().length > 0) {
+          <p-button [label]="'labels.generate_labels' | translate" icon="pi pi-print" severity="secondary"
+            [outlined]="true" (onClick)="showLabelDialog.set(true)" size="small"
+            [badge]="selectedItems().length.toString()" badgeSeverity="primary" />
+        }
+        <p-button [label]="'buttons.clear' | translate" icon="pi pi-filter-slash" severity="secondary" [outlined]="true"
+          (onClick)="clearFilters()" size="small" />
+        <base-import-export-menu
+          filename="tracecards"
+          [columns]="selectedColumns"
+          [fetchPage]="fetchExportPage"
+          [sheetName]="'pages.tracecards' | translate"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Data table -->
+  <div class="col-span-12">
+    <div class="preset-table-wrapper">
+      <app-filter-preset-manager
+        [pageKey]="PRESET_PAGE_KEY"
+        [columns]="cols"
+        [currentFilters]="activeBackendFilters"
+        [currentSort]="currentSort()"
+        [hasActiveFilters]="activeFilters().length > 0"
+        (presetSelected)="onPresetSelected($event)"
+      />
+    <div
+      class="card"
+      [style.border-top]="activePresetColor() ? '3px solid ' + activePresetColor() : null"
+    >
+      <base-data-table
+        [columns]="selectedColumns"
+        [data]="tracecardItems()"
+        [loading]="loading()"
+        [pagination]="pagination()"
+        [sort]="currentSort()"
+        [selectable]="true"
+        [activeFilterChips]="activeFilters()"
+        (stateChange)="onTableStateChange($event)"
+        (chipRemoved)="removeFilterChip($event)"
+        (selectionChange)="selectedItems.set($event)"
+      >
+        <!-- Toolbar slot -->
+        <ng-template #toolbar>
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <!-- Mobile-only: open filter drawer -->
+            <div class="sm:hidden">
+              <p-button [label]="'labels.filter' | translate" icon="pi pi-filter" severity="secondary" [outlined]="true"
+                size="small" [badge]="
+                  activeFilters().length > 0
+                    ? activeFilters().length.toString()
+                    : ''
+                " badgeSeverity="primary" (onClick)="showMobileFilters.set(true)" />
+            </div>
+          </div>
+        </ng-template>
+
+        <!-- Paginator left: column toggle (catalog pattern) -->
+        <ng-template #paginatorLeft>
+          <div class="flex items-center gap-2">
+            <p-multiSelect [options]="cols" [(ngModel)]="selectedColumns" optionLabel="header" [selectedItemsLabel]="
+                selectedColumns.length +
+                ' ' +
+                ('labels.columns_selected' | translate)
+              " [maxSelectedLabels]="0" size="small" appendTo="body"
+              [placeholder]="'labels.choose_columns' | translate">
+              <ng-template let-col pTemplate="item">
+                {{ col.header | translate }}
+              </ng-template>
+            </p-multiSelect>
+          </div>
+        </ng-template>
+
+        <ng-template #filterRow let-columns="columns">
+          <!-- Empty cell for the checkbox column -->
+          <th style="width: 3rem"></th>
+          @for (col of columns; track col.field) {
+          @switch (col.field) {
+          @case ('company_name') {
+          <th class="p-1" [style.width]="col.width">
+            <shipedge-filter-multiselect-panel [options]="companies()" optionLabel="name" optionValue="id"
+              [placeholder]="'labels.company' | translate" [showFilter]="companies().length > 5"
+              [value]="companyFilter()" (apply)="onMultiselectApply('company_name', $event)"
+              (clear)="onMultiselectClear('company_name')" />
+          </th>
+          }
+          @case ('facility_name') {
+          <th class="p-1" [style.width]="col.width">
+            <shipedge-filter-multiselect-panel [options]="facilityFilterOptions()" optionLabel="name" optionValue="id"
+              [placeholder]="'labels.facility_name' | translate" [showFilter]="facilityFilterOptions().length > 5"
+              [value]="facilityFilter()" (apply)="onMultiselectApply('facility_name', $event)"
+              (clear)="onMultiselectClear('facility_name')" />
+          </th>
+          }
+          @case ('category') {
+          <th class="p-1" [style.width]="col.width">
+            <shipedge-filter-multiselect-panel [options]="categories()" optionLabel="code" optionValue="code"
+              [placeholder]="'labels.category' | translate" [showFilter]="categories().length > 5"
+              [value]="categoryFilter()" (apply)="onMultiselectApply('category', $event)"
+              (clear)="onMultiselectClear('category')" />
+          </th>
+          }
+          @default {
+          @if (col.filterable) {
+          <th class="p-1" [style.width]="col.width">
+            <shipedge-filter-text-input [value]="getActiveFilterValue(col.field)"
+              [matchMode]="getActiveFilterMatchMode(col.field)" [placeholder]="col.header | translate"
+              [filterType]="col.filterType || 'text'" (applyWithMode)="onColumnFilterChange(col.field, $event)" />
+          </th>
+          } @else {
+          <th class="p-1" [style.width]="col.width"></th>
+          }
+          }
+          }
+          }
+        </ng-template>
+
+        <!-- Custom cell templates -->
+        <ng-template #cell let-row let-col="col">
+          @switch (col.template) {
+          @case ('image') {
+          <img [alt]="row.sku"
+            [src]="row.image_path || 'https://cdn3d.iconscout.com/3d/premium/thumb/shipping-package-3d-icon-download-in-png-blend-fbx-gltf-file-formats--cardboard-box-delivery-pack-icons-6220845.png?f=webp'"
+            width="48" height="48" class="catalog-image" (error)="handleMissingImage($event)" loading="lazy" />
+          }
+          @case ('company') {
+          <span>{{ row.company_name || '—' }}</span>
+          }
+          @case ('facility') {
+          <span>{{ row.facility_name || '—' }}</span>
+          }
+          @case ('category') {
+          <span>{{ row.category || '—' }}</span>
+          }
+          @case ('sku') {
+          <a class="font-semibold text-primary cursor-pointer" (click)="navigateToHistory(row, 'sku')">
+            <u>{{ row.sku }}</u>
+          </a>
+          }
+          @case ('barcode') {
+          <span>{{ row.barcode || '—' }}</span>
+          }
+          @case ('description') {
+          <span>{{ row.description }}</span>
+          }
+          @case ('location') {
+          <a class="font-semibold text-primary cursor-pointer" (click)="navigateToHistory(row, 'location')">
+            <u>{{ row.location_code || '—' }}</u>
+          </a>
+          }
+          @case ('container') {
+          @if (row.container_id) {
+          <a class="font-semibold text-primary cursor-pointer" (click)="navigateToHistory(row, 'bin')">
+            <u>{{ row.container_lpn || '—' }}</u>
+          </a>
+          } @else {
+          <!-- No container: a bin history would filter container_id by nothing -->
+          <span>—</span>
+          }
+          }
+          @case ('tracecard') {
+          <a class="font-semibold text-primary cursor-pointer" (click)="navigateToHistory(row, 'tracecard')">
+            <u>{{ row.tracecard }}</u>
+          </a>
+          }
+          @case ('number') {
+          <span class="font-mono w-full inline-block">{{
+            row[col.field] | number: '1.0-0'
+            }}</span>
+          }
+          @case ('decimal') {
+          <span class="font-mono w-full inline-block">{{
+            row[col.field] | number: '1.2-4'
+            }}</span>
+          }
+          @case ('lot') {
+          <span>{{ row.lot || '—' }}</span>
+          }
+          @case ('expir') {
+          <span>{{ row.expir ? formatDate(row.expir) : '—' }}</span>
+          }
+          @case ('status') {
+          <span class="text-xs font-semibold px-2 py-1 rounded-full" [class.bg-green-100]="row.status === 'AVAILABLE'"
+            [class.text-green-700]="row.status === 'AVAILABLE'" [class.bg-red-100]="row.status === 'BLOCKED'"
+            [class.text-red-700]="row.status === 'BLOCKED'"
+            [class.bg-yellow-100]="row.status !== 'AVAILABLE' && row.status !== 'BLOCKED'"
+            [class.text-yellow-700]="row.status !== 'AVAILABLE' && row.status !== 'BLOCKED'">
+            {{ row.status }}
+          </span>
+          }
+          }
+        </ng-template>
+      </base-data-table>
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Mobile Filter Drawer (catalog pattern) ── -->
+<p-drawer [visible]="showMobileFilters()" (visibleChange)="showMobileFilters.set($event)" position="bottom"
+  [style]="{ height: 'auto', maxHeight: '85dvh' }" styleClass="mobile-filter-drawer">
+  <ng-template pTemplate="header">
+    <div class="flex items-center gap-2 font-semibold text-lg">
+      <i class="pi pi-filter text-primary"></i>
+      <span>{{ 'labels.filter' | translate }}</span>
+      @if (activeFilters().length > 0) {
+      <span class="ml-auto text-sm font-normal text-surface-500">
+        {{ activeFilters().length }} {{ 'labels.records' | translate }}
+      </span>
+      }
+    </div>
+  </ng-template>
+
+  <ng-template pTemplate="content">
+    <div class="flex flex-col gap-4 pb-4 overflow-y-auto">
+      <!-- Company -->
+      <div class="flex flex-col gap-1">
+        <label for="warehouse-mobile-filter-company" class="text-sm font-medium text-surface-600">
+          {{ 'labels.company' | translate }}
+        </label>
+        <shipedge-filter-multiselect-panel id="warehouse-mobile-filter-company" [options]="companies()" optionLabel="name" optionValue="id"
+          [placeholder]="'labels.company' | translate" [showFilter]="companies().length > 5" [value]="companyFilter()"
+          (apply)="
+            onMultiselectApply('company_name', $event);
+            showMobileFilters.set(false)
+          " (clear)="onMultiselectClear('company_name')" />
+      </div>
+
+      <!-- SKU -->
+      <div class="flex flex-col gap-1">
+        <label for="warehouse-mobile-filter-sku" class="text-sm font-medium text-surface-600">
+          {{ 'labels.sku' | translate }}
+        </label>
+        <shipedge-filter-text-input id="warehouse-mobile-filter-sku" [value]="getActiveFilterValue('sku')" [placeholder]="'labels.sku' | translate"
+          (apply)="
+            onColumnFilterChange('sku', $event); showMobileFilters.set(false)
+          " />
+      </div>
+
+      <!-- Location -->
+      <div class="flex flex-col gap-1">
+        <label for="warehouse-mobile-filter-location" class="text-sm font-medium text-surface-600">
+          {{ 'labels.location' | translate }}
+        </label>
+        <shipedge-filter-text-input id="warehouse-mobile-filter-location" [value]="getActiveFilterValue('location_code')"
+          [placeholder]="'labels.location' | translate" (apply)="
+            onColumnFilterChange('location_code', $event);
+            showMobileFilters.set(false)
+          " />
+      </div>
+
+      <!-- Description -->
+      <div class="flex flex-col gap-1">
+        <label for="warehouse-mobile-filter-description" class="text-sm font-medium text-surface-600">
+          {{ 'labels.description' | translate }}
+        </label>
+        <shipedge-filter-text-input id="warehouse-mobile-filter-description" [value]="getActiveFilterValue('description')"
+          [placeholder]="'labels.description' | translate" (apply)="
+            onColumnFilterChange('description', $event);
+            showMobileFilters.set(false)
+          " />
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template pTemplate="footer">
+    <div class="flex gap-3 pt-3 border-t border-surface-200">
+      <p-button [label]="'buttons.clear' | translate" icon="pi pi-filter-slash" severity="secondary" [outlined]="true"
+        styleClass="flex-1" (onClick)="clearFilters(); showMobileFilters.set(false)" />
+      <p-button [label]="'buttons.apply' | translate" icon="pi pi-check" styleClass="flex-1"
+        (onClick)="showMobileFilters.set(false)" />
+    </div>
+  </ng-template>
+</p-drawer>
+
+<!-- Label Generator Dialog -->
+<label-generator-dialog
+  [visible]="showLabelDialog()"
+  [items]="selectedItems()"
+  labelType="tracecard"
+  (hide)="showLabelDialog.set(false)"
+/>

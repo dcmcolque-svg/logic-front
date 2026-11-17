@@ -1,0 +1,172 @@
+<div class="flex flex-col" [ngClass]="containerClass()">
+  <!-- Label (fixed above input, edge-frontend style) -->
+  @if (type() !== 'switch' && type() !== 'file') {
+    <label [for]="fieldId()" class="block font-semibold mb-1 text-sm">
+      {{ label() | translate }}
+      @if (required()) {
+        <span class="text-red-500 ml-0.5">*</span>
+      }
+    </label>
+  }
+
+  <!-- Input by type -->
+  @switch (type()) {
+    @case ('text') {
+      <input
+        [id]="fieldId()"
+        type="text"
+        pInputText
+        [formControl]="control()"
+        [placeholder]="placeholder() | translate"
+        class="w-full"
+        [class.ng-invalid]="control().invalid && control().dirty"
+      />
+    }
+    @case ('number') {
+      <p-inputNumber
+        [id]="fieldId()"
+        [formControl]="control()"
+        [placeholder]="placeholder() | translate"
+        [useGrouping]="false"
+        [showButtons]="showButtons()"
+        [min]="min()"
+        [minFractionDigits]="minFractionDigits()"
+        [maxFractionDigits]="maxFractionDigits()"
+        mode="decimal"
+        class="w-full"
+        inputStyleClass="w-full"
+      />
+    }
+    @case ('date') {
+      <p-datepicker
+        [id]="fieldId()"
+        [formControl]="control()"
+        [placeholder]="placeholder() | translate"
+        dateFormat="yy-mm-dd"
+        [showIcon]="true"
+        [showButtonBar]="true"
+        class="w-full"
+        inputStyleClass="w-full"
+        appendTo="body"
+      />
+    }
+    @case ('dropdown') {
+      <p-select
+        [id]="fieldId()"
+        [formControl]="control()"
+        [options]="options()"
+        [optionLabel]="optionLabel()"
+        [optionValue]="optionValue()"
+        [placeholder]="placeholder() | translate"
+        [filter]="true"
+        [filterBy]="optionLabel()"
+        [showClear]="!required()"
+        class="w-full"
+        styleClass="w-full"
+        appendTo="body"
+        [class.ng-invalid]="control().invalid && control().dirty"
+      />
+    }
+    @case ('multiselect') {
+      <p-multiselect
+        [id]="fieldId()"
+        [formControl]="control()"
+        [options]="options()"
+        [optionLabel]="optionLabel()"
+        [optionValue]="optionValue()"
+        [placeholder]="placeholder() | translate"
+        [filter]="true"
+        [showClear]="true"
+        class="w-full"
+        styleClass="w-full"
+        appendTo="body"
+        display="chip"
+        [class.ng-invalid]="control().invalid && control().dirty"
+      />
+    }
+    @case ('textarea') {
+      <textarea
+        [id]="fieldId()"
+        pTextarea
+        [formControl]="control()"
+        [placeholder]="placeholder() | translate"
+        [rows]="4"
+        class="w-full"
+        [autoResize]="true"
+        [class.ng-invalid]="control().invalid && control().dirty"
+      ></textarea>
+    }
+    @case ('password') {
+      <p-password
+        [id]="fieldId()"
+        [formControl]="control()"
+        [placeholder]="placeholder() | translate"
+        [toggleMask]="true"
+        [feedback]="false"
+        class="w-full"
+        inputStyleClass="w-full"
+      />
+    }
+    @case ('switch') {
+      <div class="flex items-center gap-2 pt-2">
+        <p-toggleswitch [id]="fieldId()" [formControl]="control()" />
+        <label [for]="fieldId()" class="cursor-pointer font-semibold text-sm">
+          {{ label() | translate }}
+        </label>
+      </div>
+    }
+    @case ('file') {
+      <label [for]="fieldId()" class="block font-semibold mb-1 text-sm">
+        {{ label() | translate }}
+        @if (required()) {
+          <span class="text-red-500 ml-0.5">*</span>
+        }
+      </label>
+      <p-fileupload
+        [id]="fieldId()"
+        mode="basic"
+        [chooseLabel]="'labels.choose_file' | translate"
+        [auto]="false"
+        [customUpload]="true"
+      />
+    }
+  }
+
+  <!-- Validation errors (edge-frontend p-error pattern) -->
+  @if (control().invalid && control().dirty) {
+    <small class="text-red-500 text-xs mt-1 block">
+      @if (control().errors?.['required']) {
+        {{ 'validation.required' | translate }}
+      } @else if (control().errors?.['minlength']) {
+        {{
+          'validation.minlength'
+            | translate
+              : { min: control().errors?.['minlength']?.requiredLength }
+        }}
+      } @else if (control().errors?.['maxlength']) {
+        {{
+          'validation.maxlength'
+            | translate
+              : { max: control().errors?.['maxlength']?.requiredLength }
+        }}
+      } @else if (control().errors?.['email']) {
+        {{ 'validation.email' | translate }}
+      } @else if (control().errors?.['min']) {
+        {{
+          'validation.min' | translate: { min: control().errors?.['min']?.min }
+        }}
+      } @else if (control().errors?.['max']) {
+        {{
+          'validation.max' | translate: { max: control().errors?.['max']?.max }
+        }}
+      } @else if (control().errors?.['pattern']) {
+        {{ 'validation.pattern' | translate }}
+      } @else if (control().errors?.['rangeInvalid']) {
+        {{ 'validation.range_invalid' | translate }}
+      } @else if (control().errors?.['customMessage']) {
+        <!-- Free-form error set by the parent: the value is a translation key -->
+        {{ control().errors?.['customMessage'] | translate }}
+      }
+    </small>
+  }
+</div>

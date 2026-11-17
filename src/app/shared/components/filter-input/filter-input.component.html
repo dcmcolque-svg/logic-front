@@ -1,0 +1,57 @@
+<p-columnFilter
+  #filter
+  [showClearButton]="false"
+  [showOperator]="false"
+  [showButtons]="false"
+  [type]="typereal"
+  [matchMode]="configfilter[0].value"
+  [showMenu]="configfilter.length > 1"
+  [showClearButton]="configfilter.length === 1"
+  [hideOnClear]="configfilter.length === 1"
+  [field]="field()"
+  [showMatchModes]="false"
+  [matchModeOptions]="configfilter"
+>
+  @if (typereal === 'numeric') {
+    <ng-template pTemplate="filter" let-value let-filter="filterCallback">
+      <input
+        #numericInput
+        pInputText
+        type="text"
+        [ngModel]="value"
+        (ngModelChange)="onNumericInputChange($event, filter)"
+        (keydown.enter)="onNumericInputChange2($event, filter)"
+        (keydown)="onKeyDown($event)"
+        (wheel)="onWheel($event)"
+        [attr.placeholder]="'labels.press_enter' | translate"
+      />
+    </ng-template>
+  }
+  @if (typereal === 'text') {
+    <ng-template pTemplate="filter" let-value let-filter="filterCallback">
+      <input
+        pInputText
+        type="text"
+        [ngModel]="value"
+        (ngModelChange)="onTextInputChange($event)"
+        (keydown.enter)="applyTextFilter(filter)"
+        [attr.placeholder]="'labels.press_enter' | translate"
+      />
+    </ng-template>
+  }
+  @if (typereal === 'date') {
+    <ng-template pTemplate="filter" let-value let-filter="filterCallback">
+      <p-datepicker
+        #calendar
+        [showTime]="false"
+        [showSeconds]="false"
+        dateFormat="yy-mm-dd"
+        [ngModel]="parseToDate(value)"
+        (onSelect)="onDateSelect($event, filter)"
+        appendTo="body"
+        [readonlyInput]="true"
+        [styleClass]="'custom-calendar'"
+      ></p-datepicker>
+    </ng-template>
+  }
+</p-columnFilter>

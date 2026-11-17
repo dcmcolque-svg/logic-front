@@ -1,0 +1,129 @@
+<p-toast />
+<p-confirmDialog />
+<p-menu #orderMenu [popup]="true" appendTo="body" [model]="rowMenuItems" />
+
+<div class="grid grid-cols-12 gap-4">
+  <!-- Page header -->
+  <div class="col-span-12">
+    <app-order-list-header
+      titleKey="pages.backorders"
+      [selectedCount]="selectedOrders().length"
+      (bulkActions)="onBulkActionsClick($event)"
+      (clearFilters)="clearFilters()"
+    >
+      <base-import-export-menu
+        filename="backorders"
+        [columns]="selectedColumns"
+        [fetchPage]="fetchExportPage"
+        [sheetName]="'pages.backorders' | translate"
+      />
+    </app-order-list-header>
+  </div>
+
+  <!-- Data table -->
+  <div class="col-span-12">
+    <app-order-preset-card [hasActiveFilters]="false">
+      <base-data-table
+        [columns]="selectedColumns"
+        [data]="orders()"
+        [loading]="loading()"
+        [pagination]="pagination()"
+        [sort]="currentSort()"
+        [selectable]="true"
+        [activeFilterChips]="activeFilters()"
+        (rowExpand)="onRowExpand($event)"
+        (stateChange)="onTableStateChange($event)"
+        (selectionChange)="selectedOrders.set($event)"
+        (chipRemoved)="removeFilterChip($event)"
+      >
+
+        <!-- Paginator left: column toggle -->
+        <ng-template #paginatorLeft>
+          <app-order-column-toggle />
+        </ng-template>
+
+        <!-- Custom filter row -->
+        <ng-template #filterRow let-columns="columns">
+          <!-- expand col -->
+          <th style="width: 2.5rem"></th>
+          <!-- actions col -->
+          <th class="col-actions p-1"></th>
+          <!-- checkbox col -->
+          <th class="p-1" style="width: 3rem"></th>
+          @for (col of columns; track col.field) {
+            <th class="p-1" [style.width]="col.width">
+              <app-order-column-filter [field]="col.field" />
+            </th>
+          }
+        </ng-template>
+
+        <!-- Custom cell templates -->
+        <ng-template #cell let-row let-col="col">
+          <app-order-cell
+            [row]="row"
+            [template]="col.template"
+            [createdAt]="{ showTime: true }"
+            [deliveryDate]="{ showTime: true, timezone: 'UTC' }"
+          />
+        </ng-template>
+
+        <!-- Row actions -->
+        <ng-template #actions let-row>
+          <app-order-menu-button [row]="row" />
+        </ng-template>
+
+        <!-- Row expansion: order lines sub-table -->
+        <ng-template #rowExpansion let-order>
+          <div class="px-6 py-3 bg-surface-50">
+            @if (isLoadingLines(order.id)) {
+              <div class="flex flex-col gap-2">
+                @for (_ of [1, 2]; track $index) {
+                  <p-skeleton height="2rem" />
+                }
+              </div>
+            } @else if (linesFor(order.id).length === 0) {
+              <div class="flex items-center gap-2 text-surface-500 py-2 text-sm">
+                <i class="pi pi-info-circle"></i>
+                <span>{{ 'labels.no_lines' | translate }}</span>
+              </div>
+            } @else {
+              <p-table
+                [value]="linesFor(order.id)"
+                styleClass="p-datatable-sm p-datatable-striped"
+              >
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th scope="col" class="font-bold" style="width: 3rem">#</th>
+                    <th scope="col" class="font-bold">{{ 'labels.sku' | translate }}</th>
+                    <th scope="col" class="font-bold">{{ 'labels.name' | translate }}</th>
+                    <th scope="col" class="font-bold">{{ 'labels.description' | translate }}</th>
+                    <th scope="col" class="font-bold text-right">{{ 'labels.qty_ordered' | translate }}</th>
+                    <th scope="col" class="font-bold text-right">{{ 'labels.unit_price' | translate }}</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-line>
+                  <tr>
+                    <td style="width: 3rem">{{ line.line_number }}</td>
+                    <td class="font-medium font-mono">{{ line.sku_code }}</td>
+                    <td>{{ line.sku_name || line.product_name || '—' }}</td>
+                    <td>{{ line.sku_description || '—' }}</td>
+                    <td class="text-right font-mono">{{ line.qty_ordered }}</td>
+                    <td class="text-right font-mono">{{ line.unit_price | currency }}</td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            }
+          </div>
+        </ng-template>
+
+      </base-data-table>
+    </app-order-preset-card>
+  </div>
+</div>
+
+<!-- Order detail drawer -->
+<app-order-detail-dialog
+  [visible]="showDetailDrawer()"
+  [order]="selectedOrder()"
+  (hide)="closeDetailDrawer()"
+/>

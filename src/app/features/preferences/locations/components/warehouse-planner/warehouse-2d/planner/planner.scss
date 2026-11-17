@@ -1,0 +1,39 @@
+// Host fills the full parent area
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+// ─── Main Layout ──────────────────────────────────────────────────────────────
+.planner-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+// ─── Sidebar (left) ──────────────────────────────────────────────────────────
+.planner-sidebar {
+  flex-shrink: 0;
+  height: 100%;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+// ─── Sidebar (right) ─────────────────────────────────────────────────────────
+.planner-sidebar-right {
+  flex-shrink: 0;
+  height: 100%;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+// ─── Viewport (canvas) ────────────────────────────────────────────────────────
+.planner-viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #0a0e16;
+}

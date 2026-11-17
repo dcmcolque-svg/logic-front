@@ -1,0 +1,478 @@
+// ─── Drawer panel overrides ────────────────────────────────────────────────
+:host ::ng-deep {
+  // The headless template renders inside p-drawer's root div.
+  // Force the entire drawer to constrain its content width.
+  .p-drawer {
+    overflow: hidden;
+  }
+
+  .p-drawer-content {
+    padding: 0 !important;
+    overflow-x: hidden !important;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) var(--surface-ground);
+
+    &::-webkit-scrollbar { width: 5px; }
+    &::-webkit-scrollbar-track { background: var(--surface-ground); }
+    &::-webkit-scrollbar-thumb { background: var(--primary-color); border-radius: 3px; }
+  }
+
+  // Accordion skin
+  .p-accordion-panel {
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--surface-border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .p-accordion-header {
+    background: var(--surface-section) !important;
+    color: var(--text-color) !important;
+    font-weight: 600;
+    padding: 0.85rem 1rem;
+    border: none !important;
+
+    &:hover { background: var(--surface-hover) !important; }
+
+    .p-accordion-header-action {
+      background: transparent;
+      color: var(--text-color) !important;
+    }
+  }
+
+  .p-accordion-content {
+    background: var(--surface-ground) !important;
+    color: var(--text-color) !important;
+    border-top: 1px solid var(--surface-border);
+    padding: 0 !important;
+    overflow: hidden;
+  }
+
+  .p-accordion-content-grid {
+    overflow: hidden;
+  }
+
+  .p-accordion-toggle-icon {
+    color: var(--primary-color) !important;
+  }
+}
+
+// ─── Shell ────────────────────────────────────────────────────────────────
+.pd-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  background: var(--surface-ground);
+  color: var(--text-color);
+  font-size: 0.875rem;
+}
+
+// ─── Header ───────────────────────────────────────────────────────────────
+.pd-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--surface-section);
+  border-bottom: 1px solid var(--surface-border);
+  overflow: hidden;
+}
+
+.pd-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;        // allows grid child to shrink
+  overflow: hidden;
+}
+
+
+.pd-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.pd-shipped-by {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+
+  strong { color: var(--text-color); }
+}
+
+.pd-ship-id {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-color);
+  letter-spacing: 0.03em;
+  word-break: break-all;
+}
+
+.pd-meta-row {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+  word-break: break-word;
+  overflow-wrap: break-word;
+
+  strong { color: var(--text-color); }
+}
+
+.pd-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--primary-color);
+  font-size: 1.5rem;
+  padding: 0;
+  line-height: 1;
+  transition: opacity 0.15s;
+
+  &:hover { opacity: 0.75; }
+
+  i { font-size: 1.4rem; }
+}
+
+.pd-date {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-color-secondary);
+}
+
+.pd-time {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.pd-right-meta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
+  text-align: right;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.pd-divider {
+  height: 1px;
+  background: var(--surface-border);
+}
+
+// ─── Body ─────────────────────────────────────────────────────────────────
+.pd-body {
+  flex: 1;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+// ─── Accordion inner padding ───────────────────────────────────────────────
+.pd-accordion-body {
+  padding: 0.75rem 1rem;
+  overflow: hidden;
+  min-width: 0;
+}
+
+// ─── Address section ──────────────────────────────────────────────────────
+.pd-addr-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem 0;
+}
+
+.pd-addr-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pd-addr-label {
+  font-weight: 600;
+  color: var(--text-color);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pd-addr-value {
+  color: var(--text-color);
+  text-align: right;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.pd-phone {
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+}
+
+.pd-addr-detail {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.pd-addr-divider {
+  height: 1px;
+  background: var(--surface-border);
+  margin: 0.5rem 0;
+}
+
+// ─── Shipping info rows ────────────────────────────────────────────────────
+.pd-section-title {
+  margin: 0.85rem 0 0.4rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-color);
+
+  &:first-child { margin-top: 0; }
+}
+
+.pd-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  padding: 0.2rem 0;
+
+  span:first-child {
+    color: var(--text-color-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  span:last-child, div:last-child {
+    color: var(--text-color);
+    text-align: right;
+    min-width: 0;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+}
+
+.pd-time-inline {
+  color: var(--primary-color);
+  font-size: 0.8125rem;
+}
+
+// ─── Package items ─────────────────────────────────────────────────────────
+.pd-pkg-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0 0.35rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-color);
+  border-bottom: 1px solid var(--surface-border);
+  margin-bottom: 0.25rem;
+
+  i { color: var(--primary-color); font-size: 1rem; }
+}
+
+.pd-pkg-tracking {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--primary-color);
+  margin-left: auto;
+}
+
+.pd-pkg-measures {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+}
+
+.pd-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--surface-border);
+  overflow: hidden;
+  min-width: 0;
+
+  &--last { border-bottom: none; }
+}
+
+.pd-item-img {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface-section);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--surface-border);
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+  i   { color: var(--text-color-secondary); font-size: 1.25rem; }
+}
+
+.pd-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.pd-item-sku {
+  font-family: monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  word-break: break-all;
+  overflow-wrap: break-word;
+}
+
+.pd-item-desc {
+  font-size: 0.8125rem;
+  color: var(--text-color);
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.pd-item-barcode {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+
+  i { margin-right: 2px; }
+}
+
+.pd-item-qty {
+  flex-shrink: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  min-width: 2rem;
+  text-align: right;
+}
+
+.pd-badge {
+  font-size: 0.7rem;
+  font-weight: 500;
+  background: var(--primary-100, color-mix(in srgb, var(--primary-color) 15%, transparent));
+  color: var(--primary-color);
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
+// ─── States ────────────────────────────────────────────────────────────────
+.pd-error {
+  margin: 0;
+  color: var(--red-500);
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.pd-empty {
+  margin: 0;
+  color: var(--text-color-secondary);
+  text-align: center;
+  padding: 1rem 0;
+  font-size: 0.8125rem;
+}
+
+.pd-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+// ─── Delivery summary card  (mirrors edge-frontend field='order_number') ─────
+.pd-delivery-card {
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  padding: 1rem;
+  background: var(--surface-section);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.pd-delivery-status {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.pd-delivery-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-color);
+  flex-wrap: wrap;
+
+  span:last-child {
+    min-width: 0;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+}
+
+.pd-delivery-time {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.pd-delivery-from-addr {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+  padding-left: 3rem;
+}
+
+// ─── Package box cards  (mirrors edge-frontend field='total_details') ─────────
+.pd-pkg-card {
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.75rem;
+  background: var(--surface-section);
+  overflow: hidden;
+  min-width: 0;
+}
+
+.pd-pkg-title {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.pd-pkg-meta {
+  margin: 0 0 0.2rem;
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+// ─── Large address text
+.pd-text-xl {
+  font-size: 1.0625rem !important;
+}

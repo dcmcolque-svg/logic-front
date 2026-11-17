@@ -1,0 +1,199 @@
+@if (!workspace()) {
+  <!-- ═══════ Step 1: product group selector ═══════ -->
+  <div>
+    <div class="flex items-center gap-2 mb-1">
+      <i class="pi pi-box text-primary text-sm" aria-hidden="true"></i>
+      <span class="font-semibold text-primary text-sm">{{ 'catalog.product_group' | translate }}</span>
+      <span class="product-workspace__badge px-2 py-0.5 rounded-full text-xs">{{ 'labels.optional' | translate }}</span>
+    </div>
+    <p class="text-xs text-muted-color mt-0 mb-3 leading-relaxed">{{ 'catalog.product_group_hint' | translate }}</p>
+
+    <fieldset
+      class="min-w-0 rounded-xl border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900 p-3"
+      [attr.aria-label]="'catalog.product_group' | translate"
+    >
+      @if (locked() && selected(); as product) {
+        <!-- Locked product (Add SKUs to product flow) -->
+        <div class="flex items-center gap-3">
+          <div class="product-workspace__icon flex items-center justify-center w-9 h-9 rounded-lg shrink-0">
+            <i class="pi pi-box"></i>
+          </div>
+          <div class="flex flex-col min-w-0 flex-1">
+            <span class="font-semibold text-sm truncate">{{ product.name }}</span>
+            <span class="text-xs text-muted-color truncate">
+              {{ product.brand || ('catalog.no_brand' | translate) }} · {{ product.category || '—' }}
+            </span>
+          </div>
+          <i class="pi pi-lock text-surface-400 text-xs" [pTooltip]="'catalog.locked_product' | translate" tooltipPosition="top"></i>
+        </div>
+      } @else {
+        <p-select
+          inputId="product-selector"
+          [options]="products()"
+          optionLabel="name"
+          dataKey="id"
+          [filter]="true"
+          filterBy="name,description,brand"
+          [filterPlaceholder]="'catalog.filter_placeholder' | translate"
+          [placeholder]="'catalog.search_placeholder' | translate"
+          [emptyMessage]="'labels.no_products_found' | translate"
+          styleClass="w-full"
+          [disabled]="!companyId()"
+          [loading]="loadingProducts()"
+          [ngModel]="selected()"
+          (ngModelChange)="choose($event)"
+          appendTo="body"
+        >
+          <!--
+            w-0 + min-w-full: the option fills the panel but adds nothing to its intrinsic width,
+            so the body-appended overlay stays as wide as the trigger (PrimeNG only sets its
+            min-width) instead of stretching to fit a long description.
+          -->
+          <ng-template #item let-product>
+            <div class="flex flex-col gap-1 py-1 w-0 min-w-full whitespace-normal wrap-break-word">
+              <span class="font-medium">{{ product.name }}</span>
+              <span
+                class="text-sm text-muted-color leading-relaxed line-clamp-2"
+                [attr.title]="product.description || null"
+              >
+                {{ product.description || ('catalog.no_description' | translate) }}
+              </span>
+              <span class="text-xs text-muted-color">
+                {{ 'labels.brand' | translate }}: {{ product.brand || ('catalog.no_brand' | translate) }}
+                · {{ 'catalog.sku_count' | translate: { count: product.sku_count || 0 } }}
+              </span>
+            </div>
+          </ng-template>
+        </p-select>
+        @if (!companyId()) {
+          <small class="text-surface-400 text-xs mt-1.5 block">
+            <i class="pi pi-info-circle mr-1"></i>{{ 'catalog.select_company_first' | translate }}
+          </small>
+        }
+      }
+
+
+
+      <!-- Actions -->
+      <div class="flex flex-wrap items-center justify-end gap-1 mt-2">
+        @if (!locked()) {
+          <button type="button" class="product-workspace__link" [disabled]="!companyId()" (click)="openEditor()">
+            <i class="pi pi-plus" aria-hidden="true"></i> {{ 'catalog.create_product' | translate }}
+          </button>
+        }
+        @if (selected(); as product) {
+          <button type="button" class="product-workspace__link" (click)="openEditor(product)">
+            <i class="pi pi-pencil" aria-hidden="true"></i> {{ 'catalog.edit_product' | translate }}
+          </button>
+          @if (!locked()) {
+            <button type="button" class="product-workspace__link product-workspace__link--muted" (click)="choose(null)">
+              <i class="pi pi-times" aria-hidden="true"></i> {{ 'catalog.unlink_product' | translate }}
+            </button>
+          }
+        }
+      </div>
+    </fieldset>
+
+    @if (error() && !editor()) {
+      <p role="alert" class="text-red-600 dark:text-red-400 text-sm mt-3 mb-0 leading-relaxed">{{ error() }}</p>
+    }
+  </div>
+} @else {
+  <!-- ═══════ Step 2: product editor / category manager ═══════ -->
+  <div class="product-workspace__step">
+    <section class="overflow-hidden">
+      <div [hidden]="manage()">
+        @if (editor()) {
+          <div class="product-workspace__reveal" (animationend)="onFormRevealed($event)">
+            <div class="product-workspace__reveal-content">
+              <div #productEditor class="flex items-center gap-2 mb-4">
+                <i class="pi pi-pencil text-primary"></i>
+                <span class="font-semibold text-primary">{{ (editingId ? 'catalog.edit_product_title' : 'catalog.new_product_title') | translate }}</span>
+              </div>
+              @if (editingId) {
+                <p class="text-sm text-muted-color mt-0 mb-4 leading-relaxed">{{ 'catalog.edit_product_hint' | translate }}</p>
+              }
+              <!-- placeholder=" ": the global filled-border rule (assets/styles.scss) relies on
+                   :placeholder-shown, so inputs without one look filled while empty -->
+              <div class="grid md:grid-cols-2 gap-4">
+                <label class="flex flex-col gap-2" for="product-name">
+                  {{ 'catalog.product_name' | translate }} *
+                  <input pInputText id="product-name" [(ngModel)]="name" maxlength="255" placeholder=" " />
+                </label>
+                <label class="flex flex-col gap-2" for="product-brand">
+                  {{ 'labels.brand' | translate }}
+                  <input pInputText id="product-brand" [(ngModel)]="brand" placeholder=" " />
+                </label>
+                <label class="flex flex-col gap-2" for="product-description">
+                  {{ 'labels.description' | translate }}
+                  <input pInputText id="product-description" [(ngModel)]="description" placeholder=" " />
+                </label>
+                <div>
+                  <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <label for="product-categories">{{ 'catalog.categories' | translate }}</label>
+                    <button type="button" class="product-workspace__link" (click)="toggleCategories()">
+                      <i class="pi pi-cog" aria-hidden="true"></i> {{ 'catalog.manage_categories' | translate }}
+                    </button>
+                  </div>
+                  <p-multiSelect
+                    inputId="product-categories"
+                    [options]="categories()"
+                    optionLabel="name"
+                    optionValue="id"
+                    [(ngModel)]="categoryIds"
+                    display="chip"
+                    [filter]="true"
+                    [placeholder]="'catalog.select_categories' | translate"
+                    styleClass="w-full"
+                    appendTo="body"
+                  />
+                  <p class="text-xs text-muted-color mt-2 mb-0 leading-relaxed">{{ 'catalog.remove_tag_hint' | translate }}</p>
+                </div>
+              </div>
+              @if (error()) {
+                <p role="alert" class="text-red-600 dark:text-red-400 mt-4 mb-0 leading-relaxed">{{ error() }}</p>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      @if (manage() && companyId()) {
+        <div class="product-workspace__reveal">
+          <div class="product-workspace__reveal-content">
+            <app-category-manager [companyId]="companyId()!" (changed)="onCategoriesChanged()" />
+          </div>
+        </div>
+      }
+    </section>
+
+    <!-- Back on the bottom-left; Cancel / Save on the right while the editor is open -->
+    <div class="product-workspace__actions flex flex-wrap items-center justify-between gap-2">
+      <p-button
+        [label]="(manage() ? 'catalog.back_to_product' : 'catalog.back_to_sku') | translate"
+        icon="pi pi-arrow-left"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="back()"
+      />
+      @if (editor() && !manage()) {
+        <div class="flex flex-wrap justify-end gap-2 ml-auto">
+          <p-button
+            [label]="'buttons.cancel' | translate"
+            icon="pi pi-times"
+            severity="secondary"
+            [outlined]="true"
+            (onClick)="closeWorkspace(false)"
+          />
+          <p-button
+            [label]="'catalog.save_product' | translate"
+            icon="pi pi-check"
+            [disabled]="!name.trim()"
+            [loading]="saving()"
+            (onClick)="save()"
+          />
+        </div>
+      }
+    </div>
+  </div>
+}

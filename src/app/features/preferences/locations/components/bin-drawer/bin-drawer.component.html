@@ -1,0 +1,249 @@
+<p-toast />
+<p-confirmDialog
+  acceptButtonStyleClass="p-button-text"
+  rejectButtonStyleClass="p-button-text"
+/>
+
+<p-drawer
+  [(visible)]="visible"
+  position="right"
+  [style]="{ width: '40rem' }"
+  (onHide)="onDrawerHide()"
+>
+  <ng-template pTemplate="header">
+    <div class="flex items-center gap-2">
+      <i class="pi pi-sitemap text-primary"></i>
+      <span class="font-semibold text-lg">
+        {{ 'preferences.bin.title_tree' | translate }}
+      </span>
+    </div>
+  </ng-template>
+
+  <!-- ========== TREE VIEW ========== -->
+  @if (currentView() === 'tree') {
+    <!-- Location header card -->
+    @if (selectedLocation) {
+      <div class="mb-4 p-4 surface-card border-round border-1 surface-border">
+        <div class="flex items-center gap-2 mb-3">
+          <i class="pi pi-map-marker text-primary"></i>
+          <span class="font-semibold">{{
+            selectedLocation.location_code
+          }}</span>
+          <span class="text-color-secondary">—</span>
+          <span class="text-color-secondary">{{
+            selectedLocation.facility_name
+          }}</span>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <p-chip
+            [label]="(selectedLocation.content_kardex ?? 0).toString()"
+            icon="pi pi-clipboard"
+            [pTooltip]="'labels.kardex' | translate"
+            styleClass="p-chip-sm"
+          />
+          <p-chip
+            [label]="(selectedLocation.content_skus ?? 0).toString()"
+            icon="pi pi-tag"
+            [pTooltip]="'labels.sku' | translate"
+            styleClass="p-chip-sm"
+          />
+          <p-chip styleClass="p-chip-sm">
+            <span class="flex items-center gap-1">
+              <span class="font-bold">U</span>
+              <span class="font-mono">{{
+                selectedLocation.content_units ?? 0
+              }}</span>
+            </span>
+          </p-chip>
+          <p-chip
+            [label]="nodeCount().toString()"
+            icon="pi pi-box"
+            [pTooltip]="'labels.bin_qty' | translate"
+            styleClass="p-chip-sm"
+          />
+        </div>
+      </div>
+    }
+
+
+    <!-- Add bin / Bin Planner buttons -->
+    <div class="flex justify-end gap-2 mb-3">
+      <p-button
+        label="Bin Planner"
+        icon="pi pi-th-large"
+        severity="info"
+        size="small"
+        [outlined]="true"
+        (onClick)="onOpenBinPlanner()"
+      />
+      <p-button
+        [label]="'preferences.bin.add_bin' | translate"
+        icon="pi pi-plus"
+        severity="success"
+        size="small"
+        (onClick)="onAddBin()"
+      />
+    </div>
+
+    <!-- Loading spinner -->
+    @if (loading()) {
+      <div class="flex justify-center p-6">
+        <i class="pi pi-spin pi-spinner text-2xl text-primary"></i>
+      </div>
+    }
+
+    <!-- Tree -->
+    @if (!loading() && treeData().length > 0) {
+      <p-tree [value]="treeData()" [style]="{ width: '100%' }">
+        <ng-template let-node pTemplate="default">
+          <div class="flex items-center w-full gap-2">
+            <!-- LPN name + chips -->
+            <div class="flex-grow-1 flex items-center gap-2 flex-wrap">
+              <span class="font-semibold">{{ node.label }}</span>
+              <span
+                class="text-xs text-color-secondary surface-200 px-2 py-1 border-round"
+              >
+                {{ node.data.type }}
+              </span>
+              <p-chip
+                [label]="node.data.content_kardex.toString()"
+                icon="pi pi-clipboard"
+                [pTooltip]="'labels.kardex' | translate"
+                styleClass="p-chip-sm"
+              />
+              <p-chip
+                [label]="node.data.content_skus.toString()"
+                icon="pi pi-tag"
+                [pTooltip]="'labels.sku' | translate"
+                styleClass="p-chip-sm"
+              />
+              <p-chip styleClass="p-chip-sm">
+                <span class="flex items-center gap-1">
+                  <span class="font-bold">U</span>
+                  <span class="font-mono">{{ node.data.content_units }}</span>
+                </span>
+              </p-chip>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="flex items-center gap-1 flex-shrink-0">
+              <p-button
+                icon="pi pi-plus"
+                [rounded]="true"
+                severity="success"
+                [text]="true"
+                size="small"
+                [pTooltip]="'preferences.bin.add_bin' | translate"
+                (onClick)="onAddChildBin(node.data)"
+              />
+              <p-button
+                icon="pi pi-pencil"
+                [rounded]="true"
+                severity="info"
+                [text]="true"
+                size="small"
+                pTooltip="Edit"
+                (onClick)="onEditBin(node.data)"
+              />
+              <p-button
+                icon="pi pi-trash"
+                [rounded]="true"
+                severity="danger"
+                [text]="true"
+                size="small"
+                pTooltip="Delete"
+                (onClick)="onDeleteBin(node.data)"
+              />
+            </div>
+          </div>
+        </ng-template>
+      </p-tree>
+    }
+
+    <!-- Empty state -->
+    @if (!loading() && treeData().length === 0) {
+      <div class="text-center p-6">
+        <i class="pi pi-inbox text-4xl text-color-secondary mb-3"></i>
+        <p class="text-color-secondary m-0">
+          {{ 'labels.no_tree_data_found' | translate }}
+        </p>
+      </div>
+    }
+  }
+
+  <!-- ========== FORM VIEW ========== -->
+  @if (currentView() === 'form') {
+    <div class="p-4 surface-card border-round border-1 surface-border">
+      <h4 class="mt-0 mb-4">
+        @if (editingContainerId) {
+          {{ 'preferences.bin.title_edit' | translate }}
+        } @else {
+          {{ 'preferences.bin.title_create' | translate }}
+        }
+      </h4>
+
+      <form [formGroup]="binForm" (ngSubmit)="onSaveBin()">
+        <!-- LPN Code -->
+        <div class="mb-4">
+          <label for="lpn_code" class="block font-medium mb-2">
+            {{ 'labels.lpn_code' | translate }}
+          </label>
+          <input
+            pInputText
+            id="lpn_code"
+            formControlName="lpn_code"
+            class="w-full"
+            [readonly]="!!editingContainerId"
+          />
+          @if (isFieldInvalid('lpn_code')) {
+            <small class="p-error block mt-1">
+              {{ 'forms_validation.required' | translate }}
+            </small>
+          }
+        </div>
+
+        <!-- Type -->
+        <div class="mb-4">
+          <label for="type" class="block font-medium mb-2">
+            {{ 'labels.container_type' | translate }}
+          </label>
+          <p-select
+            formControlName="type"
+            [options]="containerTypes"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full"
+            appendTo="body"
+          />
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-end gap-2 mt-4">
+          <p-button
+            [label]="'labels.cancel' | translate"
+            severity="secondary"
+            [text]="true"
+            (onClick)="onCancelForm()"
+          />
+          <p-button
+            [label]="'labels.save' | translate"
+            icon="pi pi-check"
+            type="submit"
+            [loading]="saving()"
+            [disabled]="!binForm.valid"
+          />
+        </div>
+      </form>
+    </div>
+  }
+</p-drawer>
+
+<!-- Bin Planner Dialog -->
+<app-bin-planner-dialog
+  [(visible)]="showBinPlanner"
+  [locationCode]="selectedLocation?.location_code ?? ''"
+  [locationId]="selectedLocation?.id ?? ''"
+  [facilityId]="selectedLocation?.facility_id ?? ''"
+  (applyPlan)="onBinPlannerApply($event)"
+/>

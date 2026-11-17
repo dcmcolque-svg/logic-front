@@ -1,0 +1,19 @@
+// backorders component styles
+
+// Force bold headers + auto layout on the expansion sub-table
+:host ::ng-deep .bg-surface-50 {
+  .p-datatable th {
+    font-weight: 700 !important;
+  }
+
+  .p-datatable-table {
+    table-layout: auto !important;
+  }
+
+  .p-datatable td,
+  .p-datatable th {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+  }
+}

@@ -1,0 +1,33 @@
+:host {
+  display: block;
+}
+
+// Expanding create/edit form — height animates from 0fr to 1fr
+.category-reveal {
+  display: grid;
+  animation: category-expand 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.category-reveal__content {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@keyframes category-expand {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .category-reveal {
+    animation-duration: 1ms;
+  }
+}

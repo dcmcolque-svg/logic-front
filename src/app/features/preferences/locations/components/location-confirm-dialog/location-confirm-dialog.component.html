@@ -1,0 +1,11 @@
+<base-confirm-dialog
+  [visible]="visible()"
+  [title]="'preferences.location.confirm_delete' | translate"
+  message="preferences.location.delete_message"
+  severity="danger"
+  confirmLabel="labels.delete"
+  confirmIcon="pi pi-trash"
+  [loading]="deleting()"
+  (confirm)="onConfirmDelete()"
+  (hide)="hide.emit()"
+/>

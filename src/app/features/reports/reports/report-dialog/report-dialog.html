@@ -1,0 +1,279 @@
+<p-toast />
+
+<form [formGroup]="form" (ngSubmit)="onGenerate()" novalidate>
+
+    <!-- ══ Section: Principal parameters ══════════════════════════════════════ -->
+    <section class="form-section">
+        <h6 class="section-title">{{ 'labels.principal_parameters' | translate }}</h6>
+
+        <div class="form-row">
+
+            <!-- Account selector -->
+            <div class="form-field flex-2">
+                <label class="field-label" for="accountID">
+                    {{ 'labels.facility' | translate }}
+                    <span class="field-hint">({{ 'reports.messages.required_for_saving' | translate }})</span>
+                </label>
+                <div class="input-with-clear">
+                    <p-select id="accountID" formControlName="accountID" [options]="accountOptions" optionLabel="label"
+                        optionValue="value" [placeholder]="'reports.select_facility' | translate"
+                        appendTo="body" styleClass="w-full" (onBlur)="markAsTouched('accountID')" />
+                    <p-button icon="pi pi-times" [outlined]="true" severity="secondary" size="small"
+                        (onClick)="clearAccountId()" />
+                </div>
+            </div>
+
+            <!-- File type -->
+            <div class="form-field flex-1">
+                <label class="field-label" for="export_as">{{ 'labels.export_as' | translate }} *</label>
+                <p-select id="export_as" formControlName="file_type" [options]="fileTypes"
+                    [placeholder]="'reports.select_file_type' | translate" appendTo="body" styleClass="w-full"
+                    (onBlur)="markAsTouched('file_type')" />
+                @if (form.get('file_type')?.invalid && form.get('file_type')?.touched) {
+                <small class="field-error">{{ 'reports.messages.file_type_required' | translate }}</small>
+                }
+            </div>
+
+        </div>
+
+        <!-- Dates hint -->
+        <p class="field-hint pt-5 pb-2">{{ 'labels.dates_wont_be_saved' | translate }}</p>
+
+        <div class="form-row">
+
+            <!-- Initial date -->
+            <div class="form-field flex-1">
+                <label class="field-label" for="report-initial-date">{{ 'labels.initial_date' | translate }} *</label>
+                <p-datepicker inputId="report-initial-date" formControlName="initial_date" appendTo="body" [showIcon]="true" iconDisplay="input"
+                    styleClass="w-full" />
+                @if (form.get('initial_date')?.invalid && form.get('initial_date')?.touched) {
+                <small class="field-error">{{ 'reports.messages.initial_date_required' | translate }}</small>
+                }
+            </div>
+
+            <!-- Final date -->
+            <div class="form-field flex-1">
+                <label class="field-label" for="report-final-date">{{ 'labels.final_date' | translate }}</label>
+                <p-datepicker inputId="report-final-date" formControlName="final_date" appendTo="body" [showIcon]="true" iconDisplay="input"
+                    styleClass="w-full" />
+                @if (form.errors?.['datesInvalid'] && form.get('final_date')?.touched) {
+                <small class="field-error">{{ 'reports.messages.final_date_min_error' | translate }}</small>
+                }
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ══ Accordion ══════════════════════════════════════════════════════════ -->
+    <p-accordion [multiple]="true">
+
+        <!-- Fields to export -->
+        <p-accordion-panel value="fields">
+            <p-accordion-header>{{ 'labels.select_fields_to_export' | translate }}</p-accordion-header>
+            <p-accordion-content>
+
+                <div class="fields-toolbar">
+                    <p-button icon="pi pi-filter" [severity]="editMode() ? 'warn' : 'secondary'" [outlined]="true"
+                        size="small" (onClick)="toggleEditMode()" />
+                    <p-button [label]="(allFieldsSelected() ? 'labels.unselect_all' : 'labels.select_all') | translate"
+                        [text]="true" size="small"
+                        (onClick)="allFieldsSelected() ? unselectAllFields() : selectAllFields()" />
+                </div>
+
+                @if (form.get('report_fields')?.invalid && (form.get('report_fields')?.dirty || form.get('report_fields')?.touched)) {
+                <small class="field-error mb-2 block">{{ 'reports.messages.at_least_one_selected' | translate }}</small>
+                }
+
+                <div class="drag-list" cdkDropList (cdkDropListDropped)="drop($event)" formArrayName="report_fields">
+                    @for (fieldGroup of fieldsArray.controls; track fieldGroup; let i = $index) {
+                    @if (!(fieldGroup.get('label')?.value ?? '').toLowerCase().includes('company')) {
+                    <div class="drag-row" cdkDrag [formGroupName]="i">
+
+                        @if (!editMode()) {
+                        <i class="pi pi-bars drag-handle" cdkDragHandle></i>
+                        }
+
+                        @if (editMode()) {
+                        <!-- Edit-mode: filter input per field type -->
+                        @switch (fieldGroup.get('type_field')?.value) {
+
+                        @case ('DATE') {
+                        @if (fieldGroup.get('filter_enabled')?.value !== false) {
+                        <p-datepicker formControlName="value" appendTo="body" styleClass="w-full"
+                            [placeholder]="(fieldGroup.get('label')?.value ?? '') | translate" />
+                        } @else {
+                        <input pInputText class="w-full" [disabled]="true"
+                            [value]="(fieldGroup.get('label')?.value | translate) + ': ' + ('reports.messages.filter_not_aviable' | translate)" />
+                        }
+                        }
+
+                        @case ('BOOLEAN') {
+                        @if (fieldGroup.get('filter_enabled')?.value !== false) {
+                        <div class="flex items-center gap-2">
+                            <p-checkbox inputId="report-field-value-{{ i }}" formControlName="value" [binary]="true" />
+                            <label for="report-field-value-{{ i }}">{{ fieldGroup.get('label')?.value | translate }}</label>
+                        </div>
+                        } @else {
+                        <input pInputText class="w-full" [disabled]="true"
+                            [value]="(fieldGroup.get('label')?.value | translate) + ': ' + ('reports.messages.filter_not_aviable' | translate)" />
+                        }
+                        }
+
+                        @default {
+                        @if ((fieldGroup.get('label')?.value ?? '').toLowerCase().includes('facility') && accountOptions.length > 0) {
+                        <!-- Facility ID field → reuse the same facility dropdown options -->
+                        <p-select formControlName="value"
+                            [options]="accountOptions" optionLabel="label" optionValue="value"
+                            [placeholder]="'reports.select_facility' | translate"
+                            appendTo="body" styleClass="w-full" />
+                        } @else if (fieldGroup.get('filter_enabled')?.value === false || fieldGroup.get('type_field')?.value
+                        === '') {
+                        <input pInputText class="w-full" [disabled]="true"
+                            [value]="(fieldGroup.get('label')?.value | translate) + ': ' + ('reports.messages.filter_not_aviable' | translate)" />
+                        } @else if (fieldGroup.get('parameter')?.value) {
+                        <p-multiSelect formControlName="value" [options]="fieldGroup.get('options')?.value" class="w-full"
+                            placeholder="Select Option"
+                            [disabled]="(fieldGroup.get('options')?.value?.length ?? 0) <= 1" />
+                        @if (fieldGroup.get('value')?.errors?.['atLeastOneOption'] && fieldGroup.get('value')?.dirty) {
+                        <small class="field-error">{{ 'reports.messages.at_least_one_option' | translate }}</small>
+                        }
+                        } @else if (fieldGroup.get('type_field')?.value === 'COUNT' ||
+                        fieldGroup.get('type_field')?.value === 'NUMBER') {
+                        <input pInputText type="number" formControlName="value" class="w-full"
+                            [placeholder]="(fieldGroup.get('label')?.value ?? '') | translate" />
+                        } @else {
+                        <input pInputText type="text" formControlName="value" class="w-full"
+                            [placeholder]="(fieldGroup.get('label')?.value ?? '') | translate" />
+                        }
+                        }
+
+                        }
+                        } @else {
+                        <!-- Select-mode: label + checkbox -->
+                        <label class="drag-label" for="report-field-selected-{{ i }}">{{ fieldGroup.get('label')?.value | translate }}</label>
+                        <p-checkbox inputId="report-field-selected-{{ i }}" formControlName="selected" [binary]="true" />
+                        }
+
+                    </div>
+                    }
+                    }
+                </div>
+
+            </p-accordion-content>
+        </p-accordion-panel>
+
+        <!-- ── Custom parameters divider ──────────────────────────────────────── -->
+        <div class="custom-params-header">
+            <h6 class="section-title">{{ 'labels.custom_parameters' | translate }}</h6>
+            <p class="field-hint">{{ 'labels.custom_parameters_subtitle' | translate }}</p>
+        </div>
+
+        <!-- Report settings -->
+        <p-accordion-panel value="settings">
+            <p-accordion-header>{{ 'labels.report_custom_settings' | translate }}</p-accordion-header>
+            <p-accordion-content>
+                <div class="form-field">
+                    <label class="field-label" for="name">{{ 'labels.report_name' | translate }}</label>
+                    <input pInputText id="name" formControlName="name" class="w-full"
+                        autocomplete="off" />
+                    @if (form.get('name')?.touched) {
+                        @if (form.get('name')?.errors?.['required']) {
+                            <small class="field-error">{{ 'reports.messages.report_name_required' | translate }}</small>
+                        }
+                        @if (form.get('name')?.errors?.['extraSpaces']) {
+                            <small class="field-error">{{ 'forms_validation.extra_spaces_not_allowed' | translate }}</small>
+                        }
+                    }
+                </div>
+                <div class="form-field mt-4">
+                    <label class="field-label" for="description">{{ 'labels.report_description' | translate }}</label>
+                    <input pInputText id="description" formControlName="description" class="w-full"
+                        autocomplete="off" />
+                    @if (form.get('description')?.touched && form.get('description')?.errors?.['extraSpaces']) {
+                        <small class="field-error">{{ 'forms_validation.extra_spaces_not_allowed' | translate }}</small>
+                    }
+                </div>
+            </p-accordion-content>
+        </p-accordion-panel>
+
+        <!-- Schedule settings -->
+        <p-accordion-panel value="schedule" formGroupName="schedule_config">
+            <p-accordion-header>{{ 'labels.schedule_settings' | translate }}</p-accordion-header>
+            <p-accordion-content>
+                <div class="form-row">
+                    <div class="form-field flex-1">
+                        <label class="field-label" for="report-frequency">{{ 'labels.how_often' | translate }}</label>
+                        <p-select id="frequency" inputId="report-frequency" formControlName="frequency" [options]="reportFrequencyOptions"
+                            optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full" />
+                    </div>
+                    <div class="form-field flex-1">
+                        <label class="field-label" for="report-schedule-time">{{ 'labels.how_often_time' | translate }}</label>
+                        <p-datepicker inputId="report-schedule-time" formControlName="time" [timeOnly]="true" hourFormat="24" appendTo="body"
+                            [showIcon]="true" iconDisplay="input" styleClass="w-full">
+                            <ng-template pTemplate="inputicon" let-clickCb="clickCallBack">
+                                <i class="pi pi-clock cursor-pointer" role="button" tabindex="0" (click)="clickCb($event)"
+                                    (keydown.enter)="clickCb($event)"></i>
+                            </ng-template>
+                        </p-datepicker>
+                    </div>
+                </div>
+            </p-accordion-content>
+        </p-accordion-panel>
+
+        <!-- Email settings -->
+        <p-accordion-panel value="email" formGroupName="schedule_config">
+            <p-accordion-header>{{ 'labels.email_settings' | translate }}</p-accordion-header>
+            <p-accordion-content>
+                <p class="field-hint mb-3">{{ 'labels.email_setting_subtitle' | translate }}</p>
+
+                <div class="form-field">
+                    <label class="field-label" for="recipients">{{ 'reports.send_copy_to' | translate }}</label>
+                    <p-autocomplete
+                        id="recipients"
+                        formControlName="recipients"
+                        [multiple]="true"
+                        [typeahead]="false"
+                        [dropdown]="false"
+                        [placeholder]="'reports.add_email' | translate"
+                        styleClass="w-full"
+                        (onAdd)="onEmailAdd($event)"
+                    />
+                    @if (
+                    form.get('schedule_config.recipients')?.invalid &&
+                    (form.get('schedule_config.recipients')?.touched || form.get('schedule_config.recipients')?.dirty)
+                    ) {
+                    <small class="field-error">
+                        {{ 'forms_validation.valid_email' | translate }}:
+                        {{ form.get('schedule_config.recipients')?.errors?.['invalidEmails']?.emails?.join(', ') }}
+                    </small>
+                    }
+                </div>
+
+                <div class="form-field mt-4">
+                    <label class="field-label" for="email_subject">{{ 'labels.subject' | translate }}</label>
+                    <input pInputText id="email_subject" formControlName="email_subject" class="w-full"
+                        autocomplete="off" />
+                </div>
+
+                <div class="form-field mt-4">
+                    <label class="field-label" for="email_body">{{ 'labels.details' | translate }}</label>
+                    <textarea pTextarea id="email_body" formControlName="email_body" class="w-full" rows="4"></textarea>
+                </div>
+            </p-accordion-content>
+        </p-accordion-panel>
+
+    </p-accordion>
+
+    <!-- ══ Footer actions ═══════════════════════════════════════════════════════ -->
+    <div class="dialog-footer">
+        <p-button [label]="'buttons.cancel' | translate" icon="pi pi-times" [text]="true" severity="secondary"
+            (onClick)="onCancel()" />
+        <p-button [label]="(data.action === 'edit' ? 'labels.save' : 'labels.save_as_new') | translate"
+            icon="pi pi-save" [severity]="data.action === 'edit' ? 'success' : 'warn'" [loading]="loading()"
+            [disabled]="loading() || !form.get('accountID')?.value || !form.get('name')?.value || form.get('name')?.invalid || form.get('description')?.invalid || !form.get('file_type')?.value || form.get('report_fields')?.invalid"
+            (onClick)="onSave()" />
+        <p-button [label]="'labels.generate' | translate" icon="pi pi-check" type="submit" [loading]="loading()"
+            [disabled]="loading() || !form.get('initial_date')?.value || !form.get('file_type')?.value || form.get('report_fields')?.invalid" />
+    </div>
+
+</form>

@@ -1,0 +1,19 @@
+.scope-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+}
+
+.scope-operator {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3B82F6;
+}
+
+.scope-facility {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16A34A;
+}

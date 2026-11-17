@@ -1,0 +1,97 @@
+<p-toast />
+
+<div class="reports-page">
+
+  <!-- ── Header (matches dashboard header) ──────────────────────── -->
+  <div class="reports-header">
+    <div class="reports-header__title">
+      <i class="pi pi-file"></i>
+      <h1>{{ 'reports.' + selectedMenuLabel | translate }}</h1>
+    </div>
+
+    <div class="reports-header__controls">
+      <!-- View-mode selector -->
+      <p-select
+        [formControl]="$any(form.get('selectedMenu'))"
+        [options]="menuOptions"
+        optionLabel="label"
+        [style]="{ minWidth: '13rem' }"
+        styleClass="selector-dropdown"
+        appendTo="body"
+        (onChange)="onMenuChange()"
+      >
+        <ng-template let-opt pTemplate="item">
+          {{ 'reports.' + opt.label | translate }}
+        </ng-template>
+        <ng-template let-opt pTemplate="selectedItem">
+          {{ 'reports.' + opt.label | translate }}
+        </ng-template>
+      </p-select>
+    </div>
+  </div>
+
+  <!-- ── Loading spinner ────────────────────────────────────────── -->
+  @if (loading()) {
+    <div class="reports-loading">
+      <p-progressSpinner strokeWidth="3" animationDuration="0.8s" />
+    </div>
+  } @else {
+
+    <!-- ── STANDARD VIEW ──────────────────────────────────────── -->
+    @if (viewMode === 'STANDARD') {
+      @for (group of categoryGroups(); track group.key) {
+        @if (group.reports.length > 0) {
+          <section class="category-section">
+            <div class="category-header">
+              <h5 class="category-title">{{ group.titleKey | translate }}</h5>
+              <p class="category-subtitle">{{ group.subtitleKey | translate }}</p>
+            </div>
+            <div class="cards-grid">
+              @for (report of group.reports; track report.id) {
+                <app-standard-card-report
+                  [report]="report"
+                  [reportStructure]="reportStructure()"
+                  role="button"
+                  tabindex="0"
+                  (click)="openCreateDialog(report)"
+                  (keydown.enter)="openCreateDialog(report)"
+                />
+              }
+            </div>
+          </section>
+        }
+      }
+    }
+
+    <!-- ── CUSTOM VIEW ────────────────────────────────────────── -->
+    @if (viewMode === 'CUSTOM') {
+      <section class="category-section custom-section">
+        <div class="cards-grid">
+          @for (report of reports(); track report.id) {
+            <app-custom-card-report
+              [report]="report"
+              [reportStructure]="reportStructure()"
+              (reportDeleted)="onReportCallback('CUSTOM', 'report_deleted')"
+              (reportEdited)="onReportCallback('CUSTOM', 'report_saved')"
+              (reportGenerated)="onReportCallback('CUSTOM', 'report_generated')"
+            />
+          }
+
+          @empty {
+            <div class="empty-state">
+              <i class="pi pi-inbox"></i>
+              <p>{{ 'reports.no_custom_reports' | translate }}</p>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ── GENERATED VIEW ─────────────────────────────────────── -->
+    @if (viewMode === 'GENERATED') {
+      <app-generated-report />
+    }
+
+  }
+
+</div>

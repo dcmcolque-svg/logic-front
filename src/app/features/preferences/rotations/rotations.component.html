@@ -1,0 +1,252 @@
+<p-menu #rowMenu [popup]="true" appendTo="body" [model]="menuItems" />
+
+<div class="grid grid-cols-12 gap-4">
+  <!-- Page header -->
+  <div class="col-span-12">
+    <div
+      class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2"
+    >
+      <div>
+        <h2 class="text-2xl font-bold m-0">
+          {{ 'pages.rotations' | translate }}
+        </h2>
+      </div>
+      <div class="flex gap-2">
+        <p-button
+          [label]="'preferences.rotations.create' | translate"
+          icon="pi pi-plus"
+          (onClick)="openCreateDialog()"
+          size="small"
+        />
+        <p-button
+          [label]="'buttons.clear' | translate"
+          icon="pi pi-filter-slash"
+          [outlined]="true"
+          severity="secondary"
+          (onClick)="clearAllFilters()"
+          [loading]="loading()"
+          size="small"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Active filter chips -->
+  
+  <!-- Data table with filters -->
+  <div class="col-span-12">
+    <div class="card">
+      <base-data-table
+        [columns]="selectedColumns"
+        [data]="rotations()"
+        [loading]="loading()"
+        [pagination]="pagination()"
+        [sort]="currentSort()"
+        [selectable]="false"
+        [bulkActions]="getBulkActions()"
+        [activeFilterChips]="activeFilters()"
+        (stateChange)="onTableStateChange($event)"
+        (selectionChange)="onSelectionChange($event)"
+        (chipRemoved)="removeFilterChip($event)"
+      >
+        <!-- Toolbar slot -->
+        <ng-template #toolbar>
+          <div
+            class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3"
+          >
+            <!-- Left: bulk selection chips -->
+            <div class="flex gap-2 items-center flex-wrap">
+              @if (selectedRotations().length > 0) {
+                <div class="flex items-center gap-2 animate-fadein">
+                  <p-chip
+                    [label]="selectedRotations().length + ' selected'"
+                    [removable]="true"
+                    (onRemove)="clearSelection()"
+                  />
+                </div>
+              }
+            </div>
+
+            <!-- Right side intentionally left empty since active filters are shown by base-data-table -->
+          </div>
+        </ng-template>
+
+        <!-- Paginator left: column toggle -->
+        <ng-template #paginatorLeft>
+          <div class="flex items-center gap-2">
+            <p-multiSelect
+              [options]="cols"
+              [ngModel]="selectedColumns"
+              (ngModelChange)="onColumnSelectionChange($event)"
+              optionLabel="field"
+              [placeholder]="'labels.choose_columns' | translate"
+              [selectedItemsLabel]="
+                selectedColumns.length +
+                ' ' +
+                ('labels.columns_selected' | translate)
+              "
+              [maxSelectedLabels]="0"
+              size="small"
+              appendTo="body"
+            >
+              <ng-template let-col pTemplate="item">
+                {{ col.header | translate }}
+              </ng-template>
+            </p-multiSelect>
+          </div>
+        </ng-template>
+
+        <!-- Custom cell templates -->
+        <ng-template #cell let-row let-col="col">
+          @switch (col.template) {
+            @case ('company') {
+              <span class="text-sm">{{
+                getCompanyName(row.company_id)
+              }}</span>
+            }
+            @case ('facility_name') {
+              <span class="text-sm">{{
+                getFacilityName(row.facility_id)
+              }}</span>
+            }
+            @case ('zones') {
+              <div class="flex flex-wrap gap-1">
+                @for (name of getZoneNames(row.zones || []); track name) {
+                  <span
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
+                  >
+                    {{ name }}
+                  </span>
+                }
+                @if (!row.zones || row.zones.length === 0) {
+                  <span class="text-surface-400 text-xs">—</span>
+                }
+              </div>
+            }
+            @case ('default') {
+              <p-toggleswitch
+                [ngModel]="row.default"
+                (onChange)="onToggleDefault(row, $event.checked)"
+              />
+            }
+            @case ('category') {
+              <base-status-badge
+                [value]="row.category ? 'Yes' : 'No'"
+                [statusMap]="{ yes: 'success', no: 'info' }"
+              />
+            }
+            @case ('kardex_sort') {
+              <span class="text-sm">{{ getKardexSortLabel(row.kardex_sort) }}</span>
+            }
+            @case ('first_rotation') {
+              <span class="text-sm">{{ getFirstRotationLabel(row.first_rotation) }}</span>
+            }
+            @case ('second_rotation') {
+              <span class="text-sm">{{ getSecondRotationLabel(row.second_rotation) }}</span>
+            }
+          }
+        </ng-template>
+
+        <!-- Row actions -->
+        <ng-template #actions let-row>
+          <p-button
+            icon="pi pi-ellipsis-v"
+            [text]="true"
+            [rounded]="true"
+            size="small"
+            severity="secondary"
+            (click)="onRowMenuClick($event, row)"
+          />
+        </ng-template>
+
+        <!-- Custom filter row: handles facility multiselect + all other filterable columns -->
+        <ng-template #filterRow let-columns="columns">
+          <!-- actions col spacer -->
+          <th style="width: 4rem"></th>
+          @for (col of columns; track col.field) {
+            <th class="p-1">
+              @if (col.field === 'company') {
+                <shipedge-filter-multiselect-panel
+                  [options]="companyFilterOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [placeholder]="'labels.company' | translate"
+                  [showFilter]="true"
+                  [value]="companyFilter()"
+                  (apply)="onCompanyFilterChange($event)"
+                  (clear)="onCompanyFilterChange([])"
+                />
+              } @else if (col.field === 'facility_name') {
+                <shipedge-filter-multiselect-panel
+                  [options]="facilityFilterOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [placeholder]="'labels.facility' | translate"
+                  [showFilter]="true"
+                  [value]="facilityFilter()"
+                  (apply)="onFacilityFilterChange($event)"
+                  (clear)="onFacilityFilterChange([])"
+                />
+              } @else if (col.field === 'zones') {
+                <shipedge-filter-multiselect-panel
+                  [options]="zoneFilterOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [placeholder]="'preferences.rotations.zone' | translate"
+                  [showFilter]="true"
+                  [value]="zoneFilter()"
+                  (apply)="onZoneFilterChange($event)"
+                  (clear)="onZoneFilterChange([])"
+                />
+              } @else if (col.filterable) {
+                @switch (col.filterType) {
+                  @case ('multiselect') {
+                    <shipedge-filter-multiselect-panel
+                      [options]="col.filterOptions || []"
+                      optionLabel="label"
+                      optionValue="value"
+                      [placeholder]="col.header | translate"
+                      [value]="getActiveFilterValue(col.field) || []"
+                      (apply)="onColumnFilterChange(col.field, $event)"
+                      (clear)="onColumnFilterChange(col.field, [])"
+                    />
+                  }
+                  @default {
+                    <shipedge-filter-text-input
+                      [value]="getActiveFilterValue(col.field)"
+                      [placeholder]="col.header | translate"
+                      [filterType]="col.filterType"
+                      (applyWithMode)="onColumnFilterChange(col.field, $event)"
+                    />
+                  }
+                }
+              }
+            </th>
+          }
+        </ng-template>
+      </base-data-table>
+    </div>
+  </div>
+</div>
+
+<!-- Create/Edit Dialog (sub-component) -->
+<app-rotations-form-dialog
+  [visible]="showDialog()"
+  [rotation]="editingRotation()"
+  [editing]="!!editingRotation()"
+  [saving]="savingRotation()"
+  [zonesList]="zones()"
+  [facilitiesList]="facilities()"
+  [companiesList]="companies()"
+  (save)="onSaveRotation($event)"
+  (hide)="showDialog.set(false)"
+/>
+
+<!-- Delete confirmation (sub-component) -->
+<app-rotations-confirm-dialog
+  [visible]="showDeleteConfirm()"
+  [rotation]="deleteTarget()"
+  [count]="selectedRotations().length"
+  (confirm)="onConfirmDelete()"
+  (hide)="showDeleteConfirm.set(false)"
+/>

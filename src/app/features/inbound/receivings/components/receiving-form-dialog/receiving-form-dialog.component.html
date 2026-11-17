@@ -1,0 +1,224 @@
+<base-dialog
+  [visible]="visible()"
+  [header]="editing() ? 'inbound.edit_receiving' : 'inbound.new_receiving'"
+  [subHeader]="receiving()?.doc_number ?? ''"
+  size="lg"
+  [loading]="saving() || loadingLines()"
+  saveLabel="buttons.save"
+  cancelLabel="buttons.cancel"
+  [saveDisabled]="saving()"
+  [dismissableMask]="false"
+  (save)="onSave()"
+  (hide)="hide.emit()"
+>
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <base-form-group [columns]="3">
+    <div>
+      <base-form-field
+        type="dropdown"
+        label="labels.facility"
+        [control]="form.controls.facility_id"
+        [options]="facilities()"
+        optionLabel="name"
+        optionValue="id"
+        [required]="true"
+      />
+      @if (form.controls.facility_id.errors?.['serverError']) {
+        <sh-field-error [ctrl]="form.controls.facility_id" />
+      }
+    </div>
+    <div>
+      <base-form-field
+        type="dropdown"
+        label="labels.company"
+        [control]="form.controls.company_id"
+        [options]="companies()"
+        optionLabel="name"
+        optionValue="id"
+        [required]="true"
+      />
+      @if (form.controls.company_id.errors?.['serverError']) {
+        <sh-field-error [ctrl]="form.controls.company_id" />
+      }
+    </div>
+    <base-form-field
+      type="dropdown"
+      label="labels.doc_type"
+      [control]="form.controls.doc_type"
+      [options]="docTypeOptions"
+      [required]="true"
+    />
+    <div>
+      <base-form-field
+        type="text"
+        label="labels.doc_number"
+        [control]="form.controls.doc_number"
+        [required]="true"
+      />
+      @if (form.controls.doc_number.errors?.['serverError']) {
+        <sh-field-error [ctrl]="form.controls.doc_number" />
+      }
+    </div>
+    <base-form-field
+      type="text"
+      label="labels.tracking_number"
+      [control]="form.controls.external_ref"
+    />
+    <div>
+      <base-form-field
+        type="date"
+        label="labels.expected_arrival"
+        [control]="form.controls.expected_arrival"
+      />
+      @if (form.controls.expected_arrival.errors?.['serverError']) {
+        <sh-field-error [ctrl]="form.controls.expected_arrival" />
+      }
+    </div>
+  </base-form-group>
+  <base-form-group [columns]="1">
+    <base-form-field
+      type="textarea"
+      label="labels.notes"
+      [control]="form.controls.notes"
+    />
+  </base-form-group>
+
+  <!-- ── Lines ──────────────────────────────────────────────── -->
+  <div class="flex flex-wrap items-end justify-between gap-3 mt-4 mb-2">
+    <div>
+      <h4 class="m-0 text-base font-semibold">
+        {{ 'inbound.expected_items' | translate }} <span class="text-red-500">*</span>
+      </h4>
+      <small class="text-surface-500">{{ 'inbound.expected_items_hint' | translate }}</small>
+    </div>
+    <div class="flex items-center gap-2 w-full md:w-[26rem]">
+      <p-autocomplete
+        class="flex-1"
+        styleClass="w-full"
+        inputStyleClass="w-full"
+        [formControl]="skuSearch"
+        [suggestions]="skuSuggestions()"
+        optionLabel="sku_code"
+        [delay]="300"
+        [minLength]="1"
+        [forceSelection]="false"
+        [placeholder]="(form.controls.company_id.value ? 'inbound.search_sku' : 'inbound.select_company_first') | translate"
+        appendTo="body"
+        (completeMethod)="searchSkus($event)"
+        (onSelect)="onSkuSelected($event)"
+        (keydown.enter)="$event.preventDefault(); addTypedSku()"
+      >
+        <ng-template let-sku #item>
+          <div class="flex flex-col">
+            <span class="font-medium">{{ sku.sku_code }}</span>
+            <small class="text-surface-500">
+              {{ sku.name || sku.product_name || '—' }}
+              @if (sku.barcode) { · {{ sku.barcode }} }
+            </small>
+          </div>
+        </ng-template>
+      </p-autocomplete>
+      <p-button
+        icon="pi pi-plus"
+        [outlined]="true"
+        severity="secondary"
+        [disabled]="!form.controls.company_id.value || !skuSearch.value"
+        [pTooltip]="'inbound.add_sku' | translate"
+        tooltipPosition="top"
+        (onClick)="addTypedSku()"
+      />
+    </div>
+  </div>
+
+  <div class="overflow-x-auto border border-surface-200 dark:border-surface-700 rounded-md">
+    <table class="w-full text-sm">
+      <thead class="bg-surface-50 dark:bg-surface-800">
+        <tr>
+          <th class="text-left p-2 w-12">#</th>
+          <th class="text-left p-2">{{ 'labels.sku' | translate }}</th>
+          <th class="text-left p-2">{{ 'labels.name' | translate }}</th>
+          <th class="text-left p-2 w-48">{{ 'labels.expected_qty' | translate }}</th>
+          <th class="p-2 w-12"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row; let i = $index) {
+          <tr class="border-t border-surface-200 dark:border-surface-700" [formGroup]="row">
+            <td class="p-2 text-surface-500">{{ i + 1 }}</td>
+            <td class="p-2">
+              <span class="font-medium">{{ row.controls.sku_code.value }}</span>
+              @if (row.controls.is_new.value) {
+                <p-tag
+                  class="ml-2"
+                  severity="warn"
+                  [value]="'inbound.new_sku' | translate"
+                  [pTooltip]="'inbound.new_sku_hint' | translate"
+                />
+              }
+              @if (row.controls.sku_code.errors?.['serverError']) {
+                <sh-field-error [ctrl]="row.controls.sku_code" />
+              }
+            </td>
+            <td class="p-2 text-surface-600 dark:text-surface-300">{{ row.controls.name.value || '—' }}</td>
+            <td class="p-2">
+              <p-inputnumber
+                formControlName="qty_expected"
+                [min]="1"
+                [max]="maxQty"
+                [showButtons]="true"
+                buttonLayout="horizontal"
+                incrementButtonIcon="pi pi-plus"
+                decrementButtonIcon="pi pi-minus"
+                size="small"
+                inputStyleClass="w-20 text-center"
+                [class.ng-invalid]="isInvalidCtrl(row.controls.qty_expected)"
+                [class.ng-dirty]="isInvalidCtrl(row.controls.qty_expected)"
+              />
+              <sh-field-error
+                [ctrl]="row.controls.qty_expected"
+                [errors]="{ min: 'forms_validation.min_value', max: 'forms_validation.max_value' }"
+              />
+            </td>
+            <td class="p-2 text-center">
+              <p-button
+                icon="pi pi-trash"
+                [text]="true"
+                [rounded]="true"
+                severity="danger"
+                size="small"
+                [pTooltip]="'buttons.delete' | translate"
+                (onClick)="removeItem(i)"
+              />
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="5" class="p-6 text-center text-surface-400">
+              <i class="pi pi-box text-2xl block mb-2"></i>
+              {{ 'inbound.no_items' | translate }}
+            </td>
+          </tr>
+        }
+      </tbody>
+      @if (rows().length > 0) {
+        <tfoot class="bg-surface-50 dark:bg-surface-800 font-semibold">
+          <tr class="border-t border-surface-200 dark:border-surface-700">
+            <td class="p-2" colspan="3">
+              {{ rows().length }} {{ 'inbound.lines' | translate }}
+            </td>
+            <td class="p-2" colspan="2">{{ totalQty() }}</td>
+          </tr>
+        </tfoot>
+      }
+    </table>
+  </div>
+  @if (items.touched && items.errors?.['required']) {
+    <small class="text-red-500 text-xs mt-1 block">{{ 'inbound.items_required' | translate }}</small>
+  }
+  @if (items.errors?.['duplicate']) {
+    <small class="text-red-500 text-xs mt-1 block">{{ 'forms_validation.duplicate' | translate }}</small>
+  }
+  @if (items.errors?.['maxlength']) {
+    <small class="text-red-500 text-xs mt-1 block">{{ 'forms_validation.max_value' | translate }}</small>
+  }
+</base-dialog>

@@ -1,0 +1,197 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+/* ── Slider viewport ──────────────────────────────────────────── */
+.slider-viewport {
+  overflow: hidden;
+  width: 100%;
+}
+
+.slider-track {
+  display: flex;
+  width: 200%;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.slider-track.slide-tree {
+  transform: translateX(-50%);
+}
+
+.slider-panel {
+  width: 50%;
+  flex-shrink: 0;
+  min-height: 0;
+}
+
+/* ── Location header card (edge-frontend parity) ────────────── */
+.location-header {
+  .header-card {
+    background: var(--surface-card);
+    border: 1px solid var(--surface-border);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    max-width: 500px;
+
+    &:hover {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    }
+  }
+
+  .header-title {
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+
+    i {
+      color: var(--primary-color);
+    }
+  }
+
+  .location-info {
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--surface-border);
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+
+    .info-label {
+      color: var(--text-color-secondary);
+      font-size: 0.875rem;
+      font-weight: 500;
+      min-width: 120px;
+      flex-shrink: 0;
+    }
+
+    .info-value {
+      color: var(--text-color);
+      font-size: 0.875rem;
+      text-align: right;
+      flex: 1;
+      margin-left: 12px;
+    }
+  }
+
+  .summary-stats {
+    border-top: 1px solid var(--surface-border);
+
+    .stats-title {
+      color: var(--text-color);
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+  }
+}
+
+/* ── Btn-yellow override (Bin Planner in Bulk) ────────────────── */
+::ng-deep .btn-yellow.p-button {
+  background: #EAB308;
+  border-color: #EAB308;
+  color: #422006;
+
+  &:not(:disabled):hover {
+    background: #CA8A04;
+    border-color: #CA8A04;
+    color: #422006;
+  }
+
+  &:not(:disabled):focus {
+    box-shadow: 0 0 0 2px var(--surface-ground), 0 0 0 4px #EAB308;
+  }
+}
+
+/* ── Tree node hover ──────────────────────────────────────────── */
+::ng-deep .p-tree-node-content,
+::ng-deep .p-treenode-content {
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin: 2px 0;
+  border-left: 3px solid transparent;
+
+  /* No transform on hover: the connector lines are drawn on the node's parent
+     and would not follow, so shifting the row detaches it from its own guide.
+     The tint and the left edge carry the affordance on their own. */
+  &:hover {
+    background-color: color-mix(in srgb, var(--primary-color) 8%, transparent);
+    border-left-color: var(--primary-color);
+  }
+}
+
+/* ── Hierarchy connector lines ─────────────────────────────── */
+/* Structural guides, not decoration: a flat neutral grey that reads the same
+   from top to bottom of a branch. Derived from the theme's muted text colour
+   so it adapts to light and dark without hardcoding either. */
+::ng-deep .p-tree {
+  --bin-tree-line: color-mix(in srgb, var(--text-color-secondary) 40%, transparent);
+  --bin-tree-node: color-mix(in srgb, var(--text-color-secondary) 55%, transparent);
+}
+
+::ng-deep .p-tree-node-children,
+::ng-deep .p-treenode-children {
+  position: relative;
+  margin-left: 1rem;
+  padding-left: 1.25rem;
+
+  /* Vertical line running the full height of children */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0.5rem;
+    bottom: 0.75rem;
+    width: 1px;
+    background-color: var(--bin-tree-line);
+  }
+}
+
+/* Horizontal connector from vertical line to each child node */
+::ng-deep .p-tree-node-children > .p-tree-node,
+::ng-deep .p-treenode-children > .p-treenode {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 1.1rem;
+    left: -0.75rem;
+    width: 0.75rem;
+    height: 1px;
+    background-color: var(--bin-tree-line);
+  }
+}
+
+/* Dot at the connection point */
+::ng-deep .p-tree-node-children > .p-tree-node::after,
+::ng-deep .p-treenode-children > .p-treenode::after {
+  content: '';
+  position: absolute;
+  top: calc(1.1rem - 2px);
+  left: calc(-0.75rem - 1.5px);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: var(--bin-tree-node);
+}
+
+::ng-deep .p-tree-node,
+::ng-deep .p-treenode {
+  position: relative;
+  padding-left: 0.25rem;
+}
+
+/* Let custom template fill the row */
+::ng-deep .p-tree-node-label,
+::ng-deep .p-treenode-label {
+  flex: 1;
+  min-width: 0;
+}
+

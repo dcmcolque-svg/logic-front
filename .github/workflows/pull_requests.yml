@@ -1,0 +1,19 @@
+name: Tests and Scan
+
+on:
+  pull_request:
+
+jobs:
+  vars:
+    uses: altacrest/devops_automation/.github/workflows/define-vars.yml@main
+
+  test:
+    uses: altacrest/devops_automation/.github/workflows/test-scan-node.yml@main
+    needs: vars
+    with:
+      node-version: 22
+      project-key: ${{ vars.SONAR_PROJECT_KEY }}
+      project-name: ${{ vars.SONAR_PROJECT_NAME }}
+      ref-slug: ${{ needs.vars.outputs.ref-slug }}
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

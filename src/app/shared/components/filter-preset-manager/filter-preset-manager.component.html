@@ -1,0 +1,392 @@
+<p-confirmpopup />
+
+<!-- ═══════════ DESKTOP: Tabs Bar (hidden on mobile) ═══════════ -->
+<div class="filter-tabs-bar filter-tabs-bar--desktop">
+  <!-- Left: tabs group -->
+  <div class="filter-tabs-bar__tabs">
+    @for (preset of visiblePresets(); track preset.id) {
+      <div
+        class="filter-tab"
+        [class.filter-tab--active]="preset.id === presetService.lastAppliedPresetId()"
+        [style.--tab-color]="preset.color || '#64748b'"
+        tabindex="0"
+        (click)="onSelectPreset(preset)"
+        (keydown.enter)="onPresetKeydown($event, preset)"
+      >
+        <span class="filter-tab__name">{{ preset.name }}</span>
+        <button
+          class="filter-tab__close"
+          (click)="$event.stopPropagation(); onDeletePreset($event, preset)"
+          [pTooltip]="'buttons.delete' | translate"
+          tooltipPosition="top"
+        >
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+    }
+
+    <!-- Overflow dropdown -->
+    @if (hasOverflow()) {
+      <button
+        class="filter-tab filter-tab--overflow"
+        (click)="overflowPanel.toggle($event)"
+      >
+        <i class="pi pi-ellipsis-h"></i>
+        <span class="filter-tab__name">{{ 'filter_presets.show_more' | translate }}</span>
+      </button>
+      <p-popover #overflowPanel styleClass="filter-preset-panel">
+        <div class="preset-list">
+          @for (preset of overflowPresets(); track preset.id) {
+            <div
+              class="preset-list__item"
+              [class.preset-list__item--active]="preset.id === presetService.lastAppliedPresetId()"
+              tabindex="0"
+              (click)="onSelectPreset(preset); overflowPanel.hide()"
+              (keydown.enter)="onPresetKeydown($event, preset, overflowPanel)"
+            >
+              <div class="preset-list__item-content">
+                @if (preset.color) {
+                  <span class="preset-list__color-dot" [style.background-color]="preset.color"></span>
+                }
+                <span>{{ preset.name }}</span>
+              </div>
+              <button
+                class="preset-list__delete"
+                (click)="$event.stopPropagation(); onDeletePreset($event, preset)"
+              >
+                <i class="pi pi-trash"></i>
+              </button>
+            </div>
+          }
+        </div>
+      </p-popover>
+    }
+  </div>
+
+  <!-- Right: action buttons -->
+  <div class="filter-tabs-bar__actions">
+    <button class="filter-tabs-bar__action-btn" (click)="openSaveDialog()">
+      <i class="pi pi-plus"></i>
+      <span>{{ 'filter_presets.save_preset' | translate }}</span>
+    </button>
+    @if (lastAppliedPreset()) {
+      <button
+        class="filter-tabs-bar__action-btn"
+        (click)="openEditDialog()"
+        [pTooltip]="lastAppliedPreset()!.name"
+        tooltipPosition="top"
+      >
+        <i class="pi pi-pencil"></i>
+        <span>{{ 'filter_presets.edit_preset' | translate }}</span>
+      </button>
+    }
+  </div>
+</div>
+
+<!-- ═══════════ MOBILE: Dropdown (hidden on desktop) ═══════════ -->
+<div class="filter-tabs-mobile">
+  <div class="filter-tabs-mobile__row">
+    <!-- Dropdown button showing active preset or "Custom Filters" -->
+    <button
+      class="filter-tabs-mobile__selector"
+      [style.--tab-color]="lastAppliedPreset()?.color || '#64748b'"
+      [class.filter-tabs-mobile__selector--active]="lastAppliedPreset()"
+      (click)="mobilePanel.toggle($event)"
+    >
+      @if (lastAppliedPreset()) {
+        <span class="filter-tabs-mobile__dot" [style.background-color]="lastAppliedPreset()!.color"></span>
+        <span>{{ lastAppliedPreset()!.name }}</span>
+      } @else {
+        <i class="pi pi-filter"></i>
+        <span>{{ 'filter_presets.presets' | translate }}</span>
+      }
+      <i class="pi pi-chevron-down filter-tabs-mobile__chevron"></i>
+    </button>
+
+    <!-- Action icons -->
+    <button class="filter-tabs-mobile__icon-btn" (click)="openSaveDialog()">
+      <i class="pi pi-plus"></i>
+    </button>
+    @if (lastAppliedPreset()) {
+      <button class="filter-tabs-mobile__icon-btn" (click)="openEditDialog()">
+        <i class="pi pi-pencil"></i>
+      </button>
+    }
+  </div>
+
+  <p-popover #mobilePanel styleClass="filter-preset-panel">
+    <div class="preset-list">
+      @for (preset of presetService.presets(); track preset.id) {
+        <div
+          class="preset-list__item"
+          [class.preset-list__item--active]="preset.id === presetService.lastAppliedPresetId()"
+          tabindex="0"
+          (click)="onSelectPreset(preset); mobilePanel.hide()"
+          (keydown.enter)="onPresetKeydown($event, preset, mobilePanel)"
+        >
+          <div class="preset-list__item-content">
+            @if (preset.color) {
+              <span class="preset-list__color-dot" [style.background-color]="preset.color"></span>
+            }
+            <span>{{ preset.name }}</span>
+          </div>
+          <button
+            class="preset-list__delete"
+            (click)="$event.stopPropagation(); onDeletePreset($event, preset)"
+          >
+            <i class="pi pi-trash"></i>
+          </button>
+        </div>
+      }
+      @if (presetService.presets().length === 0) {
+        <div class="preset-list__empty">
+          {{ 'filter_presets.no_presets' | translate }}
+        </div>
+      }
+    </div>
+  </p-popover>
+</div>
+
+<!-- ═══════════ Save/Create preset dialog ═══════════ -->
+<p-dialog
+  [(visible)]="showSaveDialog"
+  [header]="(editingPresetId ? ('filter_presets.edit_filter' | translate) : ('filter_presets.create_filter' | translate))"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '44rem' }"
+  [draggable]="false"
+  [resizable]="false"
+  (onHide)="onCancelSave()"
+>
+  <div class="preset-dialog">
+    <!-- Row 1: Name + Color -->
+    <div class="preset-dialog__row">
+      <div class="preset-dialog__field preset-dialog__field--grow">
+        <label class="preset-dialog__label" [for]="idPrefix + '-name'">
+          {{ 'filter_presets.preset_name' | translate }}
+        </label>
+        <input
+          pInputText
+          [id]="idPrefix + '-name'"
+          type="text"
+          [ngModel]="presetName()"
+          (ngModelChange)="presetName.set($event); nameError.set('')"
+          [placeholder]="'filter_presets.preset_name_placeholder' | translate"
+          (keydown)="onNameKeydown($event)"
+          class="w-full"
+          maxlength="10"
+          autofocus
+        />
+        <div class="preset-dialog__name-footer">
+          @if (nameError()) {
+            <small class="text-red-500">{{ nameError() }}</small>
+          }
+          <small class="preset-dialog__char-count">{{ presetName().length }}/10</small>
+        </div>
+      </div>
+      <div class="preset-dialog__field preset-dialog__field--color">
+        <label class="preset-dialog__label" [for]="idPrefix + '-color'">
+          {{ 'filter_presets.color' | translate }}
+        </label>
+        <p-colorpicker
+          [inputId]="idPrefix + '-color'"
+          [ngModel]="presetColor()"
+          (ngModelChange)="presetColor.set($event)"
+          appendTo="body"
+        />
+      </div>
+    </div>
+
+    <!-- Row 2: Description (auto-generated, editable) -->
+    <div class="preset-dialog__field">
+      <label class="preset-dialog__label" [for]="idPrefix + '-description'">
+        {{ 'filter_presets.description' | translate }}
+      </label>
+      <textarea
+        pTextarea
+        [id]="idPrefix + '-description'"
+        [ngModel]="userEditedDescription() ? presetDescription() : autoDescription()"
+        (ngModelChange)="onDescriptionInput($event)"
+        [placeholder]="'filter_presets.description_placeholder' | translate"
+        [rows]="2"
+        class="w-full"
+        [autoResize]="true"
+      ></textarea>
+    </div>
+
+    <!-- Condition rows — rendered as visual groups -->
+    <div class="preset-dialog__conditions">
+      @for (group of conditionGroups(); track $index; let gIdx = $index; let isLastGroup = $last) {
+        <!-- OR divider between groups -->
+        @if (gIdx > 0) {
+          <div class="preset-dialog__or-divider">
+            <span class="preset-dialog__or-divider-line"></span>
+            <span class="preset-dialog__or-divider-label">OR</span>
+            <span class="preset-dialog__or-divider-line"></span>
+          </div>
+        }
+
+        <!-- Group container — only show border if multiple groups exist -->
+        <div class="preset-dialog__group" [class.preset-dialog__group--bordered]="hasMultipleGroups()">
+          @for (item of group.items; track item.idx; let rIdx = $index; let isLastInGroup = $last) {
+            <div class="preset-dialog__condition-row">
+              <!-- Field selector -->
+              <p-select
+                [ngModel]="item.condition.field"
+                (ngModelChange)="onFieldChange(item.idx, $event)"
+                [options]="availableFieldsFor(item.idx)"
+                optionLabel="header"
+                optionValue="field"
+                [placeholder]="'filter_presets.select_field' | translate"
+                size="small"
+                appendTo="body"
+                styleClass="preset-dialog__select-field"
+              >
+                <ng-template pTemplate="selectedItem" let-col>
+                  {{ col.header | translate }}
+                </ng-template>
+                <ng-template pTemplate="item" let-col>
+                  {{ col.header | translate }}
+                </ng-template>
+              </p-select>
+
+              <!-- Match mode selector -->
+              <p-select
+                [ngModel]="item.condition.matchMode"
+                (ngModelChange)="onMatchModeChange(item.idx, $event)"
+                [options]="item.condition.field ? getMatchModesForField(item.condition.field) : []"
+                optionLabel="translatedLabel"
+                optionValue="value"
+                [placeholder]="'filter_presets.select_condition' | translate"
+                [disabled]="!item.condition.field"
+                size="small"
+                appendTo="body"
+                styleClass="preset-dialog__select-mode"
+              />
+
+              <!-- Value input — changes based on field type -->
+              @switch (getFieldType(item.condition.field)) {
+                @case ('numeric') {
+                  <input
+                    pInputText
+                    type="number"
+                    [ngModel]="item.condition.value"
+                    (ngModelChange)="onValueChange(item.idx, $event)"
+                    [placeholder]="'filter_presets.enter_value' | translate"
+                    [disabled]="!item.condition.field"
+                    class="preset-dialog__input-value"
+                  />
+                }
+                @case ('date') {
+                  <p-select
+                    [ngModel]="item.condition.value"
+                    (ngModelChange)="onValueChange(item.idx, $event)"
+                    [options]="daysAgoOptions()"
+                    optionLabel="translatedLabel"
+                    optionValue="value"
+                    [placeholder]="'filter_presets.select_days_ago' | translate"
+                    [disabled]="!item.condition.field"
+                    appendTo="body"
+                    size="small"
+                    styleClass="preset-dialog__input-value"
+                  />
+                }
+                @case ('multiselect') {
+                  <p-multiselect
+                    [ngModel]="item.condition.value"
+                    (ngModelChange)="onValueChange(item.idx, $event)"
+                    [options]="getColumnDef(item.condition.field)?.filterOptions || []"
+                    optionLabel="label"
+                    optionValue="value"
+                    [placeholder]="'filter_presets.enter_value' | translate"
+                    [disabled]="!item.condition.field"
+                    [maxSelectedLabels]="2"
+                    appendTo="body"
+                    styleClass="preset-dialog__input-value"
+                  />
+                }
+                @default {
+                  <input
+                    pInputText
+                    type="text"
+                    [ngModel]="item.condition.value"
+                    (ngModelChange)="onValueChange(item.idx, $event)"
+                    [placeholder]="'filter_presets.enter_value' | translate"
+                    [disabled]="!item.condition.field"
+                    class="preset-dialog__input-value"
+                  />
+                }
+              }
+
+              <!-- Delete condition button -->
+              <p-button
+                icon="pi pi-trash"
+                severity="danger"
+                [outlined]="true"
+                size="small"
+                (onClick)="removeCondition(item.idx)"
+                [pTooltip]="'buttons.delete' | translate"
+                tooltipPosition="top"
+              />
+            </div>
+
+            <!-- AND/OR connector toggle — always visible between any two rows -->
+            @if (item.idx < dialogConditions().length - 1) {
+              <div class="preset-dialog__connector">
+                <p-selectbutton
+                  [options]="operatorOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [ngModel]="dialogConditions()[item.idx + 1]?.operator ?? 'and'"
+                  (ngModelChange)="onOperatorChange(item.idx + 1, $event)"
+                  size="small"
+                  styleClass="preset-dialog__operator-toggle"
+                />
+              </div>
+            }
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Add condition button -->
+    <div class="preset-dialog__add-row">
+      <p-button
+        [label]="'filter_presets.add_condition' | translate"
+        icon="pi pi-plus"
+        severity="primary"
+        size="small"
+        (onClick)="addCondition()"
+      />
+    </div>
+  </div>
+
+  <!-- Footer: Cancel / Apply / Save -->
+  <ng-template pTemplate="footer">
+    <div class="flex justify-end items-center gap-2">
+      @if (saveError()) {
+        <small class="text-red-500 mr-auto" role="alert">{{ saveError() }}</small>
+      }
+      <p-button
+        [label]="'buttons.cancel' | translate"
+        severity="secondary"
+        [outlined]="true"
+        size="small"
+        (onClick)="onCancelSave()"
+      />
+      <p-button
+        [label]="'buttons.apply' | translate"
+        severity="secondary"
+        size="small"
+        (onClick)="onApplyPreset()"
+      />
+      <p-button
+        [label]="'buttons.save' | translate"
+        icon="pi pi-check"
+        size="small"
+        [loading]="saving()"
+        (onClick)="onSavePreset()"
+      />
+    </div>
+  </ng-template>
+</p-dialog>

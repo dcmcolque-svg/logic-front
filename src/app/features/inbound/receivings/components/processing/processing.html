@@ -1,0 +1,391 @@
+<p-toast />
+<p-confirmDialog appendTo="body" [style]="{ width: '32rem' }" />
+
+<!-- ──────── Header ──────── -->
+<div class="flex flex-wrap justify-between items-start gap-3 mb-4">
+  <div class="flex items-center gap-2">
+    <p-button icon="pi pi-angle-left" [text]="true" (onClick)="back()" />
+    <div>
+      <h5 class="text-2xl font-semibold m-0 flex items-center gap-3">
+        <span>
+          {{ 'inbound.receive_title' | translate }}:
+          <span class="text-primary">{{ receiving()?.doc_number || id }}</span>
+        </span>
+        @if (status(); as s) {
+          <base-status-badge [value]="s" [statusMap]="statusMap" />
+        }
+      </h5>
+      <p class="text-surface-400 text-sm m-0 mt-1">
+        @if (facilityName()) {
+          <i class="pi pi-building mr-1"></i>{{ facilityName() }} ·
+        }
+        {{ 'inbound.receive_description' | translate }}
+      </p>
+    </div>
+  </div>
+  <p-button
+    [label]="'buttons.details' | translate"
+    icon="pi pi-eye"
+    severity="secondary"
+    [outlined]="true"
+    size="small"
+    (onClick)="goDetails()"
+  />
+</div>
+
+@if (loading()) {
+  <div class="card flex justify-center items-center" style="min-height: 300px">
+    <div class="flex flex-col items-center gap-3 text-surface-400">
+      <i class="pi pi-spin pi-spinner text-4xl"></i>
+      <span>{{ 'labels.loading' | translate }}</span>
+    </div>
+  </div>
+} @else if (!receiving()) {
+  <div class="card text-center text-surface-400 py-10">
+    <i class="pi pi-search text-3xl block mb-2"></i>
+    {{ 'errors.RECEIVING_NOT_FOUND' | translate }}
+  </div>
+} @else {
+
+  <!-- ──────── State guard ──────── -->
+  @if (!canReceive()) {
+    <p-message severity="warn" styleClass="mb-4 w-full">
+      <div class="flex flex-wrap items-center justify-between gap-3 w-full">
+        <span>
+          @if (status() === 'IN-TRANSIT') {
+            {{ 'inbound.receive_needs_start' | translate }}
+          } @else {
+            {{ 'inbound.receive_not_allowed' | translate }}
+          }
+        </span>
+        @if (status() === 'IN-TRANSIT') {
+          <p-button
+            [label]="'inbound.start' | translate"
+            icon="pi pi-play"
+            size="small"
+            [loading]="starting()"
+            (onClick)="start()"
+          />
+        }
+      </div>
+    </p-message>
+  }
+
+  <!-- ──────── Destination + progress ──────── -->
+  <div class="card mb-3">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+      <div class="flex flex-col">
+        <label for="rcv-location" class="block font-semibold mb-1 text-sm">
+          {{ 'labels.location' | translate }} <span class="text-red-500">*</span>
+        </label>
+        <p-autocomplete
+          inputId="rcv-location"
+          [ngModel]="destination()"
+          (ngModelChange)="onLocationChange($event)"
+          (onSelect)="onLocationSelect($event)"
+          (completeMethod)="searchLocations($event)"
+          [suggestions]="locationSuggestions()"
+          optionLabel="location_code"
+          [dropdown]="true"
+          [forceSelection]="false"
+          [delay]="250"
+          [minLength]="0"
+          [disabled]="!canReceive()"
+          [placeholder]="'inbound.search_location' | translate"
+          appendTo="body"
+          styleClass="w-full"
+          inputStyleClass="w-full"
+          [class.ng-invalid]="!!locationError()"
+          [class.ng-dirty]="!!locationError()"
+        >
+          <ng-template let-loc #item>
+            <div class="flex flex-col">
+              <span class="font-medium font-mono">{{ loc.location_code }}</span>
+              <small class="text-surface-500">
+                @if (loc.operational_category_code) { {{ loc.operational_category_code }} · }
+                @if (loc.location_profile_code) { {{ loc.location_profile_code }} · }
+                {{ loc.content_skus ?? 0 }} SKU / {{ loc.content_units ?? 0 | number }} u
+              </small>
+            </div>
+          </ng-template>
+        </p-autocomplete>
+        @if (locationError()) {
+          <small class="text-red-500 text-xs mt-1">{{ locationError() }}</small>
+        } @else {
+          <small class="text-surface-400 text-xs mt-1">{{ 'inbound.location_hint' | translate }}</small>
+        }
+      </div>
+
+      <div class="flex flex-col">
+        <label for="rcv-container" class="block font-semibold mb-1 text-sm">
+          {{ 'labels.container' | translate }}
+          <span class="text-surface-400 font-normal">({{ 'labels.optional' | translate }})</span>
+        </label>
+        <input
+          id="rcv-container"
+          pInputText
+          class="w-full"
+          [ngModel]="container()"
+          (ngModelChange)="onContainerChange($event)"
+          [disabled]="!canReceive()"
+          [placeholder]="'inbound.container_placeholder' | translate"
+          [class.ng-invalid]="!!containerError()"
+          [class.ng-dirty]="!!containerError()"
+        />
+        @if (containerError()) {
+          <small class="text-red-500 text-xs mt-1">{{ containerError() }}</small>
+        }
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <div class="flex justify-between text-sm">
+          <span class="text-surface-500">{{ 'inbound.progress' | translate }}</span>
+          <span class="font-semibold">
+            {{ totalReceived() | number }} / {{ totalExpected() | number }} ({{ progress() }}%)
+          </span>
+        </div>
+        <p-progressBar [value]="progress()" [showValue]="false" [style]="{ height: '8px' }" />
+        <small class="text-surface-400">
+          {{ completedCount() }} / {{ lines().length }} {{ 'inbound.lines_complete' | translate }}
+        </small>
+      </div>
+    </div>
+
+    @if (destinationErrors().length) {
+      <p-message severity="error" styleClass="mt-3 w-full">
+        <ul class="m-0 pl-4 list-disc">
+          @for (msg of destinationErrors(); track $index) {
+            <li>{{ msg }}</li>
+          }
+        </ul>
+      </p-message>
+    }
+  </div>
+
+  <!-- ──────── Lines ──────── -->
+  <div class="card">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <h4 class="m-0 text-base font-semibold">{{ 'labels.items' | translate }}</h4>
+      <div class="flex flex-wrap gap-2">
+        @if (completedCount() > 0) {
+          <p-button
+            [label]="(showCompleted() ? 'inbound.hide_completed' : 'inbound.show_completed') | translate"
+            [icon]="showCompleted() ? 'pi pi-eye-slash' : 'pi pi-eye'"
+            [text]="true"
+            size="small"
+            severity="secondary"
+            (onClick)="showCompleted.set(!showCompleted())"
+          />
+        }
+        <p-button
+          [label]="'inbound.fill_pending' | translate"
+          icon="pi pi-check-square"
+          [outlined]="true"
+          size="small"
+          severity="secondary"
+          [disabled]="!canReceive()"
+          (onClick)="receiveAllPending()"
+        />
+        <p-button
+          [label]="'inbound.clear_quantities' | translate"
+          icon="pi pi-eraser"
+          [outlined]="true"
+          size="small"
+          severity="secondary"
+          [disabled]="!canReceive()"
+          (onClick)="clearQuantities()"
+        />
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-surface-50 dark:bg-surface-800">
+          <tr class="text-left">
+            <th class="p-2">{{ 'labels.sku' | translate }}</th>
+            <th class="p-2 w-28">{{ 'labels.status' | translate }}</th>
+            <th class="p-2 text-right w-20">{{ 'labels.expected' | translate }}</th>
+            <th class="p-2 text-right w-20">{{ 'labels.received' | translate }}</th>
+            <th class="p-2 text-right w-20">{{ 'labels.pending' | translate }}</th>
+            <th class="p-2 w-44">{{ 'inbound.qty_to_receive' | translate }}</th>
+            <th class="p-2 w-40">{{ 'labels.lot' | translate }}</th>
+            <th class="p-2 w-44">{{ 'inbound.expiry_date' | translate }}</th>
+            <th class="p-2 w-32">{{ 'inbound.serials' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (line of visibleLines(); track line.id) {
+            <tr
+              class="border-t border-surface-200 dark:border-surface-700 align-top"
+              [class.opacity-60]="line.qty_pending <= 0 && line.qty_to_receive === 0"
+            >
+              <td class="p-2">
+                <div class="font-mono font-semibold">{{ line.sku_code }}</div>
+                <div class="text-xs text-surface-500 truncate max-w-64">
+                  {{ line.description || line.product_description || '—' }}
+                </div>
+                @if (line.barcode) {
+                  <div class="text-xs text-surface-400"><i class="pi pi-qrcode mr-1"></i>{{ line.barcode }}</div>
+                }
+                <p-progressBar [value]="lineProgress(line)" [showValue]="false" [style]="{ height: '3px' }" styleClass="mt-1" />
+                @if (line.error) {
+                  <small class="text-red-500 text-xs block mt-1">{{ line.error }}</small>
+                }
+              </td>
+              <td class="p-2"><base-status-badge [value]="line.status" [statusMap]="lineStatusMap" /></td>
+              <td class="p-2 text-right">{{ line.qty_expected | number }}</td>
+              <td class="p-2 text-right">{{ line.qty_received | number }}</td>
+              <td class="p-2 text-right font-semibold">{{ line.qty_pending | number }}</td>
+              <td class="p-2">
+                <p-inputnumber
+                  [ngModel]="line.qty_to_receive"
+                  (ngModelChange)="updateLine(line.id, { qty_to_receive: $event ?? 0 })"
+                  [min]="0"
+                  [max]="maxQty"
+                  [showButtons]="true"
+                  buttonLayout="horizontal"
+                  incrementButtonIcon="pi pi-plus"
+                  decrementButtonIcon="pi pi-minus"
+                  size="small"
+                  inputStyleClass="w-16 text-center"
+                  [disabled]="!canReceive() || requiresSerials(line)"
+                />
+                @if (isOver(line)) {
+                  <small class="text-orange-500 text-xs block mt-1">
+                    <i class="pi pi-exclamation-triangle mr-1"></i>{{ 'inbound.over_pending' | translate }}
+                  </small>
+                }
+              </td>
+              <td class="p-2">
+                <input
+                  pInputText
+                  class="w-full p-inputtext-sm"
+                  [ngModel]="line.batch_lot"
+                  (ngModelChange)="updateLine(line.id, { batch_lot: $event })"
+                  [disabled]="!canReceive() || line.qty_to_receive === 0"
+                  [placeholder]="'labels.lot' | translate"
+                />
+              </td>
+              <td class="p-2">
+                <p-datepicker
+                  [ngModel]="line.expiry"
+                  (ngModelChange)="updateLine(line.id, { expiry: $event })"
+                  dateFormat="yy-mm-dd"
+                  [showButtonBar]="true"
+                  [showIcon]="true"
+                  appendTo="body"
+                  size="small"
+                  inputStyleClass="w-28"
+                  [disabled]="!canReceive() || line.qty_to_receive === 0"
+                />
+              </td>
+              <td class="p-2">
+                @if (requiresSerials(line)) {
+                  <p-button
+                    [label]="line.serials.length + ''"
+                    icon="pi pi-list"
+                    size="small"
+                    [outlined]="true"
+                    [severity]="submitted() && line.serials.length !== line.qty_to_receive ? 'danger' : 'secondary'"
+                    [pTooltip]="'inbound.serials_edit' | translate"
+                    [disabled]="!canReceive()"
+                    (onClick)="openSerials(line)"
+                  />
+                } @else {
+                  <span class="text-surface-400">—</span>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="9" class="p-6 text-center text-surface-400">
+                <i class="pi pi-check-circle text-3xl text-green-400 block mb-2"></i>
+                {{ 'labels.all_lines_processed' | translate }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (submitted() && serialIssues().length) {
+      <small class="text-red-500 text-xs block mt-2">
+        {{ 'inbound.serials_mismatch' | translate }}:
+        @for (l of serialIssues(); track l.id; let last = $last) {
+          {{ l.sku_code }}{{ last ? '' : ', ' }}
+        }
+      </small>
+    }
+  </div>
+
+  <!-- ──────── Footer ──────── -->
+  <div class="card mt-3">
+    <div class="flex flex-wrap justify-between items-center gap-3">
+      <div class="flex flex-wrap gap-5 text-sm">
+        <div>
+          <span class="text-surface-400 mr-1">{{ 'inbound.lines_to_receive' | translate }}:</span>
+          <strong class="text-primary">{{ toReceive().length }}</strong>
+        </div>
+        <div>
+          <span class="text-surface-400 mr-1">{{ 'labels.total_qty' | translate }}:</span>
+          <strong class="text-green-600">{{ totalToReceive() | number }}</strong>
+        </div>
+        @if (locationCode()) {
+          <div>
+            <span class="text-surface-400 mr-1">{{ 'labels.location' | translate }}:</span>
+            <strong class="font-mono">{{ locationCode() }}</strong>
+            @if (container()) { <span class="text-surface-400"> / {{ container() }}</span> }
+          </div>
+        }
+      </div>
+      <p-button
+        icon="pi pi-download"
+        [label]="'inbound.receive_submit' | translate"
+        severity="success"
+        [loading]="processing()"
+        [disabled]="!canReceive() || toReceive().length === 0"
+        (onClick)="submit()"
+      />
+    </div>
+  </div>
+}
+
+<!-- ──────── Serials dialog ──────── -->
+<p-dialog
+  [visible]="!!serialsLineId()"
+  (visibleChange)="!$event && closeSerials()"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{ width: '30rem' }"
+  [breakpoints]="{ '768px': '100vw' }"
+  [header]="('inbound.serials' | translate) + ': ' + (serialsLine()?.sku_code ?? '')"
+  appendTo="body"
+>
+  <p class="text-sm text-surface-500 mt-0">{{ 'inbound.serials_hint' | translate }}</p>
+  <textarea
+    pTextarea
+    class="w-full font-mono"
+    rows="10"
+    [(ngModel)]="serialsDraft"
+    placeholder="SN-0001"
+  ></textarea>
+  <div class="flex justify-between text-sm mt-2">
+    <span>
+      {{ 'inbound.serials_count' | translate }}: <strong>{{ parseSerials(serialsDraft).length }}</strong>
+      @if (serialsLine(); as l) {
+        <span class="text-surface-400"> / {{ 'labels.pending' | translate }} {{ l.qty_pending }}</span>
+      }
+    </span>
+    @if (draftDuplicates(serialsDraft).length) {
+      <span class="text-orange-500">
+        {{ 'inbound.serials_duplicates' | translate }}: {{ draftDuplicates(serialsDraft).join(', ') }}
+      </span>
+    }
+  </div>
+  <ng-template #footer>
+    <div class="flex justify-end gap-2">
+      <p-button [label]="'buttons.cancel' | translate" severity="secondary" [outlined]="true" (onClick)="closeSerials()" />
+      <p-button [label]="'buttons.apply' | translate" icon="pi pi-check" (onClick)="saveSerials()" />
+    </div>
+  </ng-template>
+</p-dialog>

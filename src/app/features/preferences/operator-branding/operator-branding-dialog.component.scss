@@ -1,0 +1,115 @@
+.branding-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.loading-bar {
+  margin-bottom: 0.5rem;
+}
+
+// ── Logo section ──────────────────────────────────────────────────────────────
+
+.logo-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.logo-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin: 0;
+
+  .logo-hint {
+    font-weight: 400;
+    font-size: 0.78rem;
+    color: var(--text-color-secondary);
+  }
+}
+
+// Preview box
+.logo-preview-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed var(--surface-border);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  min-height: 80px;
+  background: var(--surface-50);
+
+  &.logo-preview-dark {
+    background: #1a1a2e;
+  }
+}
+
+.logo-preview-img {
+  max-width: 100%;
+  max-height: 60px;
+  object-fit: contain;
+}
+
+// Actions row
+.logo-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--border-radius);
+  border: 1.5px solid var(--primary-color);
+  background: transparent;
+  color: var(--primary-color);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: var(--surface-100);
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Hidden native input
+.hidden-input {
+  display: none;
+}
+
+// ── Dialog footer ─────────────────────────────────────────────────────────────
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}

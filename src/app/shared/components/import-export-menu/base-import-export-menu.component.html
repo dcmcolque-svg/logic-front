@@ -1,0 +1,14 @@
+<p-tieredMenu #menuRef [popup]="true" appendTo="body" [model]="menuItems" />
+
+<p-button
+  icon="pi pi-ellipsis-v"
+  [text]="true"
+  [rounded]="true"
+  severity="secondary"
+  [size]="size()"
+  [loading]="exporting()"
+  [disabled]="triggerDisabled()"
+  [pTooltip]="tooltipKey() | translate"
+  tooltipPosition="top"
+  (onClick)="open($event)"
+/>

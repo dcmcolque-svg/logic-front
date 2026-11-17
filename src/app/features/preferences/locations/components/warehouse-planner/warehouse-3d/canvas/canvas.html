@@ -1,0 +1,52 @@
+<canvas #renderCanvas touch-action="none"></canvas>
+
+<!-- Hover tooltip — content injected imperatively as innerHTML -->
+<div #tooltip3d class="t3d-tip"></div>
+
+<!-- Active-action indicator (appears while dragging) -->
+@if (activeAction(); as action) {
+  <div class="action-indicator"
+    [class.pan]="action === 'pan'"
+    [class.orbit]="action === 'orbit'"
+    [class.zoom]="action === 'zoom'">
+    @if (action === 'pan') {
+      <i class="pi pi-arrows-alt"></i>
+      <span>Panning</span>
+    } @else if (action === 'orbit') {
+      <i class="pi pi-sync"></i>
+      <span>Orbiting</span>
+    } @else {
+      <i class="pi pi-search"></i>
+      <span>Zooming</span>
+    }
+  </div>
+}
+
+<!-- Mode selector buttons -->
+<div class="nav-hints">
+  <button class="nav-hint" [class.active]="activeMode() === 'pan'" (click)="setMode('pan')">
+    <span class="hint-key">
+      <i class="pi pi-arrows-alt"></i>
+    </span>
+    <span class="hint-label">Pan</span>
+  </button>
+  <button class="nav-hint" [class.active]="activeMode() === 'orbit'" (click)="setMode('orbit')">
+    <span class="hint-key">
+      <i class="pi pi-sync"></i>
+    </span>
+    <span class="hint-label">Orbit</span>
+  </button>
+  <button class="nav-hint" [class.active]="activeMode() === 'zoom'" (click)="setMode('zoom')">
+    <span class="hint-key">
+      <i class="pi pi-search"></i>
+    </span>
+    <span class="hint-label">Zoom</span>
+  </button>
+</div>
+
+<!-- Zoom Controls -->
+<div class="zoom-controls">
+  <button id="zoom3d-in"  class="zoom-btn" title="Zoom In"  (click)="zoomIn()">+</button>
+  <span class="zoom-pct">{{ zoomLevel() }}%</span>
+  <button id="zoom3d-out" class="zoom-btn" title="Zoom Out" (click)="zoomOut()">−</button>
+</div>

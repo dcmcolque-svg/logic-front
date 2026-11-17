@@ -1,0 +1,315 @@
+// ── Wrapper ───────────────────────────────────────────────────────────────────
+
+.marketplace-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: calc(100vh - 4rem);
+  overflow: hidden;
+  background: var(--surface-ground);
+}
+
+// ── Centered container (loading / error) ──────────────────────────────────────
+
+.marketplace-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 100%;
+}
+
+// ── Spinner ───────────────────────────────────────────────────────────────────
+
+.marketplace-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: var(--text-color-secondary);
+
+  i {
+    font-size: 2rem;
+    color: var(--primary-color);
+  }
+
+  span {
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+  }
+}
+
+// ── Error state ───────────────────────────────────────────────────────────────
+
+.marketplace-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
+
+  .error-icon {
+    font-size: 2.5rem;
+    color: var(--red-400);
+  }
+}
+
+.marketplace-error-text {
+  font-size: 0.95rem;
+  color: var(--text-color-secondary);
+  max-width: 32rem;
+}
+
+.marketplace-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.4rem;
+  border: 1px solid var(--primary-color);
+  border-radius: var(--border-radius);
+  background: transparent;
+  color: var(--primary-color);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: var(--primary-color);
+    color: #fff;
+  }
+}
+
+// ── Company selector ──────────────────────────────────────────────────────────
+
+.company-selector-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+}
+
+.company-selector-container {
+  width: 100%;
+  max-width: 52rem;
+}
+
+.company-selector-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.company-selector-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1.25rem;
+  background: var(--primary-color);
+  margin-bottom: 1.25rem;
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--primary-color) 30%, transparent);
+
+  i {
+    font-size: 1.75rem;
+    color: #fff;
+  }
+}
+
+.company-selector-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-color);
+  margin: 0 0 0.5rem;
+}
+
+.company-selector-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-color-secondary);
+  margin: 0;
+}
+
+// ── Company cards ─────────────────────────────────────────────────────────────
+
+.company-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+  gap: 1rem;
+}
+
+.company-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: calc(var(--border-radius) * 2);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  width: 100%;
+
+  &:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 15%, transparent),
+                0 4px 16px color-mix(in srgb, var(--primary-color) 10%, transparent);
+    transform: translateY(-2px);
+
+    .company-card-arrow {
+      color: var(--primary-color);
+      transform: translateX(4px);
+    }
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.company-card-avatar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--primary-color) 15%, transparent);
+  color: var(--primary-color);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.company-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.company-card-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.company-card-taxid {
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
+}
+
+.company-card-arrow {
+  flex-shrink: 0;
+  color: var(--surface-400);
+  font-size: 0.9rem;
+  transition: color 0.2s, transform 0.2s;
+}
+
+// ── Marketplace ready view ────────────────────────────────────────────────────
+
+.marketplace-frame {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+}
+
+.marketplace-topbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1.25rem;
+  background: var(--surface-card);
+  border-bottom: 1px solid var(--surface-border);
+  flex-shrink: 0;
+}
+
+.marketplace-company-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-color);
+
+  i {
+    color: var(--primary-color);
+  }
+}
+
+.marketplace-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.marketplace-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  background: transparent;
+  color: var(--text-color-secondary);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+  }
+
+  &.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+  }
+}
+
+.marketplace-change-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  background: transparent;
+  color: var(--text-color-secondary);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+
+  &:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+  }
+}
+
+.marketplace-content {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.gt-component-container {
+  width: 100%;
+  min-height: 400px;
+
+  gt-channel-list,
+  gt-service-list,
+  gt-integration-settings {
+    display: block;
+    width: 100%;
+  }
+}

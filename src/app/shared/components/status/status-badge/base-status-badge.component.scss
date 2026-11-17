@@ -1,0 +1,5 @@
+/* Override 'contrast' severity to yellow for discrepancy status */
+:host ::ng-deep .p-tag-contrast {
+  background: #fef9c3 !important; /* yellow-100 */
+  color: #854d0e !important;      /* yellow-800 */
+}

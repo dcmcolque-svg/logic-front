@@ -1,0 +1,194 @@
+<div class="grid grid-cols-12 gap-4">
+  <!-- Page header -->
+  <div class="col-span-12">
+    <div
+      class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2"
+    >
+      <div>
+        <h2 class="text-2xl font-bold m-0">{{ 'demo.title' | translate }}</h2>
+        <p class="text-surface-500 mt-1 text-sm">
+          {{ 'demo.subtitle' | translate }}
+        </p>
+      </div>
+      <div class="flex gap-2">
+        <p-button
+          [label]="'demo.refresh' | translate"
+          icon="pi pi-refresh"
+          [outlined]="true"
+          severity="secondary"
+          (onClick)="loadData()"
+          [loading]="loading()"
+          size="small"
+        />
+        <p-button
+          [label]="'demo.create' | translate"
+          icon="pi pi-plus"
+          (onClick)="openCreateDialog()"
+          size="small"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats cards -->
+  <div class="col-span-12">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      @for (stat of stats(); track stat.label) {
+        <div
+          class="card p-4 flex items-center gap-3 transition-shadow hover:shadow-md"
+        >
+          <div
+            class="flex items-center justify-center rounded-border"
+            [ngClass]="stat.bgClass"
+            style="width: 3rem; height: 3rem"
+          >
+            <i
+              [class]="stat.icon"
+              style="font-size: 1.5rem"
+              [ngClass]="stat.iconClass"
+            ></i>
+          </div>
+          <div>
+            <div class="text-2xl font-bold">{{ stat.value }}</div>
+            <div class="text-sm text-surface-500">
+              {{ stat.label | translate }}
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Data table with filters -->
+  <div class="col-span-12">
+    <div class="card">
+      <base-data-table
+        [columns]="selectedColumns"
+        [data]="orders()"
+        [loading]="loading()"
+        [pagination]="pagination()"
+        [sort]="currentSort()"
+        [selectable]="true"
+        [bulkActions]="getBulkActions()"
+        (stateChange)="onTableStateChange($event)"
+        (selectionChange)="onSelectionChange($event)"
+      >
+        <!-- Toolbar slot -->
+        <ng-template #toolbar>
+          <div
+            class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3"
+          >
+            <!-- Left: search + filters + clear -->
+            <div class="flex gap-2 items-center flex-wrap">
+              <base-form-field
+                type="text"
+                [control]="searchControl"
+                label="demo.search"
+                placeholder="demo.search_placeholder"
+                containerClass="w-full sm:w-72"
+              />
+              <base-form-field
+                type="dropdown"
+                [control]="statusFilter"
+                label="labels.status"
+                [options]="statusOptions"
+                optionLabel="label"
+                optionValue="value"
+                containerClass="w-full sm:w-48"
+              />
+              <base-icon-button
+                icon="pi pi-search"
+                tooltip="Search"
+                [outlined]="true"
+                [text]="false"
+                (clicked)="applyFilters()"
+              />
+              <p-button
+                icon="pi pi-filter-slash"
+                [label]="'buttons.clear' | translate"
+                severity="secondary"
+                [outlined]="true"
+                size="small"
+                (onClick)="clearFilters()"
+              />
+            </div>
+
+            <!-- Right: column toggle + bulk selection chip -->
+            <div class="flex items-center gap-2">
+              <!-- PrimeNG Column Toggle -->
+              <p-multiSelect
+                [options]="cols"
+                [(ngModel)]="selectedColumns"
+                optionLabel="field"
+                [selectedItemsLabel]="
+                  selectedColumns.length +
+                  ' ' +
+                  ('labels.columns_selected' | translate)
+                "
+                [maxSelectedLabels]="0"
+                size="small"
+                appendTo="body"
+              >
+                <ng-template let-col pTemplate="item">
+                  {{ col.header | translate }}
+                </ng-template>
+              </p-multiSelect>
+
+              <!-- Bulk selection chip -->
+              @if (selectedOrders().length > 0) {
+                <div class="flex items-center gap-2 animate-fadein">
+                  <p-chip
+                    [label]="selectedOrders().length + ' selected'"
+                    [removable]="true"
+                    (onRemove)="clearSelection()"
+                  />
+                </div>
+              }
+            </div>
+          </div>
+        </ng-template>
+
+        <!-- Custom cell templates -->
+        <ng-template #cell let-row let-col="col">
+          @switch (col.template) {
+            @case ('status') {
+              <base-status-badge [value]="row.status" />
+            }
+            @case ('amount') {
+              <span class="font-semibold"
+                >${{ row.total_amount | number: '1.2-2' }}</span
+              >
+            }
+            @case ('order_number') {
+              <span class="font-mono text-primary font-semibold">{{
+                row.order_number
+              }}</span>
+            }
+          }
+        </ng-template>
+
+        <!-- Row actions -->
+        <ng-template #actions let-row>
+          <base-action-menu [items]="getRowActions(row)" />
+        </ng-template>
+      </base-data-table>
+    </div>
+  </div>
+</div>
+
+<!-- Create/Edit Dialog (sub-component) -->
+<app-demo-form-dialog
+  [visible]="showDialog()"
+  [order]="editingOrder()"
+  [editing]="!!editingOrder()"
+  [saving]="savingOrder()"
+  (save)="onSaveOrder($event)"
+  (hide)="showDialog.set(false)"
+/>
+
+<!-- Delete confirmation (sub-component) -->
+<app-demo-confirm-dialog
+  [visible]="showDeleteConfirm()"
+  (confirm)="onConfirmDelete()"
+  (hide)="showDeleteConfirm.set(false)"
+/>

@@ -1,0 +1,311 @@
+// ─── Host ─────────────────────────────────────────────────────────────────────
+// Usa --surface-card (= --p-content-background) que responde al tema dark/light
+:host {
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+// ─── Drag Handle ─────────────────────────────────────────────────────────────
+.sidebar-handle {
+  background: var(--surface-ground);
+  padding: 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--surface-border);
+  cursor: grab;
+  user-select: none;
+
+  span {
+    color: var(--text-color-secondary);
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+  }
+}
+
+// ─── Body ─────────────────────────────────────────────────────────────────────
+.sidebar-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+// ─── Tab Row ─────────────────────────────────────────────────────────────────
+.tab-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.tab-group {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+
+  ::ng-deep .p-button.tab-btn {
+    flex: 1;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 6px 4px;
+  }
+}
+
+.undo-group {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+// ─── Sections ────────────────────────────────────────────────────────────────
+.section        { margin-bottom: 16px; }
+.mb-12          { margin-bottom: 12px; }
+.section-title  { color: var(--text-color); font-size: 0.9rem; margin-bottom: 8px; }
+.subsection-title {
+  color: var(--text-color-secondary);
+  font-size: 0.75rem;
+  margin-bottom: 6px;
+}
+.field-group { margin-bottom: 12px; }
+
+// ─── Fields ──────────────────────────────────────────────────────────────────
+.field        { margin-bottom: 8px; }
+.field-label  { color: var(--text-color-secondary); font-size: 0.75rem; display: block; margin-bottom: 4px; }
+.field-label-sm { color: var(--text-color-secondary); font-size: 0.7rem; display: block; margin-bottom: 4px; }
+
+.row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+
+  &.input-disabled { opacity: 0.6; }
+  &.input-accent  { border-color: var(--primary-color) !important; }
+  &.input-mono    { font-family: monospace; font-size: 0.82rem; }
+}
+
+// ─── Hint / Muted text ────────────────────────────────────────────────────────
+.muted-sm  { color: var(--text-color-secondary); font-size: 0.8rem; margin-bottom: 8px; }
+.muted-xs  { color: var(--text-color-secondary); font-size: 0.62rem; }
+.hint      { color: var(--text-color-secondary); font-size: 0.65rem; margin-top: 4px; }
+.hint.center     { text-align: center; }
+.hint.hint-warn  { color: #F59E0B; }
+.hint.hint-danger { color: var(--text-color-secondary); }
+
+// ─── Helper box ──────────────────────────────────────────────────────────────
+.helper-box {
+  margin-top: 12px;
+  padding: 8px;
+  background: var(--surface-ground);
+  border: 1px solid var(--surface-border);
+  border-radius: 4px;
+  color: var(--text-color-secondary);
+  font-size: 0.75rem;
+}
+
+// ─── Grids ───────────────────────────────────────────────────────────────────
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+// ─── Batch Loc edit ──────────────────────────────────────────────────────────
+.batch-box {
+  margin-bottom: 12px;
+  background: rgba(16, 185, 129, 0.07);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.batch-title {
+  color: #10B981;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 8px;
+}
+
+.batch-count {
+  color: var(--text-color-secondary);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+// ─── Input + action button row ───────────────────────────────────────────────
+.input-action-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+// ─── Card inset ──────────────────────────────────────────────────────────────
+.card-inset {
+  background: var(--surface-ground);
+  padding: 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  border: 1px solid var(--surface-border);
+}
+
+// ─── Generate section cards ──────────────────────────────────────────────────
+.gen-card {
+  padding: 10px;
+  background: var(--surface-ground);
+  border-radius: 6px;
+  border: 1px solid var(--surface-border);
+}
+
+.gen-card-title {
+  color: var(--text-color-secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.btn-pair {
+  display: flex;
+  gap: 4px;
+
+  ::ng-deep .p-button { flex: 1; justify-content: center; }
+}
+
+// ─── Outliner ─────────────────────────────────────────────────────────────────
+.outliner-scroll {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.outliner-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.folder-item {
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  background: var(--surface-ground);
+  border-radius: 4px;
+  border: 1px solid var(--surface-border);
+  user-select: none;
+}
+
+.folder-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.collapse-icon { font-size: 0.7rem; color: var(--text-color-secondary); width: 12px; }
+.folder-icon   { font-size: 0.9rem; }
+.folder-name {
+  flex: 1;
+  font-weight: 600;
+  color: var(--text-color);
+  font-size: 0.8rem;
+  outline: none;
+}
+.remove-btn {
+  color: #EF4444;
+  cursor: pointer;
+  padding: 0 4px;
+  &:hover { opacity: 0.75; }
+}
+
+.folder-items {
+  list-style: none;
+  padding-left: 20px;
+  margin-top: 4px;
+}
+
+.empty-folder {
+  font-size: 0.7rem;
+  color: var(--text-color-secondary);
+  padding: 4px 8px;
+}
+
+.unassigned-label {
+  padding: 4px 8px;
+  color: var(--text-color-secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 8px;
+}
+
+.outliner-item {
+  padding: 6px 10px;
+  margin-bottom: 3px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-color);
+  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-ground);
+  border: 1px solid transparent;
+
+  &.outliner-item-selected {
+    background: rgba(var(--p-primary-500-rgb, 14 165 233), 0.15);
+    border-color: var(--primary-color);
+  }
+  &:hover:not(.outliner-item-selected) {
+    background: var(--surface-hover);
+  }
+}
+
+.level-tag { color: var(--text-color-secondary); flex-shrink: 0; }
+.type-tag  { color: var(--text-color-secondary); flex-shrink: 0; }
+.item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loc-code {
+  font-family: monospace;
+  font-size: 0.72rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #10B981;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  outline: none;
+  min-width: 40px;
+  cursor: text;
+}
+
+// Utilidades
+.flex-1 { flex: 1; }
+.w-full { width: 100%; }
+.center { text-align: center; }

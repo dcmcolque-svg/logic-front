@@ -1,0 +1,105 @@
+<p-toast />
+<p-confirmDialog appendTo="body">
+  <ng-template pTemplate="message" let-message>
+    <div class="confirm-body">
+      <i class="pi pi-exclamation-circle confirm-icon"></i>
+      <p>{{ message.message }}</p>
+    </div>
+  </ng-template>
+</p-confirmDialog>
+
+<div class="report-card">
+
+  <!-- ── Action icons (top-right) ─────────────────────────────────────── -->
+  <div class="card-actions">
+    <i
+      class="pi pi-pen-to-square"
+      role="button"
+      tabindex="0"
+      (click)="openEditDialog()"
+      (keydown.enter)="openEditDialog()"
+      [pTooltip]="'buttons.edit' | translate"
+      tooltipPosition="top"
+    ></i>
+    <i
+      class="pi pi-trash action-delete"
+      role="button"
+      tabindex="0"
+      (click)="confirmDelete()"
+      (keydown.enter)="confirmDelete()"
+      [pTooltip]="'buttons.delete' | translate"
+      tooltipPosition="top"
+    ></i>
+  </div>
+
+  <!-- ── Header row: icon + title ─────────────────────────────────────── -->
+  <div class="card-header">
+    <span
+      class="card-icon"
+      [class]="'pi ' + (report.icon ?? 'pi-chart-bar')"
+      [style.background-color]="backgroundColorIcon"
+      [style.color]="colorIcon"
+    ></span>
+
+    <div class="card-title-group">
+      <span class="card-title" [title]="report.name">{{ report.name }}</span>
+      <span class="card-subtitle">{{ report.description }}</span>
+    </div>
+  </div>
+
+  <!-- ── Footer row: status chips + action buttons ────────────────────── -->
+  <div class="card-footer">
+
+    <!-- Status indicators -->
+    <div class="status-chips">
+      @if (report.schedule_config.enabled) {
+        <span class="status-chip chip-active">
+          <i class="pi pi-check-circle"></i>
+        </span>
+      }
+      @if (report.schedule_config.recipients) {
+        <i class="pi pi-envelope chip-icon"
+           [pTooltip]="recipientsTooltip"
+           tooltipPosition="top"></i>
+      }
+      @if (report.schedule_config.frequency) {
+        <i class="pi pi-calendar chip-icon" [pTooltip]="report.schedule_config.frequency" tooltipPosition="top"></i>
+      }
+    </div>
+
+    <!-- Action buttons -->
+    <div class="card-buttons">
+      @if (!report.schedule_config.enabled) {
+        <p-button
+          [label]="'reports.run' | translate"
+          icon="pi pi-caret-right"
+          severity="primary"
+          size="small"
+          [loading]="loading()"
+          (onClick)="updateIsActive(true)"
+        />
+      } @else {
+        <p-button
+          [label]="'reports.pause' | translate"
+          icon="pi pi-pause"
+          severity="warn"
+          size="small"
+          [loading]="loading()"
+          (onClick)="updateIsActive(false)"
+        />
+      }
+
+      <p-button
+        [label]="'labels.generate' | translate"
+        icon="pi pi-download"
+        severity="success"
+        size="small"
+        [loading]="loading()"
+        (onClick)="generateReport()"
+        [pTooltip]="'reports.messages.quick_report_today' | translate"
+        tooltipPosition="bottom"
+      />
+    </div>
+  </div>
+
+</div>

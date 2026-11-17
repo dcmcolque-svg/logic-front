@@ -1,0 +1,88 @@
+workflow:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "demo"'
+    - if: '$CI_COMMIT_BRANCH == "stable2"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_BRANCH == "test"'
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+
+stages:
+  - build
+  - deploy
+
+variables:
+  SERVER: "74.208.41.195"
+
+.default_frontend:
+  image: node:22-slim
+  tags:
+    - frontend
+
+.ssh_setup: &ssh_setup
+  - cp "$SSH_PRIVATE_KEY" deploy_key_nuevo
+  - echo "" >> deploy_key_nuevo
+  - chmod 600 deploy_key_nuevo
+  - apt-get update -qq && apt-get install -y -qq openssh-client
+  - mkdir -p ~/.ssh
+  - ssh-keyscan -H -p 10022 $SERVER >> ~/.ssh/known_hosts
+  - |
+    case "$CI_COMMIT_REF_NAME" in
+      main|demo) export AMBIENTE="edge-03" ;;
+      stable2)   export AMBIENTE="edge-05" ;;
+      develop)   export AMBIENTE="edge-01" ;;
+      test)      export AMBIENTE="edge-02" ;;
+      *)         echo "Branch sin ambiente: $CI_COMMIT_REF_NAME"; exit 1 ;;
+    esac
+  - echo "Desplegando a $AMBIENTE"
+
+build_job:
+  stage: build
+  retry: 2
+  extends: .default_frontend
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "demo"'
+    - if: '$CI_COMMIT_BRANCH == "stable2"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_BRANCH == "test"'
+  before_script:
+    - *ssh_setup
+  script:
+    - npm ci --legacy-peer-deps
+    - npx ng build -c=$AMBIENTE
+    - du -sk dist/verona-ng/browser
+    - ssh-keygen -y -f deploy_key_nuevo && echo "KEY OK" || echo "KEY INVALID"
+    - ssh -v -p 10022 -i deploy_key_nuevo -o StrictHostKeyChecking=no -o IdentitiesOnly=yes deploy@$SERVER "echo ok"
+    - ssh -p 10022 -i deploy_key_nuevo -o StrictHostKeyChecking=no -o IdentitiesOnly=yes deploy@$SERVER "rm -rf /home/edge/$AMBIENTE/frontend/*"
+    - scp -r -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i deploy_key_nuevo -P 10022 dist/verona-ng/browser/. deploy@$SERVER:/home/edge/$AMBIENTE/frontend/
+
+deploy_job:
+  stage: deploy
+  extends: .default_frontend
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "demo"'
+    - if: '$CI_COMMIT_BRANCH == "stable2"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_BRANCH == "test"'
+  before_script:
+    - *ssh_setup
+  script:
+    - |
+      case "$CI_COMMIT_REF_NAME" in
+        main|demo|stable2)
+          ssh -p 10022 -i deploy_key_nuevo -o StrictHostKeyChecking=no -o IdentitiesOnly=yes deploy@$SERVER \
+            "KUBECONFIG=~/.kube/config kubectl apply -k /home/edge/tmp/devops-scripts/edge-frontend/frontend/overlays/$AMBIENTE"
+          ssh -p 10022 -i deploy_key_nuevo -o StrictHostKeyChecking=no -o IdentitiesOnly=yes deploy@$SERVER \
+            "KUBECONFIG=~/.kube/config kubectl rollout restart deployment $AMBIENTE-frontend-deploy -n $AMBIENTE"
+          ;;
+        develop|test)
+          ssh -p 10022 -i deploy_key_nuevo -o StrictHostKeyChecking=no -o IdentitiesOnly=yes deploy@$SERVER \
+            "KUBECONFIG=~/.kube/config kubectl rollout restart deployment $AMBIENTE-frontend-deploy -n $AMBIENTE"
+          ;;
+      esac

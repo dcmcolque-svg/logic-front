@@ -1,0 +1,293 @@
+<!-- =====================================================
+     SIDEBAR PANEL – 2D Warehouse Planner
+     Migrated to PrimeNG 21 (p-button, p-inputtext, p-inputnumber, p-select)
+     Angular 21 control flow (@if / @for / @switch).
+====================================================== -->
+
+<!-- ── Drag Handle ───────────────────────────────────── -->
+<div class="sidebar-handle">
+  <span>⠿ 2D PLANNER ⠿</span>
+</div>
+
+<div class="sidebar-body">
+
+  <!-- ── Tab Row + Undo/Redo ─────────────────────────── -->
+  <div class="tab-row">
+    <div class="tab-group">
+      @for (tab of tabs; track tab.id) {
+        <p-button size="small"
+          [text]="!state.isPanelOpen(tab.id)"
+          [outlined]="state.isPanelOpen(tab.id)"
+          severity="primary"
+          styleClass="tab-btn"
+          (onClick)="switchSidebarTab(tab.id)">
+          {{ tab.label }}
+        </p-button>
+      }
+    </div>
+    <div class="undo-group">
+      <p-button size="small" [text]="true" severity="secondary"
+        [disabled]="!state.canUndo()"
+        pTooltip="Undo (Ctrl+Z)"
+        (onClick)="state.undo()">↶</p-button>
+      <p-button size="small" [text]="true" severity="secondary"
+        [disabled]="!state.canRedo()"
+        pTooltip="Redo (Ctrl+Y)"
+        (onClick)="state.redo()">↷</p-button>
+    </div>
+  </div>
+
+
+  <!-- ====================================================
+       BUILD TAB
+  ===================================================== -->
+  @if (state.isPanelOpen('build')) {
+
+    <!-- Empty-selection hint (arrow tool, nothing selected) -->
+    @if (state.activeTool() === 'arrow' && state.emptySelection() && state.selectedItems().length === 0) {
+      <div class="section">
+        <h3 class="section-title">Create From Selection</h3>
+        <p class="muted-sm">
+          {{ state.emptySelection()?.w }}' × {{ state.emptySelection()?.h }}'
+          &nbsp;({{ (state.emptySelection()?.w || 0) * (state.emptySelection()?.h || 0) }} sq mt)
+        </p>
+      </div>
+    }
+
+    <!-- Items selected -->
+    @if (state.selectedItems().length > 0) {
+      <div class="section">
+        <h3 class="section-title">
+          {{ state.selectedItems().length === 1 ? 'Selected Item' : state.selectedItems().length + ' Items Selected' }}
+        </h3>
+
+        <!-- ── Single item props ───────────────────────── -->
+        @if (state.selectedItems().length === 1) {
+          <div class="field-group">
+
+            <!-- Name -->
+            <div class="field">
+              @if (state.selectedItems()[0].type === 'Area') {
+                <label class="field-label" for="sl-item-area-name">Name</label>
+                <input id="sl-item-area-name" pInputText class="input w-full"
+                  maxlength="2"
+                  [ngModel]="state.selectedItems()[0].name"
+                  (ngModelChange)="updateAreaName($event)" />
+              } @else {
+                <label class="field-label" for="sl-item-name">Name</label>
+                <input id="sl-item-name" pInputText class="input w-full"
+                  maxlength="15"
+                  [ngModel]="state.selectedItems()[0].name"
+                  (ngModelChange)="updateSingle('name', $event)" />
+              }
+            </div>
+
+            <!-- Type (read-only) -->
+            <div class="field">
+              <label class="field-label" for="sl-item-type">Type</label>
+              <input id="sl-item-type" pInputText class="input input-disabled w-full" disabled
+                [value]="state.selectedItems()[0].type" />
+            </div>
+
+            <!-- Loc-only: Category & Storage Type -->
+            @if (state.selectedItems()[0].type === 'Loc') {
+              <div class="field">
+                <label class="field-label" for="sl-item-category">Category</label>
+                <p-select inputId="sl-item-category" [options]="bayCategories()"
+                  [ngModel]="state.selectedItems()[0].category"
+                  (ngModelChange)="updateSingle('category', $event)"
+                  styleClass="w-full" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="sl-item-type-storage">Storage Type</label>
+                <p-select inputId="sl-item-type-storage" [options]="bayTypes()"
+                  optionLabel="label" optionValue="value"
+                  [ngModel]="state.selectedItems()[0].bayType"
+                  (ngModelChange)="updateSingle('bayType', $event)"
+                  styleClass="w-full" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="sl-item-zone">Zone</label>
+                <p-select inputId="sl-item-zone" [options]="zoneOptions()"
+                  optionLabel="label" optionValue="value"
+                  [ngModel]="state.selectedItems()[0].zoneId || ''"
+                  (ngModelChange)="updateSingle('zoneId', $event || undefined)"
+                  styleClass="w-full" />
+              </div>
+            }
+
+            <!-- Area-only: Row / Col start numbering -->
+            @if (state.selectedItems()[0].type === 'Area') {
+              <div class="field">
+                <h4 class="subsection-title">Location Numbering</h4>
+                <div class="row-2">
+                  <div>
+                    <label class="field-label-sm" for="sl-area-row-start">Row Start</label>
+                    <p-inputnumber inputId="sl-area-row-start" [min]="1" [showButtons]="false"
+                      [ngModel]="state.selectedItems()[0].rowStart ?? 1"
+                      (ngModelChange)="updateSingle('rowStart', $event)"
+                      styleClass="w-full" inputStyleClass="w-full input input-accent" />
+                  </div>
+                  <div>
+                    <label class="field-label-sm" for="sl-area-col-start">Col Start</label>
+                    <p-inputnumber inputId="sl-area-col-start" [min]="1" [showButtons]="false"
+                      [ngModel]="state.selectedItems()[0].colStart ?? 1"
+                      (ngModelChange)="updateSingle('colStart', $event)"
+                      styleClass="w-full" inputStyleClass="w-full input input-accent" />
+                  </div>
+                </div>
+                <p class="hint">Set starting numbers for rows and columns within this Area</p>
+              </div>
+            }
+
+            <!-- Width / Height -->
+            <div class="row-2">
+              <div>
+                <label class="field-label" for="sl-item-width">Width</label>
+                <p-inputnumber inputId="sl-item-width" [min]="1" [showButtons]="false"
+                  [ngModel]="state.selectedItems()[0].gw"
+                  (ngModelChange)="updateSingle('gw', $event)"
+                  styleClass="w-full" inputStyleClass="w-full input" />
+              </div>
+              <div>
+                <label class="field-label" for="sl-item-height">Height</label>
+                <p-inputnumber inputId="sl-item-height" [min]="1" [showButtons]="false"
+                  [ngModel]="state.selectedItems()[0].gh"
+                  (ngModelChange)="updateSingle('gh', $event)"
+                  styleClass="w-full" inputStyleClass="w-full input" />
+              </div>
+            </div>
+
+            <!-- Position (read-only) -->
+            <div class="field">
+              <label class="field-label" for="sl-item-position">Position (X, Y)</label>
+              <input id="sl-item-position" pInputText class="input input-disabled w-full" disabled
+                [value]="state.selectedItems()[0].gx + ', ' + state.selectedItems()[0].gy" />
+            </div>
+          </div>
+        }
+
+        <!-- ── Conveyor connections ────────────────────── -->
+        @if (state.selectedItems().length === 1 && state.selectedItems()[0].type === 'Conveyor') {
+          <div class="section">
+            <h4 class="subsection-title">Conveyor Connections</h4>
+            <div class="grid-2">
+              @for (dir of conveyorDirs; track dir.key) {
+                <p-button size="small" styleClass="w-full"
+                  [outlined]="getConnection(dir.key)"
+                  [text]="!getConnection(dir.key)"
+                  severity="warn"
+                  (onClick)="state.toggleConveyorConnection(state.selectedItems()[0].id, dir.key)">
+                  {{ dir.label }}
+                </p-button>
+              }
+            </div>
+            <p class="hint">Click to toggle connections</p>
+          </div>
+        }
+
+        <!-- ── Multi-select alignment ─────────────────── -->
+        @if (state.selectedItems().length > 1) {
+          <div class="section">
+            <h4 class="subsection-title">Alignment</h4>
+            <div class="grid-3">
+              <p-button size="small" [text]="true" severity="secondary" styleClass="w-full" (onClick)="state.alignSelected('gx', 'min')">Left</p-button>
+              <p-button size="small" [text]="true" severity="secondary" styleClass="w-full" (onClick)="state.alignSelected('gx', 'center')">Center</p-button>
+              <p-button size="small" [text]="true" severity="secondary" styleClass="w-full" (onClick)="state.alignSelected('gx', 'max')">Right</p-button>
+              <p-button size="small" [text]="true" severity="secondary" styleClass="w-full" (onClick)="state.alignSelected('gy', 'min')">Top</p-button>
+              <p-button size="small" [text]="true" severity="secondary" styleClass="w-full" (onClick)="state.alignSelected('gy', 'center')">Middle</p-button>
+              <p-button size="small" [text]="true" severity="secondary" styleClass="w-full" (onClick)="state.alignSelected('gy', 'max')">Bottom</p-button>
+            </div>
+          </div>
+        }
+
+        <!-- ── Batch Loc row / col edit ───────────────── -->
+        @if (state.selectedItems().length > 1 && (locBatchSharedRow() !== null || locBatchSharedCol() !== null)) {
+          <div class="batch-box">
+            <p class="batch-title">
+              📍 Batch Loc Edit
+              <span class="batch-count">— {{ state.selectedItems().length }} locs</span>
+            </p>
+            <div class="row-2">
+              @if (locBatchSharedRow() !== null) {
+                <div>
+                  <label class="field-label-sm" for="batch-row-input-field">Row (shared)</label>
+                  <div class="input-action-row">
+                    <p-inputnumber id="batch-row-input" inputId="batch-row-input-field" [min]="1" [max]="9999" [showButtons]="false"
+                      [(ngModel)]="batchRowVal"
+                      [ngModelOptions]="{standalone: true}"
+                      styleClass="flex-1" inputStyleClass="w-full input" />
+                    <p-button size="small" severity="success"
+                      pTooltip="Apply row to all selected Locs"
+                      (onClick)="applyLocBatchRow(batchRowVal ?? 1)">✓</p-button>
+                  </div>
+                </div>
+              }
+              @if (locBatchSharedCol() !== null) {
+                <div>
+                  <label class="field-label-sm" for="batch-col-input-field">Col (shared)</label>
+                  <div class="input-action-row">
+                    <p-inputnumber id="batch-col-input" inputId="batch-col-input-field" [min]="1" [max]="99" [showButtons]="false"
+                      [(ngModel)]="batchColVal"
+                      [ngModelOptions]="{standalone: true}"
+                      styleClass="flex-1" inputStyleClass="w-full input" />
+                    <p-button size="small" severity="success"
+                      pTooltip="Apply col to all selected Locs"
+                      (onClick)="applyLocBatchCol(batchColVal ?? 1)">✓</p-button>
+                  </div>
+                </div>
+              }
+            </div>
+            <p class="hint hint-danger">Edit applies to all selected Locs · changes are locked</p>
+          </div>
+        }
+
+        <!-- ── Level selector ─────────────────────────── -->
+        <div class="field">
+          <label class="field-label" for="item-level-input">Level</label>
+          <p-select id="item-level" inputId="item-level-input"
+            [options]="['A','B','C','D','E','F']"
+            [ngModel]="getCommonLevel()"
+            (ngModelChange)="setCommonLevel($event)"
+            styleClass="w-full" />
+        </div>
+
+        <!-- ── Duplicate to Level ─────────────────────── -->
+        <div class="card-inset">
+          <label class="field-label" for="dup-level-target-input">Duplicate to Level</label>
+          <div class="input-action-row">
+            <p-select id="dup-level-target" inputId="dup-level-target-input"
+              [options]="['A','B','C','D','E','F']"
+              [ngModel]="dupTargetLvl()"
+              (ngModelChange)="dupTargetLvl.set($event)"
+              styleClass="flex-1" />
+            <p-button id="btn-duplicate-level" size="small" severity="success"
+              (onClick)="state.duplicateSelected(letterToLevel(dupTargetLvl()))">
+              Dup to Level
+            </p-button>
+          </div>
+        </div>
+
+      </div><!-- /section -->
+    }
+
+    <!-- Nothing selected helper text -->
+    @if (!state.emptySelection() && state.selectedItems().length === 0) {
+      <div class="helper-box">
+        @switch (state.activeTool()) {
+          @case ('arrow') {
+            <span>Drag on the grid to draw a region, then choose a shape type to create.</span>
+          }
+          @case ('hand') {
+            <span>Click a shape to select it. Drag to move. Hold Shift to add to selection. Drag empty space to multi-select.</span>
+          }
+          @case ('brush') {
+            <span>Click on the grid to paint items. Hold and drag to paint multiple.</span>
+          }
+        }
+      </div>
+    }
+
+  }<!-- /build tab -->
+
+</div><!-- /sidebar-body -->

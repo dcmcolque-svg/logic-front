@@ -1,0 +1,226 @@
+<!-- Edit Customer Info Dialog -->
+<p-dialog
+  [visible]="visible()"
+  [header]="(showConfirmation() ? 'parcels.update_customer.dialog_title_confirm' : 'parcels.update_customer.dialog_title') | translate"
+  [modal]="true"
+  [closable]="!saving()"
+  [style]="{ width: '32rem', maxWidth: '95vw' }"
+  [draggable]="false"
+  [resizable]="false"
+  (onHide)="onClose()"
+>
+
+  <!-- ════════════════════════════════
+       FORM VIEW
+       ════════════════════════════════ -->
+  @if (!showConfirmation()) {
+    <form [formGroup]="form" class="puc-form" novalidate>
+
+      <!-- Row: Name + Last Name -->
+      <div class="puc-row">
+        <div class="puc-field">
+          <label class="puc-label" for="puc-name">
+            {{ 'parcels.update_customer.field_name' | translate }}
+          </label>
+          <input
+            id="puc-name"
+            pInputText
+            formControlName="name"
+            [placeholder]="'parcels.update_customer.placeholder_name' | translate"
+            [class.ng-invalid]="isInvalid('name')"
+            [class.ng-dirty]="isInvalid('name')"
+            class="puc-input"
+          />
+          @if (isInvalid('name')) {
+            <small class="puc-error">
+              {{ 'parcels.update_customer.validation_name_required' | translate }}
+            </small>
+          }
+        </div>
+
+        <div class="puc-field">
+          <label class="puc-label" for="puc-last-name">
+            {{ 'parcels.update_customer.field_last_name' | translate }}
+          </label>
+          <input
+            id="puc-last-name"
+            pInputText
+            formControlName="last_name"
+            [placeholder]="'parcels.update_customer.placeholder_last_name' | translate"
+            [class.ng-invalid]="isInvalid('last_name')"
+            [class.ng-dirty]="isInvalid('last_name')"
+            class="puc-input"
+          />
+          @if (isInvalid('last_name')) {
+            <small class="puc-error">
+              {{ 'parcels.update_customer.validation_last_name_required' | translate }}
+            </small>
+          }
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="puc-field">
+        <label class="puc-label" for="puc-email">
+          {{ 'parcels.update_customer.field_email' | translate }}
+        </label>
+        <input
+          id="puc-email"
+          pInputText
+          formControlName="email"
+          [placeholder]="'parcels.update_customer.placeholder_email' | translate"
+          type="email"
+          [class.ng-invalid]="isInvalid('email')"
+          [class.ng-dirty]="isInvalid('email')"
+          class="puc-input"
+        />
+        @if (isInvalid('email')) {
+          <small class="puc-error">
+            {{ 'parcels.update_customer.validation_email_required' | translate }}
+          </small>
+        }
+      </div>
+
+      <!-- Phone -->
+      <div class="puc-field">
+        <label class="puc-label" for="puc-phone">
+          {{ 'parcels.update_customer.field_phone' | translate }}
+        </label>
+        <div class="puc-phone-group">
+          <p-select
+            id="puc-phone-country"
+            formControlName="phone_country"
+            [options]="countryOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [filter]="true"
+            filterBy="label"
+            appendTo="body"
+            [style]="{ 'min-width': '14rem', 'max-width': '14rem' }"
+          />
+          <input
+            pInputText
+            pKeyFilter="int"
+            id="puc-phone"
+            type="tel"
+            inputmode="numeric"
+            formControlName="phone"
+            [placeholder]="'parcels.update_customer.placeholder_phone' | translate"
+            [class.ng-invalid]="isInvalid('phone')"
+            [class.ng-dirty]="isInvalid('phone')"
+            class="puc-input"
+            maxlength="20"
+          />
+        </div>
+        @if (isInvalid('phone')) {
+          <small class="puc-error">
+            {{ getPhoneError() || ('parcels.update_customer.validation_phone_required' | translate) }}
+          </small>
+        }
+      </div>
+
+
+      <!-- Address -->
+      <div class="puc-field">
+        <label class="puc-label" for="puc-address">
+          {{ 'parcels.update_customer.field_address' | translate }}
+        </label>
+        <input
+          id="puc-address"
+          pInputText
+          formControlName="address"
+          [placeholder]="'parcels.update_customer.placeholder_address' | translate"
+          [class.ng-invalid]="isInvalid('address')"
+          [class.ng-dirty]="isInvalid('address')"
+          class="puc-input"
+        />
+        @if (isInvalid('address')) {
+          <small class="puc-error">
+            {{ 'parcels.update_customer.validation_address_required' | translate }}
+          </small>
+        }
+      </div>
+
+      <!-- Ship By Date -->
+      <div class="puc-field">
+        <label class="puc-label" for="puc-ship-by-date">
+          {{ 'parcels.update_customer.field_ship_by_date' | translate }}
+        </label>
+        <p-datepicker
+          id="puc-ship-by-date"
+          formControlName="ship_by_date"
+          [placeholder]="'parcels.update_customer.placeholder_date' | translate"
+          dateFormat="yy-mm-dd"
+          [showIcon]="true"
+          [minDate]="today"
+          [class.ng-invalid]="isInvalid('ship_by_date')"
+          appendTo="body"
+          styleClass="puc-datepicker"
+        />
+        @if (isInvalid('ship_by_date')) {
+          <small class="puc-error">
+            {{ 'parcels.update_customer.validation_date_required' | translate }}
+          </small>
+        }
+      </div>
+
+    </form>
+
+    <!-- Form actions — rendered inline, not in the dialog footer template -->
+    <div class="puc-footer puc-footer--inline">
+      <p-button
+        id="puc-cancel-btn"
+        [label]="'parcels.update_customer.btn_cancel' | translate"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="onClose()"
+        [disabled]="saving()"
+      />
+      <p-button
+        id="puc-save-btn"
+        [label]="'parcels.update_customer.btn_save' | translate"
+        icon="pi pi-check"
+        (onClick)="onSaveClick()"
+        [loading]="saving()"
+      />
+    </div>
+  }
+
+  <!-- ════════════════════════════════
+       CONFIRMATION VIEW
+       ════════════════════════════════ -->
+  @if (showConfirmation()) {
+    <div class="puc-confirm-body">
+      <div class="puc-confirm-icon">
+        <i class="pi pi-exclamation-triangle"></i>
+      </div>
+      <p class="puc-confirm-title">
+        {{ 'parcels.update_customer.confirm_title' | translate }}
+      </p>
+      <p class="puc-confirm-message">
+        {{ 'parcels.update_customer.confirm_message' | translate }}
+      </p>
+    </div>
+
+    <!-- Confirmation actions — rendered inline, not in the dialog footer template -->
+    <div class="puc-footer puc-footer--inline">
+      <p-button
+        id="puc-deny-btn"
+        [label]="'parcels.update_customer.btn_back' | translate"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="onCancelConfirmation()"
+        [disabled]="saving()"
+      />
+      <p-button
+        id="puc-confirm-btn"
+        [label]="'parcels.update_customer.btn_confirm' | translate"
+        icon="pi pi-check"
+        severity="danger"
+        (onClick)="onConfirm()"
+        [loading]="saving()"
+      />
+    </div>
+  }
+
+</p-dialog>

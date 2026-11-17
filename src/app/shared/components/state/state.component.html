@@ -1,0 +1,11 @@
+@if (getConfig(); as cfg) {
+  <p-tag [styleClass]="cfg.chip" class="grosor-chip w-full">
+    <b>{{ texto().toLowerCase() | translate | uppercase }}</b>
+    &nbsp;<i class="pi {{ cfg.icon }} mr-2"></i>
+  </p-tag>
+} @else {
+  <p-tag styleClass="chip-rojo" class="grosor-chip w-full">
+    <b>{{ texto().toLowerCase() | translate | uppercase }}</b>
+    &nbsp;<i class="pi pi-question mr-2"></i>
+  </p-tag>
+}

@@ -1,0 +1,277 @@
+<form [formGroup]="form" (ngSubmit)="onSave()">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+        <!-- ── Left Column: Identity ── -->
+        <div class="flex flex-col gap-4">
+
+            <!-- Facility -->
+            <div class="flex flex-col gap-1">
+                <label for="facility_id" class="font-semibold text-sm">
+                    {{ 'packaging.form.facility' | translate }}
+                    @if (!isEditMode) {
+                        <span class="text-red-500 ml-1">*</span>
+                    }
+                </label>
+                <p-select
+                    id="facility_id"
+                    formControlName="facility_id"
+                    [options]="facilities()"
+                    optionLabel="label"
+                    optionValue="value"
+                    [placeholder]="'packaging.form.select_facility' | translate"
+                    [loading]="loadingFacilities()"
+                    class="w-full"
+                    appendTo="body"
+                    [invalid]="isInvalid('facility_id')"
+                />
+                @if (isInvalid('facility_id')) {
+                    <small class="text-red-500 text-xs">{{ getFieldError('facility_id') }}</small>
+                }
+            </div>
+
+            <!-- Package Type -->
+            <div class="flex flex-col gap-1">
+                <label for="container_profile_id" class="font-semibold text-sm">
+                    {{ 'packaging.form.package_type' | translate }} <span class="text-red-500 ml-1">*</span>
+                </label>
+                <p-select
+                    id="container_profile_id"
+                    formControlName="container_profile_id"
+                    [options]="containerProfiles()"
+                    optionLabel="label"
+                    optionValue="value"
+                    [placeholder]="'packaging.form.select_package_type' | translate"
+                    [loading]="loadingProfiles()"
+                    class="w-full"
+                    appendTo="body"
+                    [invalid]="isInvalid('container_profile_id')"
+                />
+                @if (isInvalid('container_profile_id')) {
+                    <small class="text-red-500 text-xs">{{ getFieldError('container_profile_id') }}</small>
+                }
+            </div>
+
+
+
+            <!-- Name -->
+            <div class="flex flex-col gap-1">
+                <label for="name" class="font-semibold text-sm flex items-center gap-1">
+                    {{ 'packaging.form.name' | translate }} <span class="text-red-500">*</span>
+                    <i class="pi pi-info-circle text-xs text-surface-400 cursor-help"
+                       [pTooltip]="'packaging.form.name_unique_hint' | translate"
+                       tooltipPosition="top"></i>
+                </label>
+                <input
+                    pInputText
+                    id="name"
+                    formControlName="name"
+                    class="w-full"
+                    autocomplete="off"
+                    [invalid]="isInvalid('name')"
+                />
+                @if (isInvalid('name')) {
+                    <small class="text-red-500 text-xs">{{ getFieldError('name') }}</small>
+                }
+            </div>
+
+            <!-- Barcode -->
+            <div class="flex flex-col gap-1">
+                <label for="barcode" class="font-semibold text-sm">
+                    {{ 'packaging.form.barcode' | translate }}
+                </label>
+                <input
+                    pInputText
+                    id="barcode"
+                    formControlName="barcode"
+                    class="w-full"
+                    autocomplete="off"
+                />
+            </div>
+
+            <!-- Description -->
+            <div class="flex flex-col gap-1">
+                <label for="description" class="font-semibold text-sm">
+                    {{ 'packaging.form.description' | translate }}
+                </label>
+                <textarea
+                    pTextarea
+                    id="description"
+                    formControlName="description"
+                    class="w-full"
+                    rows="3"
+                ></textarea>
+            </div>
+        </div>
+
+        <!-- ── Right Column: Quantities & Accordions ── -->
+        <div class="flex flex-col gap-4">
+
+            <!-- Quantity -->
+            <div class="flex flex-col gap-1">
+                <label for="qty" class="font-semibold text-sm">
+                    {{ 'packaging.form.quantity' | translate }}
+                    @if (!isEditMode) {
+                        <span class="text-red-500 ml-1">*</span>
+                    }
+                </label>
+                <p-inputNumber
+                    id="qty"
+                    formControlName="qty"
+                    [showButtons]="true"
+                    [min]="1"
+                    [max]="MAX_QTY"
+                    [maxlength]="10"
+                    variant="filled"
+                    class="w-full"
+                    [invalid]="isInvalid('qty')"
+                />
+                @if (isInvalid('qty')) {
+                    <small class="text-red-500 text-xs">{{ getFieldError('qty') }}</small>
+                }
+            </div>
+
+            <!-- Accordion Group -->
+            <p-accordion [multiple]="true" [value]="[]">
+
+                <!-- ── Dimensions Accordion ── -->
+                <p-accordion-panel value="dimensions">
+                    <p-accordion-header>{{ 'packaging.form.dimensions' | translate }}</p-accordion-header>
+                    <p-accordion-content>
+                        <div class="flex flex-col gap-4 pt-2">
+
+                            <!-- Weight -->
+                            <div class="flex flex-col gap-1">
+                                <label for="weight" class="font-medium text-sm">
+                                    {{ 'packaging.form.weight' | translate }}
+                                </label>
+                                <p-inputNumber
+                                    id="weight"
+                                    formControlName="weight"
+                                    mode="decimal"
+                                    [minFractionDigits]="0"
+                                    [maxFractionDigits]="4"
+                                    [min]="0"
+                                    variant="filled"
+                                    class="w-full"
+                                />
+                            </div>
+
+                            <!-- Length -->
+                            <div class="flex flex-col gap-1">
+                                <label for="length" class="font-medium text-sm">
+                                    {{ 'packaging.form.length' | translate }}
+                                </label>
+                                <p-inputNumber
+                                    id="length"
+                                    formControlName="length"
+                                    mode="decimal"
+                                    [minFractionDigits]="0"
+                                    [maxFractionDigits]="2"
+                                    [min]="0"
+                                    variant="filled"
+                                    class="w-full"
+                                />
+                            </div>
+
+                            <!-- Width -->
+                            <div class="flex flex-col gap-1">
+                                <label for="width" class="font-medium text-sm">
+                                    {{ 'packaging.form.width' | translate }}
+                                </label>
+                                <p-inputNumber
+                                    id="width"
+                                    formControlName="width"
+                                    mode="decimal"
+                                    [minFractionDigits]="0"
+                                    [maxFractionDigits]="2"
+                                    [min]="0"
+                                    variant="filled"
+                                    class="w-full"
+                                />
+                            </div>
+
+                            <!-- Height -->
+                            <div class="flex flex-col gap-1">
+                                <label for="height" class="font-medium text-sm">
+                                    {{ 'packaging.form.height' | translate }}
+                                </label>
+                                <p-inputNumber
+                                    id="height"
+                                    formControlName="height"
+                                    mode="decimal"
+                                    [minFractionDigits]="0"
+                                    [maxFractionDigits]="2"
+                                    [min]="0"
+                                    variant="filled"
+                                    class="w-full"
+                                />
+                            </div>
+
+                        </div>
+                    </p-accordion-content>
+                </p-accordion-panel>
+
+                <!-- ── Price and Cost Accordion ── -->
+                <p-accordion-panel value="price_cost">
+                    <p-accordion-header>{{ 'packaging.form.price_and_cost' | translate }}</p-accordion-header>
+                    <p-accordion-content>
+                        <div class="flex flex-col gap-4 pt-2">
+
+                            <!-- Cost (retail_price) -->
+                            <div class="flex flex-col gap-1">
+                                <label for="retail_price" class="font-medium text-sm">
+                                    {{ 'packaging.form.cost' | translate }}
+                                </label>
+                                <p-inputNumber
+                                    id="retail_price"
+                                    formControlName="retail_price"
+                                    mode="decimal"
+                                    [minFractionDigits]="0"
+                                    [maxFractionDigits]="2"
+                                    [min]="0"
+                                    variant="filled"
+                                    class="w-full"
+                                />
+                            </div>
+
+                            <!-- Price (wholesale_price) -->
+                            <div class="flex flex-col gap-1">
+                                <label for="wholesale_price" class="font-medium text-sm">
+                                    {{ 'packaging.form.price' | translate }}
+                                </label>
+                                <p-inputNumber
+                                    id="wholesale_price"
+                                    formControlName="wholesale_price"
+                                    mode="decimal"
+                                    [minFractionDigits]="0"
+                                    [maxFractionDigits]="2"
+                                    [min]="0"
+                                    variant="filled"
+                                    class="w-full"
+                                />
+                            </div>
+
+                        </div>
+                    </p-accordion-content>
+                </p-accordion-panel>
+
+            </p-accordion>
+        </div>
+    </div>
+
+    <!-- ── Footer ── -->
+    <div class="flex justify-end gap-2 mt-6">
+        <p-button
+            [label]="'buttons.cancel' | translate"
+            [text]="true"
+            severity="secondary"
+            (onClick)="onCancel()"
+        />
+        <p-button
+            [label]="'packaging.form.save' | translate"
+            type="submit"
+            [disabled]="form.invalid || saving()"
+            [loading]="saving()"
+        />
+    </div>
+</form>

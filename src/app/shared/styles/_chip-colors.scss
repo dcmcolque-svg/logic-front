@@ -1,0 +1,49 @@
+// ═══ Chip color variables & classes ═══
+// Used by status, state, and category-chip components
+
+$color-fondo-violeta: #dbe3f2;
+$color-fondo-plomo: #d8d4d4;
+$color-fondo-celeste: #cee8fb;
+$color-fondo-amarillo: #fbe7c8;
+$color-fondo-verde: #bee6d1;
+$color-fondo-rojo: #f9e5e1;
+$color-fondo-negro: #d5d5d5;
+$color-fondo-azul-oscuro: #b0c7d8;
+$color-fondo-naranja: #fbd1b7;
+$color-fondo-rosa: #f7c4d8;
+$color-fondo-turquesa: #b7f2f0;
+$color-fondo-morado: #d6b7fb;
+$color-fondo-dorado: #f0c76e;
+$color-fondo-gris-oscuro: #9e9e9e;
+$color-fondo-blanco: #ffffff;
+$color-fondo-verde-claro: #e1ffde;
+
+.grosor-chip { line-height: 30px; }
+
+.chip-violeta { background-color: $color-fondo-violeta !important; color: darken($color-fondo-violeta, 60%) !important; }
+.chip-plomo { background-color: $color-fondo-plomo; color: darken($color-fondo-plomo, 60%) !important; }
+.chip-celeste { background-color: $color-fondo-celeste; color: darken($color-fondo-celeste, 60%) !important; }
+.chip-amarillo { background-color: $color-fondo-amarillo; color: darken($color-fondo-amarillo, 60%) !important; }
+.chip-verde { background-color: $color-fondo-verde; color: darken($color-fondo-verde, 60%) !important; }
+.chip-rojo { background-color: $color-fondo-rojo; color: darken($color-fondo-rojo, 60%) !important; }
+.chip-negro { background-color: $color-fondo-negro; color: darken($color-fondo-negro, 60%) !important; }
+.chip-azul-oscuro { background-color: $color-fondo-azul-oscuro; color: darken($color-fondo-azul-oscuro, 60%) !important; }
+.chip-naranja { background-color: $color-fondo-naranja; color: darken($color-fondo-naranja, 60%) !important; }
+.chip-rosa { background-color: $color-fondo-rosa; color: darken($color-fondo-rosa, 60%) !important; }
+.chip-turquesa { background-color: $color-fondo-turquesa; color: darken($color-fondo-turquesa, 60%) !important; }
+.chip-morado { background-color: $color-fondo-morado; color: darken($color-fondo-morado, 60%) !important; }
+.chip-dorado { background-color: $color-fondo-dorado; color: darken($color-fondo-dorado, 60%) !important; }
+.chip-gris-oscuro { background-color: $color-fondo-gris-oscuro; color: lighten($color-fondo-gris-oscuro, 60%) !important; }
+.chip-blanco { background-color: $color-fondo-blanco; color: darken($color-fondo-blanco, 80%) !important; }
+.chip-verde-claro { background-color: $color-fondo-verde-claro; color: darken($color-fondo-verde-claro, 60%) !important; }
+
+.chip-rojo-accion {
+    background-color: $color-fondo-rojo; color: darken($color-fondo-rojo, 60%) !important;
+    border: 1px solid darken($color-fondo-rojo, 60%) !important;
+    &:hover { background-color: darken($color-fondo-rojo, 60%) !important; color: $color-fondo-rojo !important; }
+}
+.chip-verde-accion {
+    background-color: $color-fondo-verde; color: darken($color-fondo-verde, 60%) !important;
+    border: 1px solid darken($color-fondo-verde, 60%) !important;
+    &:hover { background-color: darken($color-fondo-verde, 60%) !important; color: $color-fondo-verde !important; }
+}

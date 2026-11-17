@@ -1,0 +1,113 @@
+/* ── Parcel Update Customer Dialog ─────────────────────────── */
+
+.puc-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.25rem 0;
+}
+
+.puc-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.puc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.puc-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--p-text-muted-color);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.puc-input {
+  width: 100%;
+}
+
+/* Phone group: country-code selector + national number side by side */
+.puc-phone-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+
+  p-select {
+    flex: 0 0 auto;
+  }
+
+  input {
+    flex: 1 1 0;
+    min-width: 3rem;
+  }
+}
+
+.puc-error {
+  color: var(--p-red-500);
+  font-size: 0.75rem;
+}
+
+/* Datepicker full width override */
+.puc-datepicker {
+  width: 100%;
+}
+
+/* Footer */
+.puc-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.25rem;
+}
+
+.puc-footer--inline {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--p-content-border-color);
+}
+
+/* ── Confirmation view ─────────────────────────────────────── */
+
+.puc-confirm-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 0.5rem 0.5rem;
+  text-align: center;
+}
+
+.puc-confirm-icon {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  background: var(--p-orange-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  i {
+    font-size: 1.75rem;
+    color: var(--p-orange-500);
+  }
+}
+
+.puc-confirm-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--p-text-color);
+}
+
+.puc-confirm-message {
+  font-size: 0.9rem;
+  color: var(--p-text-muted-color);
+  line-height: 1.6;
+  max-width: 26rem;
+  margin: 0;
+}

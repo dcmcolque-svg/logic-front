@@ -1,0 +1,122 @@
+<p-toast />
+<p-confirmDialog />
+<p-menu #orderMenu [popup]="true" appendTo="body" [model]="rowMenuItems" />
+
+<div class="grid grid-cols-12 gap-4">
+  <!-- Page header -->
+  <div class="col-span-12">
+    <app-order-list-header
+      titleKey="pages.all_orders"
+      [selectedCount]="selectedOrders().length"
+      (bulkActions)="onBulkActionsClick($event)"
+      (clearFilters)="clearFilters()"
+    >
+      <base-import-export-menu
+        filename="all_orders"
+        [columns]="selectedColumns"
+        [fetchPage]="fetchExportPage"
+        [sheetName]="'pages.all_orders' | translate"
+      />
+    </app-order-list-header>
+  </div>
+
+  <!-- Data table -->
+  <div class="col-span-12">
+    <app-order-preset-card [hasActiveFilters]="activeFilters().length > 0">
+      <base-data-table
+        [columns]="selectedColumns"
+        [data]="orders()"
+        [loading]="loading()"
+        [pagination]="pagination()"
+        [sort]="currentSort()"
+        [selectable]="true"
+        [rowExpandable]="isRowExpandable"
+        [activeFilterChips]="activeFilters()"
+        (rowExpand)="onRowExpand($event)"
+        (stateChange)="onTableStateChange($event)"
+        (selectionChange)="selectedOrders.set($event)"
+        (chipRemoved)="removeFilterChip($event)"
+      >
+
+        <!-- Paginator left: column toggle -->
+        <ng-template #paginatorLeft>
+          <app-order-column-toggle />
+        </ng-template>
+
+        <!-- Custom filter row -->
+        <ng-template #filterRow let-columns="columns">
+          <!-- expand col -->
+          <th style="width: 2.5rem"></th>
+          <!-- actions col -->
+          <th class="col-actions p-1"></th>
+          <!-- checkbox col -->
+          <th class="p-1" style="width: 3rem"></th>
+          @for (col of columns; track col.field) {
+            <th class="p-1" [style.width]="col.width">
+              <app-order-column-filter [field]="col.field" />
+            </th>
+          }
+        </ng-template>
+
+        <!-- Custom cell templates -->
+        <ng-template #cell let-row let-col="col">
+          <app-order-cell [row]="row" [template]="col.template" />
+        </ng-template>
+
+        <!-- Row actions -->
+        <ng-template #actions let-row>
+          <app-order-menu-button [row]="row" />
+        </ng-template>
+
+        <!-- Row expansion: shipments sub-table -->
+        <ng-template #rowExpansion let-order>
+          <div class="px-6 py-3 bg-surface-50">
+            @if (isLoadingDetail(order.id)) {
+              <div class="flex flex-col gap-2">
+                @for (_ of [1, 2]; track $index) {
+                  <p-skeleton height="2rem" />
+                }
+              </div>
+            } @else if (shipmentsFor(order.id).length === 0) {
+              <div class="flex items-center gap-2 text-surface-500 py-2 text-sm">
+                <i class="pi pi-info-circle"></i>
+                <span>{{ 'labels.no_shipments' | translate }}</span>
+              </div>
+            } @else {
+              <p-table
+                [value]="shipmentsFor(order.id)"
+                styleClass="p-datatable-sm p-datatable-striped"
+              >
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th scope="col">{{ 'labels.shipment' | translate }}</th>
+                    <th scope="col">{{ 'labels.status' | translate }}</th>
+                    <th scope="col">{{ 'labels.carrier_code' | translate }}</th>
+                    <th scope="col" class="text-right">{{ 'labels.boxes' | translate }}</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-shipment>
+                  <tr>
+                    <td class="font-medium font-mono">{{ shipment.shipment_number }}</td>
+                    <td><base-status-badge [value]="shipment.shipment_status" /></td>
+                    <td class="font-mono">{{ shipment.carrier_code || '—' }}</td>
+                    <td class="text-right font-mono">{{ shipment.packages?.length || 0 }}</td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            }
+          </div>
+        </ng-template>
+
+      </base-data-table>
+    </app-order-preset-card>
+  </div>
+</div>
+
+<!-- Order detail drawer -->
+<app-order-detail-dialog
+  [visible]="showDetailDrawer()"
+  [order]="selectedOrder()"
+  [fullDetail]="true"
+  (hide)="closeDetailDrawer()"
+/>

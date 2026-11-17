@@ -1,0 +1,236 @@
+<p-dialog
+  [header]="
+    isEdit()
+      ? ('preferences.addons.title_edit_dialog' | translate) +
+        ' ' +
+        ('labels.with' | translate) +
+        ' ' +
+        application()?.name
+      : ('preferences.addons.title_create_dialog' | translate) +
+        ' ' +
+        ('labels.with' | translate) +
+        ' ' +
+        application()?.name
+  "
+  [(visible)]="visible"
+  [modal]="true"
+  [style]="{ width: '40rem' }"
+  [closable]="false"
+>
+  <div
+    class="flex align-items-center gap-2 justify-content-between mt-3 mb-3 sm:flex-row flex-col"
+  >
+    <img
+      [src]="application()?.icon_url"
+      alt="Icon-app"
+      class="border-round"
+      style="width: 15rem; height: auto"
+    />
+    <i class="pi pi-sync" style="font-size: 2rem; color: #6b7280"></i>
+    <img
+      src="layout/images/logo-dark.png"
+      alt="Icon-app"
+      class="border-round"
+      style="width: 15rem; height: auto"
+    />
+  </div>
+
+  <form class="needs-validation" [formGroup]="form">
+    <!-- Name -->
+    <div class="flex flex-col gap-2 mb-4">
+      <label for="name" class="font-semibold block">
+        {{ 'preferences.addons.name' | translate }}
+      </label>
+      <input
+        pInputText
+        id="name"
+        type="text"
+        formControlName="name"
+        class="p-2 rounded w-full"
+        [ngClass]="{
+          'ng-invalid ng-dirty':
+            form.controls['name'].invalid &&
+            (form.controls['name'].touched || form.controls['name'].dirty),
+        }"
+      />
+      @if (
+        form.controls['name'].invalid &&
+        (form.controls['name'].touched || form.controls['name'].dirty)
+      ) {
+        <small class="text-red-500">
+          @if (form.controls['name'].errors?.['required']) {
+            {{ 'forms_validation.required' | translate }}
+          }
+        </small>
+      }
+    </div>
+
+    <!-- Company -->
+    <div class="flex flex-col gap-2 mb-4">
+      <label for="company_id" class="font-semibold block">Company</label>
+      <p-select
+        id="company_id"
+        formControlName="company_id"
+        [options]="service.companies()"
+        optionLabel="name"
+        optionValue="id"
+        placeholder="Select a company"
+        [filter]="true"
+        filterBy="name"
+        styleClass="w-full"
+        [ngClass]="{
+          'ng-invalid ng-dirty':
+            form.controls['company_id'].invalid &&
+            (form.controls['company_id'].touched ||
+              form.controls['company_id'].dirty),
+        }"
+      ></p-select>
+      @if (
+        form.controls['company_id'].invalid &&
+        (form.controls['company_id'].touched || form.controls['company_id'].dirty)
+      ) {
+        <small class="text-red-500">
+          @if (form.controls['company_id'].errors?.['required']) {
+            {{ 'forms_validation.required' | translate }}
+          }
+        </small>
+      }
+    </div>
+
+    <!-- URL -->
+    <div class="flex flex-col gap-2 mb-4">
+      <label for="endpoint_url" class="font-semibold block">
+        {{ 'preferences.addons.url' | translate }}
+      </label>
+      <input
+        pInputText
+        id="endpoint_url"
+        type="text"
+        formControlName="endpoint_url"
+        class="p-2 rounded w-full"
+        [ngClass]="{
+          'ng-invalid ng-dirty':
+            form.controls['endpoint_url'].invalid &&
+            (form.controls['endpoint_url'].touched ||
+              form.controls['endpoint_url'].dirty),
+        }"
+      />
+      @if (
+        form.controls['endpoint_url'].invalid &&
+        (form.controls['endpoint_url'].touched ||
+          form.controls['endpoint_url'].dirty)
+      ) {
+        <small class="text-red-500">
+          @if (form.controls['endpoint_url'].errors?.['required']) {
+            {{ 'forms_validation.required' | translate }}
+          }
+        </small>
+      }
+    </div>
+
+    <!-- Token -->
+    <div class="flex flex-col gap-2 mb-4">
+      <label for="auth_token" class="font-semibold block">
+        {{ 'preferences.addons.token' | translate }}
+      </label>
+      <input
+        pInputText
+        id="auth_token"
+        type="text"
+        formControlName="auth_token"
+        class="p-2 rounded w-full"
+        [ngClass]="{
+          'ng-invalid ng-dirty':
+            form.controls['auth_token'].invalid &&
+            (form.controls['auth_token'].touched ||
+              form.controls['auth_token'].dirty),
+        }"
+      />
+      @if (
+        form.controls['auth_token'].invalid &&
+        (form.controls['auth_token'].touched || form.controls['auth_token'].dirty)
+      ) {
+        <small class="text-red-500">
+          @if (form.controls['auth_token'].errors?.['required']) {
+            {{ 'forms_validation.required' | translate }}
+          }
+        </small>
+      }
+    </div>
+
+    <!-- Email -->
+    <div class="flex flex-col gap-2 mb-4">
+      <label for="contact_email" class="font-semibold block">
+        {{ 'preferences.addons.email' | translate }}
+      </label>
+      <input
+        pInputText
+        id="contact_email"
+        type="email"
+        formControlName="contact_email"
+        class="p-2 rounded w-full"
+        [ngClass]="{
+          'ng-invalid ng-dirty':
+            form.controls['contact_email'].invalid &&
+            (form.controls['contact_email'].touched ||
+              form.controls['contact_email'].dirty),
+        }"
+      />
+      @if (
+        form.controls['contact_email'].invalid &&
+        (form.controls['contact_email'].touched ||
+          form.controls['contact_email'].dirty)
+      ) {
+        <small class="text-red-500">
+          @if (form.controls['contact_email'].errors?.['required']) {
+            {{ 'forms_validation.required' | translate }}
+          }
+          @if (form.controls['contact_email'].errors?.['email']) {
+            {{ 'forms_validation.valid_email' | translate }}
+          }
+        </small>
+      }
+    </div>
+
+    <!-- Active -->
+    <div class="flex flex-col gap-2 mb-4">
+      <label for="is_active" class="font-semibold block">
+        {{ 'preferences.addons.is_active' | translate }}
+      </label>
+      <p-toggleswitch
+        id="is_active"
+        formControlName="is_active"
+      ></p-toggleswitch>
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="{{ 'buttons.cancel' | translate }}"
+      [text]="true"
+      severity="secondary"
+      (onClick)="close()"
+    />
+
+    @if (isEdit()) {
+      <p-button
+        [disabled]="saving()"
+        label="{{ 'buttons.delete' | translate }}"
+        severity="danger"
+        [outlined]="true"
+        (onClick)="deleteConfig()"
+      />
+    }
+
+    <p-button
+      [disabled]="form.invalid || saving()"
+      label="{{ 'buttons.save' | translate }}"
+      severity="success"
+      (onClick)="save()"
+      [loading]="saving()"
+    />
+  </ng-template>
+</p-dialog>
+
+<!-- Confirmation Dialog for delete -->
+<p-confirmDialog [style]="{ width: '450px' }"></p-confirmDialog>

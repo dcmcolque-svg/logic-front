@@ -1,0 +1,10 @@
+:host {
+  display: block;
+}
+
+// ── Filter row cells ────────────────────────────────────────────────────────
+// Each <th> in the second header row holds one filter control
+.filter-th {
+  padding: 0.35rem 0.5rem !important;
+  vertical-align: middle;
+}

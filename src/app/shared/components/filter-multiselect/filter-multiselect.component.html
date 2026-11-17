@@ -1,0 +1,78 @@
+<p-columnFilter
+  #filterComponent
+  class="custom-filter"
+  [field]="field()"
+  [matchMode]="'in'"
+  [showMatchModes]="false"
+  [showOperator]="false"
+  [showAddButton]="false"
+  [showApplyButton]="false"
+  [showClearButton]="false"
+  [matchModeOptions]="configfilter"
+>
+  <ng-template pTemplate="filter" let-value let-filter="filterCallback">
+    <p-multiSelect
+      #multiselect
+      [ngModel]="value"
+      [options]="processedOptions()"
+      [placeholder]="type()"
+      optionLabel="_translatedLabel"
+      [optionValue]="optionField()"
+      [maxSelectedLabels]="0"
+      selectedItemsLabel="{0} items"
+      [showClear]="false"
+      [filter]="true"
+      appendTo="body"
+      filterBy="_translatedLabel"
+    >
+      <ng-template let-option pTemplate="item">
+        <div class="p-multiselect-representative-option">
+          @if (withimage() !== '') {
+            <img
+              [alt]="option.label"
+              src="https://primefaces.org/cdn/primeng/images/demo/avatar/{{
+                option.image
+              }}"
+              width="24"
+              class="vertical-align-middle"
+            />
+            <span class="ml-1 mt-1">{{
+              option._translatedLabel || option[columna()]
+            }}</span>
+          } @else {
+            @if (!withTemplate()) {
+              <span class="ml-2">{{
+                option._translatedLabel || option[columna()]
+              }}</span>
+            } @else {
+              @if (listTemplate) {
+                <ng-container
+                  [ngTemplateOutlet]="listTemplate"
+                  [ngTemplateOutletContext]="{ $implicit: option }"
+                ></ng-container>
+              }
+            }
+          }
+        </div>
+      </ng-template>
+      <ng-template pTemplate="footer">
+        <div class="flex gap-2 px-3 py-2 border-top-1 surface-border justify-content-end">
+          <p-button
+            [label]="'buttons.clear' | translate"
+            icon="pi pi-times"
+            severity="secondary"
+            [outlined]="true"
+            size="small"
+            (onClick)="clearFilter(filter)"
+          />
+          <p-button
+            [label]="'buttons.apply' | translate"
+            icon="pi pi-check"
+            size="small"
+            (onClick)="filter(multiselect.value); hide()"
+          />
+        </div>
+      </ng-template>
+    </p-multiSelect>
+  </ng-template>
+</p-columnFilter>

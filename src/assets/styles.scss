@@ -1,0 +1,72 @@
+/* You can add global styles to this file, and also import other style files */
+@use 'primeicons/primeicons.css';
+@use './layout/layout.scss';
+@use './demo/demo.scss';
+@use '../app/shared/styles/chip-colors';
+
+// ── Accordion collapse fix ────────────────────────────────────────────────────
+// PrimeNG 21 Motion component renders as <p-motion class="p-motion"> host.
+// It applies visibility:hidden as inline style but never changes grid-template-rows.
+// The @keyframes animation for collapse won't fire without @angular/animations.
+// We force the collapsed state directly using [data-p-active="false"] on the
+// p-accordion-content host (which gets this attribute from PrimeNG internals).
+.p-accordioncontent[data-p-active='false'] .p-motion,
+p-accordion-content[data-p-active='false'] p-motion,
+p-accordion-content[data-p-active='false'] .p-motion {
+  grid-template-rows: 0fr !important;
+  visibility: hidden !important;
+  overflow: hidden !important;
+}
+
+// ── Missing fields popover (data_status "incomplete") ─────────────────────────
+.missing-fields-popover {
+  .p-popover-content {
+    padding: 0.75rem 1rem;
+  }
+}
+
+.missing-fields-content {
+  min-width: 200px;
+  max-width: 320px;
+}
+
+.missing-fields-title {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.missing-fields-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.missing-fields-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  font-size: 0.85rem;
+}
+
+.missing-fields-icon {
+  color: #ef4444;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+// ── Filled-state input border ─────────────────────────────────────────────────
+// When an input has a value, keep the primary border visible even when unfocused.
+// Uses native CSS :not(:placeholder-shown) to detect filled state — no dependency
+// on PrimeNG's .p-filled class or any JS.
+//
+// Exclusions:
+//   :not(:focus)      — focused inputs have their own, stronger ring
+//   :not(:disabled)   — disabled inputs should stay muted
+//   :not([readonly])  — readonly inputs should stay muted
+//   :not(.ng-invalid) — Angular invalid fields keep their error (red) border
+input:not(:placeholder-shown):not(:focus):not(:disabled):not([readonly]):not(.ng-invalid),
+textarea:not(:placeholder-shown):not(:focus):not(:disabled):not([readonly]):not(.ng-invalid) {
+  border-color: var(--p-primary-color) !important;
+}

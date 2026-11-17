@@ -1,0 +1,31 @@
+<div class="filter-text-input-wrapper">
+  <input
+    #inputRef
+    pInputText
+    [type]="htmlInputType()"
+    [ngModel]="pendingValue()"
+    (ngModelChange)="onInputChange($event)"
+    (keydown.enter)="onEnter()"
+    (keydown)="onKeyDown($event)"
+    (wheel)="onWheel($event)"
+    [placeholder]="placeholder() || ('labels.press_enter' | translate)"
+    [class]="styleClass()"
+  />
+  @if (showMenu()) {
+    <button
+      type="button"
+      class="filter-menu-btn"
+      [class.filter-active]="pendingValue() !== ''"
+      (click)="toggleMenu($event)"
+    >
+      <i class="pi pi-filter"></i>
+    </button>
+    <p-menu
+      #matchModeMenu
+      [model]="matchModeMenuItems()"
+      [popup]="true"
+      appendTo="body"
+      styleClass="filter-matchmode-menu"
+    />
+  }
+</div>
