@@ -18,7 +18,7 @@ RUN npm run build -- -c ${BUILD_CONFIG}
 
 FROM i1pro/nginx:stable
 
-COPY --from=build /build/dist/edge-frontend/browser /usr/share/nginx/html
+COPY --from=build /build/dist/logic/browser /usr/share/nginx/html
 
 RUN chown -R nginx:nginx /usr/share/nginx/html && chmod -R 500 /usr/share/nginx/html
 
