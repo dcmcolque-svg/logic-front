@@ -121,12 +121,8 @@
           <div
             class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2"
           >
-            <div>
-              <h2 class="text-2xl font-bold m-0">
-                {{ 'preferences.location.title' | translate | uppercase }}
-              </h2>
-            </div>
-            <div class="flex gap-2">
+            <div></div>
+            <div class="flex flex-wrap gap-2">
               <p-button
                 [label]="'preferences.location.new_location' | translate"
                 icon="pi pi-plus"
@@ -142,6 +138,7 @@
                 size="small"
                 [disabled]="loading()"
               />
+              <!-- Temporarily hidden: Warehouse Planner
               <p-button
                 label="Warehouse Planner"
                 icon="pi pi-map"
@@ -150,6 +147,8 @@
                 size="small"
                 [disabled]="loading()"
               />
+              -->
+              <!-- Temporarily hidden: Planificador / Agregar Bins (bulk)
               <p-button
                 [label]="'preferences.bin_planner.bulk_add_bins' | translate"
                 icon="pi pi-objects-column"
@@ -163,6 +162,7 @@
                 [pTooltip]="selectedLocations().length === 0 ? ('preferences.bin_planner.select_locations_first' | translate) : ''"
                 tooltipPosition="top"
               />
+              -->
               @if (selectedLocations().length > 0) {
                 <p-button
                   [label]="'labels.generate_labels' | translate"
@@ -213,6 +213,7 @@
               (stateChange)="onTableStateChange($event)"
               (selectionChange)="onSelectionChange($event)"
               (chipRemoved)="removeFilterChip($event)"
+              (clearAllFilters)="clearFilters()"
             >
               <!-- Toolbar slot -->
               <ng-template #toolbar>
@@ -274,7 +275,7 @@
                   @switch (col.field) {
                     @case ('facility_name') {
                       <th class="p-1" [style.width]="col.width">
-                        <shipedge-filter-multiselect-panel
+                        <nuvex-filter-multiselect-panel
                           [options]="facilityFilterOptions()"
                           optionLabel="name"
                           optionValue="id"
@@ -288,7 +289,7 @@
                     }
                     @case ('zone_id') {
                       <th class="p-1" [style.width]="col.width">
-                        <shipedge-filter-multiselect-panel
+                        <nuvex-filter-multiselect-panel
                           [options]="zones()"
                           optionLabel="name"
                           optionValue="id"
@@ -302,7 +303,7 @@
                     }
                     @case ('operational_category_id') {
                       <th class="p-1" [style.width]="col.width">
-                        <shipedge-filter-multiselect-panel
+                        <nuvex-filter-multiselect-panel
                           [options]="operationalCategories()"
                           [optionLabel]="'code'"
                           [optionValue]="'id'"
@@ -317,7 +318,7 @@
                     }
                     @case ('location_profile_id') {
                       <th class="p-1" [style.width]="col.width">
-                        <shipedge-filter-multiselect-panel
+                        <nuvex-filter-multiselect-panel
                           [options]="locationProfiles()"
                           optionLabel="name"
                           optionValue="id"
@@ -331,10 +332,10 @@
                     }
                     @case ('is_active') {
                       <th class="p-1" [style.width]="col.width">
-                        <shipedge-filter-multiselect-panel
+                        <nuvex-filter-multiselect-panel
                           [options]="[
-                            { label: 'Active', value: true },
-                            { label: 'Inactive', value: false }
+                            { label: ('labels.active' | translate), value: true },
+                            { label: ('labels.inactive' | translate), value: false }
                           ]"
                           optionLabel="label"
                           optionValue="value"
@@ -349,7 +350,7 @@
                     @default {
                       @if (col.filterable) {
                         <th class="p-1" [style.width]="col.width">
-                          <shipedge-filter-text-input
+                          <nuvex-filter-text-input
                             [value]="getActiveFilterValue(col.field)"
                             [matchMode]="getActiveFilterMatchMode(col.field)"
                             [placeholder]="col.header | translate"
@@ -375,50 +376,43 @@
                     <span class="font-semibold">{{ row.location_code }}</span>
                   }
                   @case ('content') {
-                    <div class="flex flex-col gap-2">
-                      <span class="flex items-center gap-2">
-                        <i
-                          class="pi pi-clipboard text-lg text-blue-500"
-                          [pTooltip]="'labels.kardex' | translate"
-                        ></i>
-                        <span class="font-mono text-base">{{
-                          row.content_kardex || 0
-                        }}</span>
+                    <!-- One line per row: kardex · SKUs · units, zeros muted -->
+                    <div class="content-stats">
+                      <span
+                        class="stat"
+                        [class.is-zero]="!row.content_kardex"
+                        [pTooltip]="'labels.kardex' | translate"
+                      >
+                        <i class="pi pi-clipboard"></i>{{ row.content_kardex || 0 }}
                       </span>
-                      <span class="flex items-center gap-2">
-                        <i
-                          class="pi pi-tag text-lg text-blue-500"
-                          [pTooltip]="'labels.sku' | translate"
-                        ></i>
-                        <span class="font-mono text-base">{{
-                          row.content_skus || 0
-                        }}</span>
+                      <span
+                        class="stat"
+                        [class.is-zero]="!row.content_skus"
+                        [pTooltip]="'labels.sku' | translate"
+                      >
+                        <i class="pi pi-tag"></i>{{ row.content_skus || 0 }}
                       </span>
-                      <span class="flex items-center gap-2">
-                        <span
-                          class="font-bold text-lg text-blue-500"
-                          [pTooltip]="'labels.units' | translate"
-                        >
-                          U
-                        </span>
-                        <span class="font-mono text-base">{{
-                          row.content_units | number: '1.0-0'
-                        }}</span>
+                      <span
+                        class="stat"
+                        [class.is-zero]="!row.content_units"
+                        [pTooltip]="'labels.units' | translate"
+                      >
+                        <b>U</b>{{ (row.content_units || 0) | number: '1.0-0' }}
                       </span>
                     </div>
                   }
                   @case ('bin_qty') {
                     <button
-                      class="flex items-center gap-2 cursor-pointer hover:underline text-primary bg-transparent border-none p-0"
+                      type="button"
+                      class="bin-qty-pill"
+                      [class.is-zero]="!row.bin_qty"
                       (click)="openBinDrawer(row)"
+                      [pTooltip]="'preferences.bin.view_bins' | translate"
+                      [attr.aria-label]="('preferences.bin.view_bins' | translate) + ' ' + row.location_code"
                     >
-                      <i
-                        class="pi pi-box text-lg text-blue-500"
-                        [pTooltip]="'labels.containers' | translate"
-                      ></i>
-                      <span class="font-mono text-base">{{
-                        row.bin_qty || 0
-                      }}</span>
+                      <i class="pi pi-box"></i>
+                      <span>{{ row.bin_qty || 0 }}</span>
+                      <i class="pi pi-chevron-right chevron"></i>
                     </button>
                   }
                   @case ('zone') {
@@ -467,206 +461,140 @@
 
     <!-- ====== SLIDE 2: BIN TREE ====== -->
     <div class="slider-panel">
-      @if (selectedLocationForDrawer()) {
-        <div class="card">
-          <!-- Back button + title -->
-          <div class="flex items-center gap-3 mb-4">
-            <p-button
-              icon="pi pi-arrow-left"
-              [rounded]="true"
-              [text]="true"
-              severity="secondary"
-              (onClick)="closeBinTree()"
-              pTooltip="Back"
-            />
-            <div class="flex items-center gap-2">
-              <i class="pi pi-sitemap text-primary text-xl"></i>
-              <h3 class="m-0 text-xl font-bold">
-                {{ 'preferences.bin.title_tree' | translate }}
-              </h3>
-            </div>
-          </div>
-
-          <!-- Location header card (edge-frontend style) -->
-          <div class="location-header mb-4">
-            <div class="header-card p-4 border-round">
-              <div class="flex items-center justify-between mb-3">
-                <h5 class="m-0 header-title">
-                  <i class="pi pi-map-marker mr-2"></i>
-                  {{ 'preferences.bin.location_details' | translate }}
-                </h5>
-              </div>
-
-              <div class="location-info">
-                <div class="info-row">
-                  <span class="info-label"
-                    >{{ 'labels.location' | translate }}:</span
-                  >
-                  <span class="info-value font-semibold">{{
-                    selectedLocationForDrawer()!.location_code
-                  }}</span>
-                </div>
-
-                <div class="info-row">
-                  <span class="info-label"
-                    >{{ 'labels.facility' | translate }}:</span
-                  >
-                  <span class="info-value">{{
-                    selectedLocationForDrawer()!.facility_name
-                  }}</span>
-                </div>
-
-                @if (selectedLocationForDrawer()!.zone_id) {
-                  <div class="info-row">
-                    <span class="info-label"
-                      >{{ 'preferences.location.zone' | translate }}:</span
-                    >
-                    <span class="info-value">{{
-                      getZoneName(selectedLocationForDrawer()!.zone_id!)
-                    }}</span>
-                  </div>
-                }
-
-                <div class="info-row">
-                  <span class="info-label"
-                    >{{ 'labels.category' | translate }}:</span
-                  >
-                  <span class="info-value">
-                    <base-status-badge
-                      [value]="
-                        getCategoryCode(
-                          selectedLocationForDrawer()!.operational_category_code || selectedLocationForDrawer()!.operational_category_id
-                        )
-                      "
-                    />
-                  </span>
-                </div>
-
-                <div class="info-row">
-                  <span class="info-label"
-                    >{{ 'labels.bin_qty' | translate }}:</span
-                  >
-                  <span class="info-value">{{ binNodeCount() }}</span>
-                </div>
-              </div>
-
-              <div class="summary-stats mt-3 pt-3">
-                <div class="flex items-center gap-3 flex-wrap">
-                  <h6 class="stats-title m-0">
-                    {{ 'preferences.bin.summary_statistics' | translate }} :
-                  </h6>
-
-                  <div class="flex flex-row gap-2">
-                    <p-chip
-                      [label]="
-                        (
-                          selectedLocationForDrawer()!.content_kardex ?? 0
-                        ).toString()
-                      "
-                      icon="pi pi-clipboard"
-                      [pTooltip]="'labels.kardex' | translate"
-                      styleClass="p-chip-sm bg-blue-50 text-blue-700"
-                    />
-
-                    <p-chip
-                      [label]="
-                        (
-                          selectedLocationForDrawer()!.content_skus ?? 0
-                        ).toString()
-                      "
-                      icon="pi pi-tag"
-                      [pTooltip]="'labels.sku' | translate"
-                      styleClass="p-chip-sm bg-blue-50 text-blue-700"
-                    />
-
-                    <p-chip
-                      [pTooltip]="'labels.units' | translate"
-                      styleClass="p-chip-sm bg-blue-50 text-blue-700 px-3 text-base"
-                    >
-                      <span class="flex items-center gap-2">
-                        <span class="font-bold text-lg">U</span>
-                        <span class="font-mono text-base">{{
-                          selectedLocationForDrawer()!.content_units ?? 0
-                        }}</span>
-                      </span>
-                    </p-chip>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Generate / Add bin / Bin Planner buttons -->
-          <div class="flex justify-end gap-2 mb-3">
-            @if (selectedBins().length > 0) {
+      @if (selectedLocationForDrawer(); as loc) {
+        <div class="card bin-panel">
+          <!-- Header: back + location identity + totals -->
+          <div class="bin-panel-header">
+            <div class="flex items-center gap-3 min-w-0">
               <p-button
-                [label]="'labels.generate_labels' | translate"
-                icon="pi pi-print"
+                icon="pi pi-arrow-left"
+                [rounded]="true"
+                [text]="true"
                 severity="secondary"
+                (onClick)="closeBinTree()"
+                [pTooltip]="'preferences.bin.back_to_locations' | translate"
+                [ariaLabel]="'preferences.bin.back_to_locations' | translate"
+              />
+              <div class="min-w-0">
+                <div class="text-xs uppercase tracking-wide text-surface-500">
+                  {{ 'preferences.bin.title_bins' | translate }}
+                </div>
+                <h3 class="m-0 text-xl font-bold truncate">{{ loc.location_code }}</h3>
+                <div class="flex items-center gap-2 flex-wrap text-sm text-surface-500 mt-1">
+                  <span><i class="pi pi-building text-xs mr-1"></i>{{ loc.facility_name || '—' }}</span>
+                  @if (loc.zone_id) {
+                    <span aria-hidden="true">·</span>
+                    <span>{{ getZoneName(loc.zone_id) }}</span>
+                  }
+                  <base-status-badge
+                    [value]="getCategoryCode(loc.operational_category_code || loc.operational_category_id)"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="header-stats">
+              <div class="header-stat">
+                <span class="value">{{ binNodeCount() }}</span>
+                <span class="label">{{ 'labels.bin_qty' | translate }}</span>
+              </div>
+              <div class="header-stat">
+                <span class="value">{{ loc.content_kardex ?? 0 }}</span>
+                <span class="label">{{ 'labels.kardex' | translate }}</span>
+              </div>
+              <div class="header-stat">
+                <span class="value">{{ loc.content_skus ?? 0 }}</span>
+                <span class="label">{{ 'labels.sku' | translate }}</span>
+              </div>
+              <div class="header-stat">
+                <span class="value">{{ (loc.content_units ?? 0) | number: '1.0-0' }}</span>
+                <span class="label">{{ 'labels.units' | translate }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Toolbar: selection on the left, actions on the right -->
+          <div class="bin-toolbar">
+            <div class="flex items-center gap-3 flex-wrap">
+              <div class="flex items-center gap-1">
+                <p-button
+                  [label]="'preferences.bin.select_all' | translate"
+                  severity="secondary"
+                  size="small"
+                  [text]="true"
+                  (onClick)="selectAllBins()"
+                  [disabled]="binTreeData().length === 0"
+                />
+                <p-button
+                  [label]="'preferences.bin.select_none' | translate"
+                  severity="secondary"
+                  size="small"
+                  [text]="true"
+                  (onClick)="clearBinSelection()"
+                  [disabled]="selectedBins().length === 0"
+                />
+              </div>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <p-toggleSwitch
+                  [ngModel]="includeNestedBins()"
+                  (ngModelChange)="onIncludeNestedBinsChange($event)"
+                />
+                <span class="text-sm text-surface-500">
+                  {{ 'preferences.bin.include_nested' | translate }}
+                </span>
+              </label>
+              @if (selectedBins().length > 0) {
+                <span class="text-sm font-semibold text-primary">
+                  {{ 'preferences.bin.selected_count' | translate: { count: selectedBins().length } }}
+                </span>
+              }
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap">
+              @if (selectedBins().length > 0) {
+                <p-button
+                  [label]="'labels.generate_labels' | translate"
+                  icon="pi pi-print"
+                  severity="secondary"
+                  [outlined]="true"
+                  size="small"
+                  (onClick)="openBinLabelDialog()"
+                  [badge]="selectedBins().length.toString()"
+                  badgeSeverity="primary"
+                />
+              }
+              <!-- Temporarily hidden: Bin Planner
+              <p-button
+                [label]="'preferences.bin_planner.title' | translate"
+                icon="pi pi-th-large"
+                severity="secondary"
+                size="small"
                 [outlined]="true"
-                size="small"
-                (onClick)="openBinLabelDialog()"
-                [badge]="selectedBins().length.toString()"
-                badgeSeverity="primary"
+                (onClick)="onOpenBinPlanner()"
               />
-            }
-            <p-button
-              label="Bin Planner"
-              icon="pi pi-th-large"
-              severity="info"
-              size="small"
-              [outlined]="true"
-              (onClick)="onOpenBinPlanner()"
-            />
-            <p-button
-              [label]="'preferences.bin.add_bin' | translate"
-              icon="pi pi-plus"
-              severity="success"
-              size="small"
-              (onClick)="onAddBin()"
-            />
-          </div>
-
-          <!-- Selection controls -->
-          <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
-            <div class="flex items-center gap-2">
-              <p-toggleSwitch
-                [ngModel]="includeNestedBins()"
-                (ngModelChange)="onIncludeNestedBinsChange($event)"
-              />
-              <span class="text-sm text-color-secondary">
-                {{ 'preferences.bin.include_nested' | translate }}
-              </span>
-            </div>
-            <div class="flex items-center gap-2">
+              -->
               <p-button
-                [label]="'preferences.bin.select_all' | translate"
-                severity="secondary"
+                [label]="'preferences.bin.add_bin' | translate"
+                icon="pi pi-plus"
                 size="small"
-                [text]="true"
-                (onClick)="selectAllBins()"
-              />
-              <p-button
-                [label]="'preferences.bin.select_none' | translate"
-                severity="secondary"
-                size="small"
-                [text]="true"
-                (onClick)="clearBinSelection()"
-                [disabled]="selectedBins().length === 0"
+                (onClick)="onAddBin()"
               />
             </div>
           </div>
 
           <!-- Loading -->
           @if (binLoading()) {
-            <div class="flex justify-center p-6">
-              <i class="pi pi-spin pi-spinner text-2xl text-primary"></i>
+            <div class="flex flex-col gap-2 py-2">
+              @for (i of [1, 2, 3, 4]; track i) {
+                <p-skeleton height="2.5rem" />
+              }
             </div>
           }
 
           <!-- Tree -->
           @if (!binLoading() && binTreeData().length > 0) {
             <p-tree
+              styleClass="bin-tree"
               [value]="binTreeData()"
               [style]="{ width: '100%' }"
               selectionMode="checkbox"
@@ -679,101 +607,116 @@
               [filterPlaceholder]="'preferences.bin.search_lpn' | translate"
             >
               <ng-template let-node pTemplate="default">
-                <div class="flex items-center w-full gap-2">
-                  <div class="flex-grow-1 flex items-center gap-2 flex-wrap">
-                    <span class="font-semibold">{{ node.label }}</span>
+                <div class="bin-node">
+                  <div class="flex items-center gap-3 min-w-0 flex-1 flex-wrap">
+                    <span class="font-semibold font-mono truncate">{{ node.label }}</span>
 
                     @if (node.data.simulated) {
-                      <span
-                        class="text-xs px-2 py-1 border-round font-semibold"
-                        style="background: rgba(245,158,11,0.15); color: #F59E0B; border: 1px solid rgba(245,158,11,0.3);"
-                      >
-                        ⚡ Simulated
+                      <span class="simulated-badge">
+                        <i class="pi pi-bolt text-xs"></i>
+                        {{ 'preferences.bin.simulated' | translate }}
                       </span>
                     } @else {
-                      <span
-                        class="text-xs text-color-secondary surface-200 px-2 py-1 border-round"
-                      >
-                        {{ node.data.type }}
-                      </span>
-                      <p-chip
-                        [label]="node.data.content_kardex.toString()"
-                        icon="pi pi-clipboard"
-                        [pTooltip]="'labels.kardex' | translate"
-                        styleClass="p-chip-sm"
-                      />
-                      <p-chip
-                        [label]="node.data.content_skus.toString()"
-                        icon="pi pi-tag"
-                        [pTooltip]="'labels.sku' | translate"
-                        styleClass="p-chip-sm"
-                      />
-                      <p-chip styleClass="p-chip-sm">
-                        <span class="flex items-center gap-1">
-                          <span class="font-bold">U</span>
-                          <span class="font-mono">{{
-                            node.data.content_units
-                          }}</span>
+                      <div class="content-stats">
+                        <span
+                          class="stat"
+                          [class.is-zero]="!node.data.content_kardex"
+                          [pTooltip]="'labels.kardex' | translate"
+                        >
+                          <i class="pi pi-clipboard"></i>{{ node.data.content_kardex || 0 }}
                         </span>
-                      </p-chip>
+                        <span
+                          class="stat"
+                          [class.is-zero]="!node.data.content_skus"
+                          [pTooltip]="'labels.sku' | translate"
+                        >
+                          <i class="pi pi-tag"></i>{{ node.data.content_skus || 0 }}
+                        </span>
+                        <span
+                          class="stat"
+                          [class.is-zero]="!node.data.content_units"
+                          [pTooltip]="'labels.units' | translate"
+                        >
+                          <b>U</b>{{ (node.data.content_units || 0) | number: '1.0-0' }}
+                        </span>
+                      </div>
                     }
                   </div>
 
-                  @if (!node.data.simulated) {
-                      <div class="flex items-center gap-1 flex-shrink-0">
-                        <p-button
-                          icon="pi pi-plus"
-                          [rounded]="true"
-                          severity="success"
-                          [text]="true"
-                          size="small"
-                          [pTooltip]="'preferences.bin.add_bin' | translate"
-                          (onClick)="onAddChildBin(node.data)"
-                        />
-                        <p-button
-                          icon="pi pi-pencil"
-                          [rounded]="true"
-                          severity="info"
-                          [text]="true"
-                          size="small"
-                          pTooltip="Edit"
-                          (onClick)="onEditBin(node.data)"
-                        />
-                        <p-button
-                          icon="pi pi-trash"
-                          [rounded]="true"
-                          severity="danger"
-                          [text]="true"
-                          size="small"
-                          pTooltip="Delete"
-                          (onClick)="onDeleteBin(node.data)"
-                        />
-                      </div>
+                  <div class="bin-node-actions">
+                    @if (!node.data.simulated) {
+                      <p-button
+                        icon="pi pi-plus"
+                        [rounded]="true"
+                        severity="secondary"
+                        [text]="true"
+                        size="small"
+                        [pTooltip]="'preferences.bin.add_child_bin' | translate"
+                        [ariaLabel]="'preferences.bin.add_child_bin' | translate"
+                        (onClick)="onAddChildBin(node.data)"
+                      />
+                      <p-button
+                        icon="pi pi-pencil"
+                        [rounded]="true"
+                        severity="secondary"
+                        [text]="true"
+                        size="small"
+                        [pTooltip]="'labels.edit' | translate"
+                        [ariaLabel]="'labels.edit' | translate"
+                        (onClick)="onEditBin(node.data)"
+                      />
+                      <p-button
+                        icon="pi pi-trash"
+                        [rounded]="true"
+                        severity="danger"
+                        [text]="true"
+                        size="small"
+                        [pTooltip]="'labels.delete' | translate"
+                        [ariaLabel]="'labels.delete' | translate"
+                        (onClick)="onDeleteBin(node.data)"
+                      />
                     } @else {
-                      <div class="flex items-center gap-1 flex-shrink-0">
-                        <p-button
-                          icon="pi pi-trash"
-                          [rounded]="true"
-                          severity="secondary"
-                          [text]="true"
-                          size="small"
-                          pTooltip="Remove from preview"
-                          (onClick)="onRemoveSimulatedBin(node.key)"
-                        />
-                      </div>
+                      <p-button
+                        icon="pi pi-times"
+                        [rounded]="true"
+                        severity="secondary"
+                        [text]="true"
+                        size="small"
+                        [pTooltip]="'preferences.bin.remove_preview' | translate"
+                        [ariaLabel]="'preferences.bin.remove_preview' | translate"
+                        (onClick)="onRemoveSimulatedBin(node.key)"
+                      />
                     }
+                  </div>
                 </div>
               </ng-template>
             </p-tree>
           }
 
-          <!-- Empty -->
+          <!-- Empty: say so and offer the next step -->
           @if (!binLoading() && binTreeData().length === 0) {
-            <div class="text-center p-6">
-              <i class="pi pi-inbox text-4xl text-color-secondary mb-3"></i>
-              <p class="text-color-secondary m-0">
-                {{ 'labels.no_tree_data_found' | translate }}
-              </p>
+            <div class="bin-empty">
+              <i class="pi pi-box text-4xl text-surface-400"></i>
+              <p class="font-semibold m-0">{{ 'preferences.bin.empty_title' | translate }}</p>
+              <p class="text-sm text-surface-500 m-0">{{ 'preferences.bin.empty_hint' | translate }}</p>
+              <div class="flex gap-2 mt-2">
+                <p-button
+                  [label]="'preferences.bin.add_bin' | translate"
+                  icon="pi pi-plus"
+                  size="small"
+                  (onClick)="onAddBin()"
+                />
+                <!-- Temporarily hidden: Bin Planner
+                <p-button
+                  [label]="'preferences.bin_planner.title' | translate"
+                  icon="pi pi-th-large"
+                  severity="secondary"
+                  [outlined]="true"
+                  size="small"
+                  (onClick)="onOpenBinPlanner()"
+                />
+                -->
+              </div>
             </div>
           }
         </div>
@@ -859,7 +802,7 @@
         <label for="locations-mobile-filter-facility" class="text-sm font-medium text-surface-600">
           {{ 'labels.facility' | translate }}
         </label>
-        <shipedge-filter-multiselect-panel
+        <nuvex-filter-multiselect-panel
           id="locations-mobile-filter-facility"
           [options]="facilityFilterOptions()"
           optionLabel="name"
@@ -880,7 +823,7 @@
         <label for="locations-mobile-filter-zone" class="text-sm font-medium text-surface-600">
           {{ 'preferences.location.zone' | translate }}
         </label>
-        <shipedge-filter-multiselect-panel
+        <nuvex-filter-multiselect-panel
           id="locations-mobile-filter-zone"
           [options]="zones()"
           optionLabel="name"
@@ -901,7 +844,7 @@
         <label for="locations-mobile-filter-location" class="text-sm font-medium text-surface-600">
           {{ 'labels.location' | translate }}
         </label>
-        <shipedge-filter-text-input
+        <nuvex-filter-text-input
           id="locations-mobile-filter-location"
           [value]="getActiveFilterValue('location_code')"
           [placeholder]="'labels.location' | translate"
@@ -917,7 +860,7 @@
         <label for="locations-mobile-filter-category" class="text-sm font-medium text-surface-600">
           {{ 'preferences.location.category' | translate }}
         </label>
-        <shipedge-filter-multiselect-panel
+        <nuvex-filter-multiselect-panel
           id="locations-mobile-filter-category"
           [options]="operationalCategories()"
           [optionLabel]="'code'"
@@ -938,7 +881,7 @@
         <label for="locations-mobile-filter-type" class="text-sm font-medium text-surface-600">
           {{ 'preferences.location.type' | translate }}
         </label>
-        <shipedge-filter-multiselect-panel
+        <nuvex-filter-multiselect-panel
           id="locations-mobile-filter-type"
           [options]="locationProfiles()"
           optionLabel="name"
@@ -958,7 +901,7 @@
         <label for="locations-mobile-filter-status" class="text-sm font-medium text-surface-600">
           {{ 'labels.status' | translate }}
         </label>
-        <shipedge-filter-multiselect-panel
+        <nuvex-filter-multiselect-panel
           id="locations-mobile-filter-status"
           [options]="[
             { label: 'Active', value: true },

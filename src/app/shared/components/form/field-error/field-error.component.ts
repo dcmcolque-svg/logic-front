@@ -28,7 +28,7 @@ import { TranslateService } from '@ngx-translate/core'
   standalone: true,
   template: `
     @if (show) {
-      <small class="text-red-500 text-xs mt-0.5 block">{{ message }}</small>
+      <small role="alert" class="text-red-500 text-xs mt-0.5 block">{{ message }}</small>
     }
   `,
 })

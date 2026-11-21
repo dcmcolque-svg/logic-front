@@ -1,3 +1,5 @@
+import { facilityDayFilters } from '@/app/shared/utils/time-zone.util'
+import { FacilityDatePipe } from '@/app/shared/pipes/facility-date.pipe'
 import { Component, effect, inject, OnInit, signal, computed, ViewChild } from '@angular/core'
 import { Router } from '@angular/router'
 import { CommonModule } from '@angular/common'
@@ -77,6 +79,7 @@ import { provideTableColumns } from '@/app/shared/services/table-columns.bus'
   selector: 'app-parcels',
   standalone: true,
   imports: [
+    FacilityDatePipe,
     CommonModule,
     FormsModule,
     TranslateModule,
@@ -116,13 +119,13 @@ export default class ParcelsComponent implements OnInit {
   private readonly tableState = inject(TableStateService)
   private readonly filterPresetService = inject(FilterPresetService)
   private readonly router = inject(Router)
-  private readonly STATE_KEY = 'binlogic:parcels'
+  private readonly STATE_KEY = 'logic:parcels'
   readonly PRESET_PAGE_KEY = 'parcels'
 
   activeFilters = signal<ActiveFilterChip[]>([])
   /** Initialized from localStorage at field-init time so [initialFilters] is correct when BaseDataTable mounts */
   protected activeBackendFilters: Record<string, any> =
-    (inject(TableStateService).load('binlogic:parcels')?.filters ?? {}) as Record<string, any>
+    (inject(TableStateService).load('logic:parcels')?.filters ?? {}) as Record<string, any>
 
   /** Committed multiselect values for display/chip sync */
   facilityFilter = signal<string[]>([])
@@ -559,7 +562,7 @@ export default class ParcelsComponent implements OnInit {
           ? [{ field: this.mapSortField(sort.field), order: sort.order === 'asc' ? 1 : -1 }]
           : [{ field: 'created_at', order: -1 }],
       },
-      filter: scopeApiFilter(apiFilter, this.facilityScope.apiValue(), { scopeField: FACILITY_SCOPE_FIELD }),
+      filter: scopeApiFilter(facilityDayFilters(apiFilter), this.facilityScope.apiValue(), { scopeField: FACILITY_SCOPE_FIELD }),
     }
   }
 

@@ -1,3 +1,4 @@
+import { CostingCurrency } from '@/app/shared/utils/costing.util'
 /**
  * Tracecards domain types — mirrors the v2 tracecards API contracts.
  *
@@ -66,6 +67,12 @@ export interface TracecardItem {
   expir: string | null
   status: string
   updated_at: string | null
+  // Costing — OWNER only; null when the facility does not cost
+  /** Weighted average cost of the SKU in this facility */
+  avg_cost?: number | null
+  /** qty_on_hand × avg_cost */
+  cost_value?: number | null
+  cost_currency?: CostingCurrency | null
 }
 
 // ============================================================
@@ -136,6 +143,129 @@ export interface CompanyListResponse {
 }
 
 // ============================================================
+// Move / Recount (POST /v2/inventory/move, /v2/inventory/recount)
+// ============================================================
+
+/**
+ * Body of POST /v2/inventory/move. At least one target is required:
+ * location only → loose stock; container only → the container's location;
+ * both → the container must already be at that location.
+ */
+export interface MoveInput {
+  source_kardex_id: string
+  target_location_code?: string
+  target_container_lpn?: string
+  /** Units to move — strictly positive, at most qty_on_hand − qty_reserved. */
+  qty: number
+  /** Operator comment, max 500 characters; stored in wms_movement_flow.notes. */
+  notes?: string
+}
+
+export interface MoveResult {
+  source_kardex_id: string
+  target_kardex_id: string
+  qty: number
+  source_qty_after: number
+  target_qty_after: number
+}
+
+/** Body of POST /v2/inventory/recount. `qty` is a delta added to qty_on_hand. */
+export interface RecountInput {
+  kardex_id: string
+  qty: number
+  reason_code?: string
+}
+
+export interface RecountResult {
+  adjustment_id: string
+  kardex_id: string
+  qty_previous: number
+  qty_new: number
+  qty_delta: number
+}
+
+/**
+ * Body of POST /v2/inventory/block. Blocks the whole tracecard (all of
+ * qty_on_hand): it stays on hand but cannot be reserved, moved or recounted.
+ */
+export interface BlockInput {
+  kardex_id: string
+  /** Upper-case code (A-Z, 0-9, _ -), 2-50 chars — e.g. DAMAGED. */
+  reason_code: string
+  notes?: string
+}
+
+export interface BlockResult {
+  hold_id: string
+  kardex_id: string
+  status: string
+  qty_on_hand: number
+  reason_code: string
+  notes: string | null
+  blocked_at: string
+}
+
+/** Body of POST /v2/inventory/unblock — releases the ACTIVE hold. */
+export interface UnblockInput {
+  kardex_id: string
+}
+
+export interface UnblockResult {
+  hold_id: string
+  kardex_id: string
+  status: string
+  qty_on_hand: number
+  reason_code: string
+  released_at: string
+  /** YYYY-MM-DD when the tracecard has an expiration date. */
+  expir: string | null
+  /** The lot is already expired: unblocking is allowed, but the user should know. */
+  expired: boolean
+}
+
+/** One order in `meta.orders` of BLOCK_HAS_RESERVATIONS. */
+export interface ReservingOrder {
+  order_id: string
+  order_number: string
+  order_status: string
+  qty_allocated: number
+}
+
+/** Slim projection of POST /v2/wms/location/list (destination picker). */
+export interface LocationOption {
+  id: string
+  location_code: string
+  operational_category_code?: string | null
+}
+
+/** Raw node of POST /v2/wms/container/tree. */
+export interface ContainerTreeNode {
+  id: string
+  lpn_code: string
+  type: string
+  content_units: number
+  children?: ContainerTreeNode[]
+}
+
+/** Container (LPN) of a location, flattened; depth 0 = directly in the location. */
+export interface ContainerOption {
+  id: string
+  lpn_code: string
+  type: string
+  content_units: number
+  depth: number
+}
+
+/** v2 AppError body as rethrown by the error interceptor. */
+export interface AppErrorBody {
+  code?: string
+  message?: string
+  http_status?: number
+  errors?: Array<{ field: string; rule: string }>
+  meta?: Record<string, unknown>
+}
+
+// ============================================================
 // Kardex Flow (history)
 // ============================================================
 
@@ -150,6 +280,12 @@ export interface KardexFlowItem {
   user_id: string | null
   event_code: string | null // 12-char business alias; null on rows written before it existed
   created_at: string
+  // Costs — OWNER only (omitted for other roles); null when the facility does not cost
+  unit_cost?: number | null
+  /** qty_change × unit_cost — negative on exits */
+  total_cost?: number | null
+  cost_source?: string | null
+  currency?: CostingCurrency | null
   // Joined fields
   tracecard: string
   sku: string
@@ -170,6 +306,7 @@ export interface KardexFlowItem {
   reference_number: string | null // OMS_ORDER → oms_orders.customer_po
   adjustment_reason: string | null // INV_ADJUSTMENT → inv_adjustments.reason_code
   related_location_code: string | null // INV_KARDEX (move) → counterpart location
+  move_notes?: string | null // MOVE_OUT / MOVE_IN → wms_movement_flow.notes (null on older moves)
 }
 
 /** Which reference-document section the history detail drawer shows. */

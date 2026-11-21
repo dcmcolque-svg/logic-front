@@ -36,6 +36,7 @@ import {
     SkuUpdateInput,
     ContainerProfile,
 } from '../../packaging.types';
+import { revealInvalid } from '@/app/shared/utils/form.util'
 
 /**
  * Upper bound for the quantity field, enforced only by the reactive validator.
@@ -88,8 +89,6 @@ export class PackagingDialogComponent implements OnInit {
     private readonly packagingService = inject(PackagingService);
     private readonly facilitiesService = inject(FacilitiesService);
     private readonly messageService = inject(MessageEdgeService);
-    /** Exposed for template binding on [max]. */
-    protected readonly MAX_QTY = MAX_QTY;
 
     form!: FormGroup;
     isEditMode = false;
@@ -173,10 +172,7 @@ export class PackagingDialogComponent implements OnInit {
     }
 
     onSave(): void {
-        if (this.form.invalid) {
-            this.form.markAllAsTouched();
-            return;
-        }
+        if (revealInvalid(this.form)) return;
         if (this.saving()) return;
         this.saving.set(true);
 

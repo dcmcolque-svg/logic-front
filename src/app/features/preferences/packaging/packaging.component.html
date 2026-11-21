@@ -2,7 +2,6 @@
 
 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
     <div>
-        <h5 class="text-2xl font-semibold m-0 mb-1">{{ 'packaging.title' | translate }}</h5>
         <p class="text-surface-500 text-sm m-0">{{ 'packaging.subtitle' | translate }}</p>
     </div>
     <div class="flex gap-2">
@@ -35,6 +34,7 @@
         [activeFilterChips]="activeFilters()"
         (stateChange)="onTableStateChange($event)"
         (chipRemoved)="removeFilterChip($event)"
+        (clearAllFilters)="clearFilters()"
     >
 
         <!-- Paginator left: column toggle -->
@@ -89,7 +89,7 @@
                     @switch (col.field) {
 
                         @case ('facility') {
-                            <shipedge-filter-multiselect-panel
+                            <nuvex-filter-multiselect-panel
                                 [options]="getFacilityOptions()"
                                 optionLabel="label"
                                 optionValue="value"
@@ -104,7 +104,7 @@
 
 
                         @case ('barcode') {
-                            <shipedge-filter-text-input
+                            <nuvex-filter-text-input
                                 [value]="getActiveFilterValue('barcode')"
                                 [matchMode]="getActiveFilterMatchMode('barcode')"
                                 [placeholder]="'packaging.columns.barcode' | translate"
@@ -114,7 +114,7 @@
                         }
 
                         @case ('package_type') {
-                            <shipedge-filter-multiselect-panel
+                            <nuvex-filter-multiselect-panel
                                 [options]="getContainerProfileOptions()"
                                 optionLabel="label"
                                 optionValue="value"
@@ -127,7 +127,7 @@
                         }
 
                         @case ('sku_name') {
-                            <shipedge-filter-text-input
+                            <nuvex-filter-text-input
                                 [value]="getActiveFilterValue('sku_name')"
                                 [matchMode]="getActiveFilterMatchMode('sku_name')"
                                 [placeholder]="'packaging.columns.name' | translate"
@@ -137,7 +137,7 @@
                         }
 
                         @case ('sku_description') {
-                            <shipedge-filter-text-input
+                            <nuvex-filter-text-input
                                 [value]="getActiveFilterValue('sku_description')"
                                 [matchMode]="getActiveFilterMatchMode('sku_description')"
                                 [placeholder]="'packaging.columns.description' | translate"
@@ -147,7 +147,7 @@
                         }
 
                         @case ('quantity') {
-                            <shipedge-filter-text-input
+                            <nuvex-filter-text-input
                                 [value]="getActiveFilterValue('quantity')"
                                 [matchMode]="getActiveFilterMatchMode('quantity')"
                                 [placeholder]="'packaging.columns.quantity' | translate"
@@ -157,7 +157,7 @@
                         }
 
                         @case ('weight') {
-                            <shipedge-filter-text-input
+                            <nuvex-filter-text-input
                                 [value]="getActiveFilterValue('weight')"
                                 [matchMode]="getActiveFilterMatchMode('weight')"
                                 [placeholder]="'packaging.columns.weight' | translate"
@@ -167,7 +167,7 @@
                         }
 
                         @case ('location') {
-                            <shipedge-filter-text-input
+                            <nuvex-filter-text-input
                                 [value]="getActiveFilterValue('location')"
                                 [matchMode]="getActiveFilterMatchMode('location')"
                                 [placeholder]="'packaging.columns.location' | translate"

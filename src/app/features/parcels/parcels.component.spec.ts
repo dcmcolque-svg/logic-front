@@ -66,6 +66,7 @@ describe('ParcelsComponent — tracking number visibility', () => {
 
     // FacilityScopeService stub — must include selectedIds used by BaseDataTable
     facilityScopeStub = {
+      zone: () => 'America/La_Paz', zoneOf: () => 'America/La_Paz', mixedZones: () => false, load: () => {},
       inScope: signal<{ id: string; name: string }[]>([]),
       includesNoFacility: signal(true),
       apiValue: signal(null),

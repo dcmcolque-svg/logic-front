@@ -21,12 +21,15 @@ export interface BrandingCreateInput {
   theme_name?: string
   logo_light_url?: string | null
   logo_dark_url?: string | null
+  ui_settings?: Record<string, unknown>
 }
 
 export interface BrandingUpdateInput {
   theme_name?: string
   logo_light_url?: string | null
   logo_dark_url?: string | null
+  /** Replaces the whole object: send it merged with the stored one. */
+  ui_settings?: Record<string, unknown>
 }
 
 /** Shape of the R2 upload result returned by POST /v2/operator-branding/logo/upload */

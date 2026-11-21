@@ -12,6 +12,8 @@ export interface ScopeFacility {
   name: string
   code?: string
   is_active?: boolean
+  /** IANA zone of the facility (core_facilities.time_zone), e.g. America/La_Paz. */
+  time_zone?: string
 }
 
 /**

@@ -18,7 +18,7 @@ import { TranslateLanService } from '../../../core/services/translate-lan.servic
 import { FiltersShip } from './filters.interface'
 
 @Component({
-  selector: 'shipedge-filter-clear',
+  selector: 'nuvex-filter-clear',
   standalone: true,
   imports: [CommonModule, ChipModule, FormsModule, TranslateModule],
   templateUrl: './filter-clear.component.html',

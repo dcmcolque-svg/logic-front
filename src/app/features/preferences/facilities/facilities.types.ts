@@ -1,3 +1,5 @@
+import { CostingSettings } from '@/app/shared/utils/costing.util';
+
 // ── Generic API Response ─────────────────────────────────────────────────────
 
 /** * Unifica el éxito y el error en un solo tipo. 
@@ -68,6 +70,8 @@ export interface FacilitySettings {
     delivery_pod_setting?: ActivityPODSettings;
     collect_pod_setting?: ActivityPODSettings;
     default_location?: DefaultLocationSetting;
+    /** Inventory costing. Absent = NONE. Only OWNER may change it; omit it to keep the stored value. */
+    costing?: CostingSettings;
 }
 
 // ── Error Handling ──────────────────────────────────────────────────────────
@@ -87,15 +91,6 @@ export interface ApiErrorResponse {
     errors?: ApiErrorDetail[];
 }
 
-/** Dropdown option for the Xenvio connection select */
-export interface OptionSelect {
-    id: string;
-    name: string;
-    company?: string;
-    /** Shown but not selectable (a connected location Xenvio did not list) */
-    disabled?: boolean;
-}
-
 /** Representa la entidad principal del JSON (Warehouse/Facility) */
 export interface Facility {
     id: string;
@@ -104,6 +99,8 @@ export interface Facility {
     operator_id: string;
     external_ref_id?: string;
     is_active: boolean;
+    /** IANA zone (core_facilities.time_zone): its local day and the times shown. */
+    time_zone?: string;
     created_at: string | Date;
     address: Address;
     settings: FacilitySettings;
@@ -152,23 +149,3 @@ export const FACILITY_COLUMNS: Column[] = [
     { field: 'is_active', header: 'Status' },
     { field: 'created_at', header: 'Created At' },
 ];
-
-// ── Xenvio Connection Types ──────────────────────────────────────────────────
-
-/** GET v2/integration/providers/xenvio/fulfillment-locations */
-export interface XenvioFulfillmentLocationsResponse {
-    data: { id: number; name: string; company?: string }[];
-}
-
-/** A facility's Xenvio fulfillment location (core_facility_integrations) */
-export interface XenvioFacility {
-    facility_id: string;
-    fulfillment_location_id: string;
-    name: string;
-    company?: string;
-}
-
-/** GET v2/integration/providers/xenvio/facilities */
-export interface XenvioFacilitiesResponse {
-    data: XenvioFacility[];
-}

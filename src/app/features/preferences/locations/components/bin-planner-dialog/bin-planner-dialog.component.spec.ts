@@ -1,6 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing'
 import { HttpClientTestingModule } from '@angular/common/http/testing'
-import { NoopAnimationsModule } from '@angular/platform-browser/animations'
 import { TranslateModule } from '@ngx-translate/core'
 import { of, throwError } from 'rxjs'
 
@@ -57,7 +56,6 @@ describe('BinPlannerDialogComponent', () => {
       imports: [
         BinPlannerDialogComponent,
         HttpClientTestingModule,
-        NoopAnimationsModule,
         TranslateModule.forRoot(),
       ],
       providers: [
@@ -95,8 +93,8 @@ describe('BinPlannerDialogComponent', () => {
     expect(component.nameFormat()).toBe('{loc}/{bin}')
   })
 
-  it('should default to BOX bin type', () => {
-    expect(component.binType()).toBe('BOX')
+  it('should default to BIN bin type', () => {
+    expect(component.binType()).toBe('BIN')
   })
 
   it('should have empty tags by default', () => {
@@ -206,15 +204,14 @@ describe('BinPlannerDialogComponent', () => {
       expect(component.gridError()).toBeTruthy()
     })
 
-    it('should reject changes that would exceed MAX_BINS', () => {
-      component.cols.set(25)
-      component.onRowsChange(25)  // 25*25 = 625, within 10000
-      // Now try cols that would be too many
-      component.rows.set(500)
-      component.cols.set(4)
-      // 500 * 21 = 10500 > 10000 → rejected
-      component.onColsChange(21)
-      expect(component.cols()).toBe(4)
+    // MAX_ROWS × MAX_COLS (25 × 25 = 625) is far below MAX_BINS, so the
+    // per-axis limits are what bound the grid; the dynamic max follows them.
+    it('caps the dynamic row/column max at MAX_ROWS / MAX_COLS', () => {
+      component.onRowsChange(25)
+      component.onColsChange(25)
+      expect(component.rows() * component.cols()).toBeLessThanOrEqual(component.MAX_BINS)
+      expect(component.maxRows()).toBe(component.MAX_ROWS)
+      expect(component.maxCols()).toBe(component.MAX_COLS)
     })
   })
 
@@ -441,10 +438,10 @@ describe('BinPlannerDialogComponent', () => {
       component.applyEditBin()
 
       const unmodified = component.bins().filter(b => b.id !== bins[0].id)
-      expect(unmodified.every(b => b.type === 'BOX')).toBeTrue()
+      expect(unmodified.every(b => b.type === 'BIN')).toBeTrue()
     })
 
-    it('should open edit bin dialog with first selected bin values', () => {
+    it('should open edit bin dialog with BIN type and first selected bin tags', () => {
       const bins = component.bins()
       // Set different type/tag on first bin
       component.selectedBinIds.set(new Set([bins[0].id]))
@@ -456,7 +453,7 @@ describe('BinPlannerDialogComponent', () => {
       component.selectedBinIds.set(new Set([bins[0].id]))
       component.openEditBinDialog()
       expect(component.editBinDialogVisible()).toBeTrue()
-      expect(component.editBinType()).toBe('PALLET')
+      expect(component.editBinType()).toBe('BIN')
       expect(component.editBinTags()).toEqual(['hazmat'])
     })
   })
@@ -698,7 +695,7 @@ describe('BinPlannerDialogComponent', () => {
       expect(component.horizontalOrder()).toBe('btt')
       expect(component.nameFormat()).toBe('BIN-{bin}')
       expect(component.tags()).toEqual(['priority', 'rush'])
-      expect(component.binType()).toBe('TOTE')
+      expect(component.binType()).toBe('BIN')
       expect(component.colWidths).toEqual([2, 1, 1])
       expect(component.rowHeights).toEqual([1])
       expect(component._walls.length).toBe(2)
@@ -745,9 +742,17 @@ describe('BinPlannerDialogComponent', () => {
   // ─────────────────────────────────────────────────────────────────
   describe('action flows', () => {
     it('onApply should show confirmation dialog', () => {
+      component.rebuildGrid() // a plan needs bins to apply
       expect(component.confirmVisible()).toBeFalse()
       component.onApply()
       expect(component.confirmVisible()).toBeTrue()
+    })
+
+    it('onApply without bins shows an error instead of the confirmation', () => {
+      component.bins.set([])
+      component.onApply()
+      expect(component.confirmVisible()).toBeFalse()
+      expect(component.gridError()).toBeTruthy()
     })
 
     it('onCancelConfirm should hide confirmation dialog', () => {
@@ -964,9 +969,9 @@ describe('BinPlannerDialogComponent', () => {
   // binTypeOptions
   // ─────────────────────────────────────────────────────────────────
   describe('binTypeOptions', () => {
-    it('should provide BOX, PALLET, and TOTE options', () => {
+    it('should only provide the BIN option', () => {
       const values = component.binTypeOptions.map(o => o.value)
-      expect(values).toEqual(['BOX', 'PALLET', 'TOTE'])
+      expect(values).toEqual(['BIN'])
     })
   })
 

@@ -4,8 +4,7 @@
 <!-- ──────── Header ──────── -->
 <div class="flex justify-between items-start mb-4">
     <div>
-        <h2 class="text-2xl font-bold m-0 mb-1">{{ 'pages.receivings' | translate }}</h2>
-        <p class="text-surface-400 text-sm m-0">{{ 'labels.receivings_description' | translate }}</p>
+        <p class="text-surface-500 text-sm m-0">{{ 'labels.receivings_description' | translate }}</p>
     </div>
     <div class="flex gap-2">
         @if (selected().length > 0) {
@@ -71,6 +70,7 @@
         (stateChange)="onTableStateChange($event)"
         (selectionChange)="onSelectionChange($event)"
         (chipRemoved)="removeFilterChip($event)"
+        (clearAllFilters)="clearFilters()"
     >
         <!-- Toolbar: active filter chips (top-right) -->
         <ng-template #toolbar>
@@ -123,6 +123,13 @@
                 @case ('shipment') {
                     <div class="font-medium text-sm">{{ row.doc_number || '—' }}</div>
                 }
+                @case ('supplier') {
+                    @if (row.supplier_name) {
+                        <span class="text-sm">{{ row.supplier_name }}</span>
+                    } @else {
+                        <span class="text-surface-400 text-sm">—</span>
+                    }
+                }
                 @case ('doc_number') {
                     <div class="font-medium text-sm">{{ row.doc_number || '—' }}</div>
                 }
@@ -138,7 +145,12 @@
                 @case ('expected_arrival') {
                     @if (row.expected_arrival) {
                         <div class="flex flex-col text-nowrap">
-                            <span class="text-surface-400">{{ row.expected_arrival | date:'yyyy-MM-dd':'UTC' }}</span>
+                            @if (isOverdue(row)) {
+                                <span class="font-semibold text-red-600 dark:text-red-400">{{ row.expected_arrival | displayDate: 'date':'UTC' }}</span>
+                                <small class="text-red-600 dark:text-red-400"><i class="pi pi-clock mr-1 text-xs"></i>{{ 'inbound.overdue' | translate }}</small>
+                            } @else {
+                                <span class="text-surface-400">{{ row.expected_arrival | displayDate: 'date':'UTC' }}</span>
+                            }
                         </div>
                     } @else {
                         <span class="text-surface-400 text-sm">—</span>
@@ -147,8 +159,8 @@
                 @case ('delivery_date') {
                     @if (row.finished_at) {
                         <div class="flex flex-col text-nowrap">
-                            <span class="text-surface-400">{{ row.finished_at | date:'yyyy-MM-dd' }}</span>
-                            <span class="text-primary text-sm">{{ row.finished_at | date:'HH:mm' }}</span>
+                            <span class="text-surface-400">{{ row.finished_at | facilityDate:'date':row.facility_id }}</span>
+                            <span class="text-primary text-sm">{{ row.finished_at | facilityDate:'time':row.facility_id }}</span>
                         </div>
                     } @else {
                         <span class="text-surface-400 text-sm">—</span>
@@ -158,7 +170,18 @@
                     <span class="text-sm font-semibold">{{ row.qty_expected_sum }}</span>
                 }
                 @case ('received_qty') {
-                    <span class="text-sm font-semibold">{{ row.qty_received_sum }}</span>
+                    <!-- Received out of expected, with a thin progress bar -->
+                    <div class="flex flex-col gap-1 min-w-20">
+                        <span class="text-sm">
+                            <span class="font-semibold">{{ row.qty_received_sum }}</span>
+                            <span class="text-surface-400"> / {{ row.qty_expected_sum }}</span>
+                        </span>
+                        <div class="h-1 rounded-full bg-surface-200 dark:bg-surface-700 overflow-hidden">
+                            <div class="h-full rounded-full"
+                                [class]="receivedPct(row) >= 100 ? 'bg-green-500' : 'bg-primary'"
+                                [style.width.%]="receivedPct(row)"></div>
+                        </div>
+                    </div>
                 }
             }
         </ng-template>
@@ -188,7 +211,7 @@
 
                     @case ('facility_id') {
                         <th class="p-1" [style.width]="col.width">
-                            <shipedge-filter-multiselect-panel
+                            <nuvex-filter-multiselect-panel
                                 [options]="facilityFilterOptions()"
                                 optionLabel="name"
                                 optionValue="id"
@@ -201,10 +224,25 @@
                         </th>
                     }
 
+                    @case ('supplier_id') {
+                        <th class="p-1" [style.width]="col.width">
+                            <nuvex-filter-multiselect-panel
+                                [options]="supplierFilterOptions()"
+                                optionLabel="name"
+                                optionValue="id"
+                                [placeholder]="'labels.supplier' | translate"
+                                [showFilter]="true"
+                                [value]="getActiveFilterValue('supplier_id') ?? []"
+                                (apply)="onMultiselectApply('supplier_id', $event)"
+                                (clear)="onMultiselectClear('supplier_id')"
+                            />
+                        </th>
+                    }
+
                     @case ('status') {
                         <th class="p-1" [style.width]="col.width">
                             @if (translatedFilterOptionsMap[col.field]) {
-                                <shipedge-filter-multiselect-panel
+                                <nuvex-filter-multiselect-panel
                                     [options]="translatedFilterOptionsMap['status']"
                                     optionLabel="label"
                                     optionValue="value"
@@ -221,7 +259,7 @@
                     @default {
                         <th class="p-1" [style.width]="col.width">
                             @if (col.filterable && col.filterType === 'text') {
-                                <shipedge-filter-text-input
+                                <nuvex-filter-text-input
                                     [value]="getActiveFilterValue(col.field)"
                                     [placeholder]="col.translatedHeader || (col.header | translate)"
                                     [filterType]="col.filterType || 'text'"
@@ -229,7 +267,7 @@
                                 />
                             }
                             @if (col.filterable && col.filterType === 'date') {
-                                <shipedge-filter-date-input
+                                <nuvex-filter-date-input
                                     [value]="getActiveFilterValue(col.field)"
                                     [matchMode]="getActiveFilterMatchMode(col.field)"
                                     [placeholder]="col.translatedHeader || (col.header | translate)"

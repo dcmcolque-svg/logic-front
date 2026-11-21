@@ -1,3 +1,23 @@
+// === Private sign-up (POST /register) ===
+
+export interface RegisterRequest {
+  key: string
+  company_name: string
+  facility_name: string
+  facility_code: string
+  full_name: string
+  email: string
+  password: string
+  confirm_password: string
+}
+
+export interface RegisterResponse {
+  operator_id: string
+  facility_id: string
+  user_id: string
+  email: string
+}
+
 // === Auth Response (from SSO cookie) ===
 
 export interface AuthResponse {

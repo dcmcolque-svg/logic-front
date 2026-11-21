@@ -1,4 +1,4 @@
-import { Component, effect, inject, OnInit, signal } from '@angular/core'
+import { Component, effect, inject, OnInit, signal, isDevMode } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { RouterModule } from '@angular/router'
 import { MenuItem } from 'primeng/api'
@@ -40,7 +40,10 @@ export class AppMenu implements OnInit {
   }
 
   ngOnInit() {
-    this.menuService.setMenu(APP_MENU)
+    // The demo components showcase is for developers only
+    this.menuService.setMenu(
+      isDevMode() ? APP_MENU : APP_MENU.filter((item) => item.path !== '/demo')
+    )
   }
 
   private async loadTranslatedMenu() {

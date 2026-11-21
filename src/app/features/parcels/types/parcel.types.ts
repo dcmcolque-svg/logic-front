@@ -1,3 +1,4 @@
+import { CostingCurrency } from '@/app/shared/utils/costing.util'
 /**
  * Parcel domain types — mirrors the v2 outbound box API contracts.
  *
@@ -273,7 +274,25 @@ export interface ParcelDashboardSummary {
 /** Counters for the "Orders Shipped" dashboard panel. */
 export interface OrdersShippedSummary {
   orders_shipped: number
+  /** Sum across currencies — prefer revenue_by_currency. */
   total_revenue: number
+  /** Same number of days right before the period; absent for an open or instant range. */
+  prev_orders_shipped?: number
+  /** Revenue per facility currency (never added up across currencies). */
+  revenue_by_currency?: CurrencyAmount[]
+}
+
+/** An amount of one currency, with the previous period's when there is one. */
+export interface CurrencyAmount {
+  currency: CostingCurrency
+  total: number
+  prev_total?: number
+}
+
+/** Orders shipped on one day, in the facility's time zone. */
+export interface OrderDailyPoint {
+  day: string // yyyy-mm-dd
+  orders: number
 }
 
 /** Counters for the "Alerts" dashboard panel. */
@@ -286,16 +305,23 @@ export interface AlertsSummary {
 export interface OrderDashboardSummary {
   orders_shipped: OrdersShippedSummary
   alerts: AlertsSummary
+  /** One point per day with shipments; empty for an open period. */
+  daily?: OrderDailyPoint[]
 }
 
 // ── Inventory Dashboard types ─────────────────────────────────
 
 /** Response shape for GET /tracecards/dashboard/summary. */
 export interface InventoryDashboardSummary {
+  /** At retail_price */
   total_value: number
   skus: number
   units: number
   trace_cards: number
+  /** Inventory value at cost, one entry per currency — OWNER only (absent for other roles) */
+  cost_values?: { currency: CostingCurrency; total_value: number }[]
+  /** Value at retail_price per facility currency */
+  retail_values?: { currency: CostingCurrency; total_value: number }[]
 }
 
 // ── Location Dashboard types ──────────────────────────────────
@@ -315,5 +341,7 @@ export interface BestSellingItem {
   product_name: string
   qty_sold: number
   total_amount: number
+  /** Currency of total_amount (the facility's); a SKU sold in two currencies comes twice. */
+  currency?: CostingCurrency
   image_url: string | null
 }

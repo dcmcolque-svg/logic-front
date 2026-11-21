@@ -23,6 +23,11 @@
         list-style-type: none;
 
         .layout-root-menuitem {
+            // Breathing room between groups
+            & + .layout-root-menuitem {
+                margin-top: 0.5rem;
+            }
+
             > .layout-menuitem-root-text {
                 font-size: 0.857rem;
                 text-transform: uppercase;
@@ -85,6 +90,19 @@
 
                 &.active-route {
                     font-weight: 700;
+                    background: var(--v-menuitem-hover-bg);
+
+                    // Accent bar: currentColor so it reads on light, dark and primary sidebars
+                    &::before {
+                        content: "";
+                        position: absolute;
+                        left: 0;
+                        top: 20%;
+                        bottom: 20%;
+                        width: 3px;
+                        border-radius: 3px;
+                        background: currentColor;
+                    }
                 }
 
                 &:hover {

@@ -2,8 +2,15 @@
     display: block;
 }
 
+/* Hover is a neutral tint; selected rows a primary tint — so the two never look alike.
+   color-mix keeps both readable in light and dark mode. */
 :host ::ng-deep .p-datatable .p-datatable-tbody > tr:hover {
-    background: var(--p-highlight-background) !important;
+    background: var(--p-datatable-row-hover-background, var(--p-content-hover-background));
+}
+
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr.row-selected,
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr.row-selected:hover {
+    background: color-mix(in srgb, var(--p-primary-color) 14%, transparent);
 }
 
 /* Actions column: force narrow fixed width only when col-actions class is present */
@@ -82,4 +89,61 @@
     /* OR style — amber/orange to stand out */
     background-color: rgba(245, 158, 11, 0.15);
     color: #f59e0b;
+}
+
+/* ── Compact, refined density ─────────────────────────────────────── */
+:host ::ng-deep .p-datatable {
+    font-size: 0.9375rem;
+}
+
+/* Column headers: small, muted, spaced caps */
+:host ::ng-deep .p-datatable-thead > tr:first-child > th {
+    padding: 0.5rem 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--p-text-muted-color);
+    background: var(--p-content-background);
+    border-bottom: 1px solid var(--p-content-border-color);
+}
+
+/* Filter row: tight and borderless so it reads as part of the header */
+:host ::ng-deep .p-datatable-thead > tr:not(:first-child) > th {
+    padding: 0.25rem 0.375rem;
+    background: var(--p-content-background);
+    border-bottom: 1px solid var(--p-content-border-color);
+}
+:host ::ng-deep .p-datatable-thead > tr:not(:first-child) .p-inputtext {
+    padding-block: 0.25rem;
+    font-size: 0.8125rem;
+}
+
+/* Body cells: tight padding, hairline separators */
+:host ::ng-deep .p-datatable-tbody > tr > td {
+    padding: 0.375rem 0.625rem;
+    line-height: 1.35;
+    border-bottom: 1px solid color-mix(in srgb, var(--p-content-border-color) 60%, transparent);
+}
+:host ::ng-deep .p-datatable-tbody > tr:last-child > td {
+    border-bottom: none;
+}
+
+/* Numbers line up in columns */
+:host ::ng-deep .p-datatable-tbody > tr > td .font-mono {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Paginator: slimmer */
+:host ::ng-deep .p-datatable .p-paginator {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+}
+:host ::ng-deep .p-datatable .p-paginator .p-paginator-page,
+:host ::ng-deep .p-datatable .p-paginator .p-paginator-first,
+:host ::ng-deep .p-datatable .p-paginator .p-paginator-prev,
+:host ::ng-deep .p-datatable .p-paginator .p-paginator-next,
+:host ::ng-deep .p-datatable .p-paginator .p-paginator-last {
+    min-width: 2rem;
+    height: 2rem;
 }

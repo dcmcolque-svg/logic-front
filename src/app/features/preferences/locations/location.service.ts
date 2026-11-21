@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core'
 import { HttpClient } from '@angular/common/http'
-import { Observable } from 'rxjs'
+import { map, Observable } from 'rxjs'
 import { environment } from '@/environments/environment'
 import {
   Location,
@@ -166,10 +166,14 @@ export class LocationService {
 
   // === Container (bin) ===
 
+  /** Bins of a location: the API keeps only BIN containers, at every level. */
   getContainerTree(locationId: string): Observable<ContainerTreeNode[]> {
-    return this.http.post<ContainerTreeNode[]>(`${this.containerUrl}/tree`, {
-      location_id: locationId,
-    })
+    return this.http
+      .post<ContainerTreeNode[] | null>(`${this.containerUrl}/tree`, {
+        location_id: locationId,
+        type: 'BIN',
+      })
+      .pipe(map(res => res ?? []))
   }
 
   createContainer(input: ContainerCreateInput): Observable<Container> {

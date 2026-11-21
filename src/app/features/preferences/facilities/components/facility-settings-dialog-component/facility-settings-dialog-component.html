@@ -15,6 +15,105 @@
         <p-toggleSwitch id="set-auto-blocked" formControlName="auto_blocked_expired" />
     </div>
 
+    <!-- ══════════ Costing (OWNER only) ══════════ -->
+    <div formGroupName="costing" class="flex flex-col gap-0">
+        <div class="flex items-center gap-2 mb-4">
+            <i class="pi pi-wallet text-primary text-xl"></i>
+            <span class="text-lg font-semibold text-primary">{{ 'preferences.facilities.costing' | translate }}</span>
+            <i class="pi pi-info-circle text-surface-400 cursor-help"
+               [pTooltip]="'preferences.facilities.costing_tooltip' | translate"
+               tooltipPosition="right"
+               style="font-size: 1rem;"></i>
+            @if (!isOwner) {
+                <p-tag severity="secondary" [value]="'preferences.facilities.costing_owner_only' | translate" />
+            }
+        </div>
+
+        <div class="flex flex-row items-center justify-between gap-4 mb-4 px-1">
+            <label for="set-costing-method" class="text-base">
+                {{ 'preferences.facilities.costing_method' | translate }}
+            </label>
+            <p-select
+                inputId="set-costing-method"
+                formControlName="method"
+                [options]="costingMethodOptions"
+                optionValue="value"
+                optionLabel="label"
+                optionDisabled="disabled"
+                styleClass="w-56"
+                appendTo="body"
+            >
+                <ng-template #selectedItem let-opt>{{ opt.label | translate }}</ng-template>
+                <ng-template #item let-opt>
+                    {{ opt.label | translate }}
+                    @if (opt.disabled) {
+                        <span class="text-surface-400 text-xs ml-1">({{ 'preferences.facilities.costing_coming_soon' | translate }})</span>
+                    }
+                </ng-template>
+            </p-select>
+        </div>
+
+        <!-- Currency is set independently of the method (sales use it too) -->
+        <div class="flex flex-row items-center justify-between gap-4 mb-4 px-1">
+            <label for="set-costing-currency" class="text-base">
+                {{ 'preferences.facilities.costing_currency' | translate }}
+            </label>
+            <p-select
+                inputId="set-costing-currency"
+                formControlName="currency"
+                [options]="currencyOptions"
+                optionValue="value"
+                optionLabel="label"
+                styleClass="w-56"
+                appendTo="body"
+            />
+        </div>
+
+        @if (form.get('costing.method')?.value !== 'NONE') {
+            <div class="flex flex-row items-center justify-between mb-4 px-1">
+                <label for="set-costing-required" class="text-base">
+                    {{ 'preferences.facilities.cost_required_on_receiving' | translate }}
+                </label>
+                <p-toggleSwitch id="set-costing-required" formControlName="cost_required_on_receiving" />
+            </div>
+        }
+
+        <!-- Method / currency are applied with "Initialize costing", not with Update -->
+        @if (isOwner && costingChanged()) {
+            @let kind = costingChangeKind();
+            <div class="mb-4 mx-1 p-3 rounded-md border"
+                 [class.border-orange-300]="kind === 'start' || kind === 'blocked'"
+                 [class.bg-orange-50]="kind === 'start' || kind === 'blocked'"
+                 [class.border-surface-300]="kind === 'stop' || kind === 'currency'">
+                <p class="m-0 mb-3 text-sm">
+                    <i class="pi pi-exclamation-triangle mr-1"></i>
+                    {{ costingChangeMessageKey() | translate }}
+                </p>
+                <div class="flex justify-end gap-2">
+                    <p-button
+                        [label]="'common.cancel' | translate"
+                        severity="secondary" [text]="true" size="small"
+                        [disabled]="applyingCosting()"
+                        (onClick)="resetCostingForm()"
+                    />
+                    @if (kind !== 'blocked') {
+                        <p-button
+                            [label]="(kind === 'currency'
+                                ? 'preferences.facilities.costing_apply_currency'
+                                : confirmingCosting()
+                                    ? 'preferences.facilities.costing_confirm'
+                                    : 'preferences.facilities.costing_initialize') | translate"
+                            [severity]="confirmingCosting() ? 'warn' : 'primary'"
+                            size="small"
+                            [loading]="applyingCosting()"
+                            (onClick)="applyCosting()"
+                        />
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
     <!-- ══════════ Outbound ══════════ -->
     <div class="flex items-center gap-2 mb-4">
         <i class="pi pi-sliders-v text-primary text-xl"></i>
@@ -98,7 +197,8 @@
         </div>
     }
 
-    <!-- ══════════ Delivery POD Settings ══════════ -->
+    <!-- TEMPORARILY DISABLED: POD settings (delivery + customer pickup)
+    [══════════ Delivery POD Settings ══════════]
     <div formGroupName="delivery_pod_setting" class="flex flex-col gap-0">
         <div class="flex items-center gap-2 mb-4">
             <i class="pi pi-truck text-primary text-xl"></i>
@@ -135,7 +235,7 @@
             </div>
         }
 
-        <!-- GPS location toggle — always visible, independent of master switch -->
+        [GPS location toggle — always visible, independent of master switch]
         <div class="flex flex-row items-center justify-between mb-4 px-1">
         <label for="set-del-ubication" class="text-base">
                 {{ 'preferences.facilities.is_location_required' | translate }}
@@ -144,7 +244,7 @@
         </div>
     </div>
 
-    <!-- ══════════ Collect POD Settings ══════════ -->
+    [══════════ Collect POD Settings ══════════]
     <div formGroupName="collect_pod_setting" class="flex flex-col gap-0">
         <div class="flex items-center gap-2 mb-4">
             <i class="pi pi-shopping-bag text-primary text-xl"></i>
@@ -181,7 +281,7 @@
             </div>
         }
 
-        <!-- GPS location toggle — always visible, independent of master switch -->
+        [GPS location toggle — always visible, independent of master switch]
         <div class="flex flex-row items-center justify-between mb-4 px-1">
         <label for="set-col-ubication" class="text-base">
                 {{ 'preferences.facilities.is_location_required' | translate }}
@@ -189,6 +289,7 @@
             <p-toggleSwitch id="set-col-ubication" formControlName="is_location_required" />
         </div>
     </div>
+    -->
 
 </form>
 

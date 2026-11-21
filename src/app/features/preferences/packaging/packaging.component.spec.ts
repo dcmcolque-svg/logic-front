@@ -244,7 +244,7 @@ describe('PackagingComponent', () => {
             component.removeFilterChip('facility_id')
 
             expect(tableStateSpy.save).toHaveBeenCalledWith(
-                'binlogic:packaging',
+                'logic:packaging',
                 jasmine.objectContaining({ filters: jasmine.any(Object) }),
             )
         })
@@ -299,7 +299,7 @@ describe('PackagingComponent', () => {
             expect(internals.containerProfileFilter()).toEqual([])
             expect(internals.activeFilters()).toEqual([])
             expect(Object.keys(internals.activeRawFilters).length).toBe(0)
-            expect(tableStateSpy.clear).toHaveBeenCalledWith('binlogic:packaging')
+            expect(tableStateSpy.clear).toHaveBeenCalledWith('logic:packaging')
         })
 
         it('should reload the list after clearing all filters', async () => {

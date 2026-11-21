@@ -23,7 +23,7 @@ import { ButtonModule } from 'primeng/button'
  *
  * @example
  * ```html
- * <shipedge-filter-multiselect-panel
+ * <nuvex-filter-multiselect-panel
  *   [options]="statusOptions"
  *   optionLabel="label"
  *   optionValue="value"
@@ -36,7 +36,7 @@ import { ButtonModule } from 'primeng/button'
  * ```
  */
 @Component({
-  selector: 'shipedge-filter-multiselect-panel',
+  selector: 'nuvex-filter-multiselect-panel',
   standalone: true,
   imports: [CommonModule, FormsModule, TranslateModule, MultiSelectModule, ButtonModule],
   templateUrl: './filter-multiselect-panel.component.html',

@@ -244,14 +244,13 @@
 </p-dialog>
 
 <!-- ═══ Confirmation Dialog ═══ -->
-<p-dialog
-  [header]="'preferences.bin_planner.confirm_title' | translate"
-  [(visible)]="confirmVisible"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [style]="{ width: '420px' }"
-  [closable]="true"
+<base-dialog
+  [visible]="confirmVisible()"
+  header="preferences.bin_planner.confirm_title"
+  size="sm"
+  saveLabel="labels.confirm"
+  (save)="onConfirmApply()"
+  (hide)="onCancelConfirm()"
 >
   <div class="confirm-content">
     <div class="confirm-icon">
@@ -275,36 +274,20 @@
     }
     <p class="confirm-question">{{ 'preferences.bin_planner.confirm_proceed' | translate }}</p>
   </div>
-  <ng-template #footer>
-    <div class="confirm-actions">
-      <p-button
-        [label]="'labels.cancel' | translate"
-        severity="secondary"
-        [text]="true"
-        (onClick)="onCancelConfirm()"
-      />
-      <p-button
-        [label]="'labels.confirm' | translate"
-        icon="pi pi-check"
-        (onClick)="onConfirmApply()"
-      />
-    </div>
-  </ng-template>
-</p-dialog>
+</base-dialog>
 
 
 <!-- ═══ Bin Context Menu ═══ -->
 <p-contextMenu #binContextMenu [model]="contextMenuItems()" appendTo="body" />
 
 <!-- ═══ Edit Bin Type & Tags Dialog ═══ -->
-<p-dialog
-  [header]="'preferences.bin_planner.edit_bin_properties' | translate"
-  [(visible)]="editBinDialogVisible"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [style]="{ width: '380px' }"
-  [closable]="true"
+<base-dialog
+  [visible]="editBinDialogVisible()"
+  header="preferences.bin_planner.edit_bin_properties"
+  size="sm"
+  saveLabel="preferences.bin_planner.apply_plan"
+  (save)="applyEditBin()"
+  (hide)="editBinDialogVisible.set(false)"
 >
   <div class="edit-bin-content">
     <div class="control-group">
@@ -341,26 +324,11 @@
           class="tags-inline-input"
           [ngModel]="editBinTagInput()"
           (ngModelChange)="editBinTagInput.set($event)"
-          (keydown.enter)="addEditTag()"
+          (keydown.enter)="addEditTag(); $event.preventDefault()"
           placeholder="Type and press Enter"
         />
       </div>
     </div>
   </div>
 
-  <ng-template #footer>
-    <div class="confirm-actions">
-      <p-button
-        [label]="'labels.cancel' | translate"
-        severity="secondary"
-        [text]="true"
-        (onClick)="editBinDialogVisible.set(false)"
-      />
-      <p-button
-        [label]="'preferences.bin_planner.apply_plan' | translate"
-        icon="pi pi-check"
-        (onClick)="applyEditBin()"
-      />
-    </div>
-  </ng-template>
-</p-dialog>
+</base-dialog>

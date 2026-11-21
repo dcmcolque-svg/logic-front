@@ -210,7 +210,7 @@ import {
     .wl-code {
       margin: 0;
       padding: .625rem .75rem;
-      background: var(--surface-100);
+      background: var(--p-content-hover-background);
       border: 1px solid var(--surface-200);
       border-radius: .4rem;
       font-size: .72rem;
@@ -315,7 +315,6 @@ import {
                     appendTo="body"
                     [readonlyInput]="true"
                     [placeholder]="'labels.select_date' | translate"
-                    dateFormat="yy-mm-dd"
                   />
                   @if (selectedDate) {
                     <p-button

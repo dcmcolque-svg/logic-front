@@ -3,7 +3,7 @@
   @if (type() !== 'switch' && type() !== 'file') {
     <label [for]="fieldId()" class="block font-semibold mb-1 text-sm">
       {{ label() | translate }}
-      @if (required()) {
+      @if (isRequired()) {
         <span class="text-red-500 ml-0.5">*</span>
       }
     </label>
@@ -17,9 +17,11 @@
         type="text"
         pInputText
         [formControl]="control()"
+        [attr.aria-invalid]="showError()"
+        [attr.aria-describedby]="showError() ? errorId() : null"
         [placeholder]="placeholder() | translate"
         class="w-full"
-        [class.ng-invalid]="control().invalid && control().dirty"
+        [class.ng-invalid]="showError()"
       />
     }
     @case ('number') {
@@ -42,7 +44,6 @@
         [id]="fieldId()"
         [formControl]="control()"
         [placeholder]="placeholder() | translate"
-        dateFormat="yy-mm-dd"
         [showIcon]="true"
         [showButtonBar]="true"
         class="w-full"
@@ -60,11 +61,11 @@
         [placeholder]="placeholder() | translate"
         [filter]="true"
         [filterBy]="optionLabel()"
-        [showClear]="!required()"
+        [showClear]="!isRequired()"
         class="w-full"
         styleClass="w-full"
         appendTo="body"
-        [class.ng-invalid]="control().invalid && control().dirty"
+        [class.ng-invalid]="showError()"
       />
     }
     @case ('multiselect') {
@@ -81,7 +82,7 @@
         styleClass="w-full"
         appendTo="body"
         display="chip"
-        [class.ng-invalid]="control().invalid && control().dirty"
+        [class.ng-invalid]="showError()"
       />
     }
     @case ('textarea') {
@@ -89,11 +90,13 @@
         [id]="fieldId()"
         pTextarea
         [formControl]="control()"
+        [attr.aria-invalid]="showError()"
+        [attr.aria-describedby]="showError() ? errorId() : null"
         [placeholder]="placeholder() | translate"
         [rows]="4"
         class="w-full"
         [autoResize]="true"
-        [class.ng-invalid]="control().invalid && control().dirty"
+        [class.ng-invalid]="showError()"
       ></textarea>
     }
     @case ('password') {
@@ -118,7 +121,7 @@
     @case ('file') {
       <label [for]="fieldId()" class="block font-semibold mb-1 text-sm">
         {{ label() | translate }}
-        @if (required()) {
+        @if (isRequired()) {
           <span class="text-red-500 ml-0.5">*</span>
         }
       </label>
@@ -133,8 +136,8 @@
   }
 
   <!-- Validation errors (edge-frontend p-error pattern) -->
-  @if (control().invalid && control().dirty) {
-    <small class="text-red-500 text-xs mt-1 block">
+  @if (showError()) {
+    <small [id]="errorId()" role="alert" class="text-red-500 text-xs mt-1 block">
       @if (control().errors?.['required']) {
         {{ 'validation.required' | translate }}
       } @else if (control().errors?.['minlength']) {

@@ -112,55 +112,35 @@
     }
   </section>
 
-  <!-- Delete confirmation / in-use notice -->
+  <!-- Delete confirmation, or a notice when products still use the category -->
   @if (confirm(); as row) {
-    <p-dialog
-      [header]="(row.product_count > 0 ? 'catalog.category.cannot_delete' : 'catalog.category.confirm_delete') | translate"
-      [visible]="true"
-      (visibleChange)="!$event && confirm.set(null)"
-      [modal]="true"
-      [draggable]="false"
-      [resizable]="false"
-      [style]="{ width: '460px', maxWidth: 'calc(100vw - 2rem)' }"
-      appendTo="body"
-    >
-      <div class="flex gap-4 items-start">
-        <div
-          class="shrink-0 flex items-center justify-center w-12 h-12 rounded-full"
-          [class]="row.product_count > 0 ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'"
-        >
-          <i class="pi text-xl" [class]="row.product_count > 0 ? 'pi-exclamation-triangle' : 'pi-trash'" aria-hidden="true"></i>
-        </div>
-        <div>
-          <p class="mt-0 mb-2 font-semibold">{{ row.name }}</p>
-          <p class="m-0 text-muted-color leading-relaxed">
-            @if (row.product_count > 0) {
-              {{ 'catalog.category.in_use' | translate: { count: row.product_count } }}
-            } @else {
-              {{ 'catalog.category.delete_question' | translate }}
-            }
-          </p>
-        </div>
-      </div>
-      <ng-template #footer>
-        @if (row.product_count > 0) {
-          <p-button [label]="'catalog.category.understood' | translate" (onClick)="confirm.set(null)" />
-        } @else {
-          <p-button
-            [label]="'buttons.cancel' | translate"
-            severity="secondary"
-            [outlined]="true"
-            (onClick)="confirm.set(null)"
-          />
-          <p-button
-            [label]="'buttons.delete' | translate"
-            icon="pi pi-trash"
-            severity="danger"
-            [loading]="saving()"
-            (onClick)="remove(row)"
-          />
-        }
-      </ng-template>
-    </p-dialog>
+    @if (row.product_count > 0) {
+      <base-confirm-dialog
+        [visible]="true"
+        title="catalog.category.cannot_delete"
+        message="catalog.category.in_use"
+        [messageParams]="{ count: row.product_count }"
+        [subject]="row.name"
+        severity="warn"
+        [showCancel]="false"
+        confirmLabel="catalog.category.understood"
+        (confirm)="confirm.set(null)"
+        (hide)="confirm.set(null)"
+      />
+    } @else {
+      <base-confirm-dialog
+        [visible]="true"
+        title="catalog.category.confirm_delete"
+        message="catalog.category.delete_question"
+        [subject]="row.name"
+        severity="danger"
+        confirmLabel="buttons.delete"
+        confirmIcon="pi pi-trash"
+        cancelLabel="buttons.cancel"
+        [loading]="saving()"
+        (confirm)="remove(row)"
+        (hide)="confirm.set(null)"
+      />
+    }
   }
 </section>

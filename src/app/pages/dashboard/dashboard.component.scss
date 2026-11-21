@@ -1,512 +1,113 @@
-// ================================================================
-// Dashboard Page — Styles
-// Follows the binlogic design system (CSS variables from layout)
-// ================================================================
+// Dashboard: layout and spacing come from Tailwind + PrimeNG; only the pieces
+// that repeat (KPI tiles, quick actions) live here.
 
-.dashboard-page {
+.kpi-tile {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding: 1.5rem;
-}
-
-// ── Header ──────────────────────────────────────────────────────
-
-.dashboard-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-
-  &__title {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-
-    i {
-      font-size: 1.4rem;
-      color: var(--primary-color);
-    }
-
-    h1 {
-      margin: 0;
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--text-color);
-    }
-  }
-
-  &__controls {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    flex-wrap: wrap;
-  }
-}
-
-.selector-wrap {
-  ::ng-deep .selector-dropdown {
-    min-width: 13rem;
-  }
-}
-
-// Sentinel "All facilities" item styling
-.facility-all-item,
-.facility-all-selected {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-weight: 600;
-  color: var(--primary-color);
-
-  i {
-    font-size: 0.85rem;
-  }
-}
-
-// Date range dropdown item styling
-.date-range-item {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-
-  i {
-    font-size: 0.85rem;
-    color: var(--primary-color);
-  }
-
-  // "Custom range" item — accent color
-  &--custom {
-    color: var(--primary-color);
-    font-weight: 600;
-  }
-}
-
-// Custom date range picker (appears when "Custom range" is selected)
-.custom-range-wrap {
-  ::ng-deep .custom-range-picker {
-    .p-inputtext {
-      min-width: 13rem;
-      font-size: 0.85rem;
-    }
-  }
-}
-
-.refresh-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 50%;
-  border: 1px solid var(--surface-border);
-  background: var(--surface-card);
-  color: var(--text-color-secondary);
+  gap: 0.5rem;
+  width: 100%;
+  padding: 1.25rem;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: var(--p-content-background);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-content-border-radius, 12px);
   cursor: pointer;
-  transition: background 0.2s, color 0.2s, transform 0.2s;
-  flex-shrink: 0;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
 
-  &:hover:not(:disabled) {
-    background: var(--primary-color);
-    color: #fff;
-    border-color: var(--primary-color);
+  &:hover:not(.kpi-tile--static) {
+    border-color: var(--p-primary-color);
+    box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--p-primary-color) 45%, transparent);
+    transform: translateY(-1px);
   }
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
   }
 
-  &.spinning i {
-    animation: spin 0.8s linear infinite;
+  &--static {
+    cursor: default;
   }
-
-  i {
-    font-size: 0.95rem;
-  }
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
-
-// ── Loading ─────────────────────────────────────────────────────
-
-.dashboard-loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 12rem;
-}
-
-// ── Parcels section ─────────────────────────────────────────────
-
-.parcels-section {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
-}
-
-// ── Panel (shipped / ship-prepared) ────────────────────────────
-
-.panel {
-  background: var(--surface-card);
-  border: 1px solid var(--surface-border);
-  border-radius: 0.75rem;
-  padding: 1.25rem 1.5rem 1.5rem;
 
   &__head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 1rem;
-  }
-
-  &__head-left {
-    display: flex;
-    align-items: baseline;
     gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--p-text-muted-color);
   }
 
-  &__label {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text-color);
-    letter-spacing: 0.01em;
-  }
-
-  &__total {
-    font-size: 0.8rem;
-    color: var(--text-color-secondary);
-  }
-
-  &__nav-btn {
+  &__icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    padding: 0;
-    font-size: 0.85rem;
-    color: var(--text-color-secondary);
-    background: transparent;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: color 0.2s, background 0.2s;
-
-    &:hover {
-      color: var(--primary-color);
-      background: var(--surface-hover);
-    }
-  }
-}
-
-// ── Metric cards ────────────────────────────────────────────────
-
-.metric-cards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.85rem;
-}
-
-.metric-card {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  background: var(--surface-ground);
-  border: 1px solid var(--surface-border);
-  border-radius: 0.6rem;
-  padding: 0.9rem 1rem;
-
-  &__icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.6rem;
-    height: 2.6rem;
-    border-radius: 50%;
-    flex-shrink: 0;
-
-    i {
-      font-size: 1.15rem;
-    }
-
-    // Shipped panel (orange — matches edge-frontend)
-    &--shipped {
-      background: rgba(232, 138, 58, 0.12);
-      color: #e88a3a;
-    }
-
-    // Ready (green)
-    &--ready {
-      background: rgba(54, 207, 133, 0.12);
-      color: #36cf85;
-    }
-
-    // Missing data (red/amber)
-    &--missing {
-      background: rgba(249, 67, 60, 0.12);
-      color: #f9433c;
-    }
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.75rem;
+    font-size: 1.1rem;
   }
 
-  &__body {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-  }
-
-  &__count {
-    font-size: 1.5rem;
+  &__value {
+    font-size: 1.875rem;
     font-weight: 700;
-    color: var(--text-color);
-    line-height: 1;
-
-    // Alert variant — red count
-    &--alert {
-      color: #e53935;
-    }
+    line-height: 1.1;
+    color: var(--p-text-color);
+    font-variant-numeric: tabular-nums;
   }
 
-  &__label {
+  &__hint {
     font-size: 0.75rem;
-    color: var(--text-color-secondary);
-    font-weight: 500;
-    letter-spacing: 0.04em;
+    color: var(--p-text-muted-color);
+  }
 
-    // Alert variant — red label
-    &--alert {
-      color: #e53935;
-    }
+  /* Extra currencies under the main amount: one compact line each */
+  &__secondary {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--p-text-muted-color);
+    font-variant-numeric: tabular-nums;
   }
 }
 
-// ── Icon colour variants ─────────────────────────────────────────
+.alert-chip {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
 
-// Orders Shipped (green)
-.metric-card__icon--orders {
-  background: rgba(54, 207, 133, 0.12);
-  color: #36cf85;
-}
-
-// Revenue (green darker)
-.metric-card__icon--revenue {
-  background: rgba(54, 207, 133, 0.12);
-  color: #36cf85;
-}
-
-// Alerts (red)
-.metric-card__icon--alert {
-  background: rgba(229, 57, 53, 0.12);
-  color: #e53935;
-}
-
-// Inventory (blue)
-.metric-card__icon--inventory {
-  background: rgba(66, 133, 244, 0.12);
-  color: #4285f4;
-}
-
-// Location (orange — same as shipped but reused)
-.metric-card__icon--location {
-  background: rgba(232, 138, 58, 0.12);
-  color: #e88a3a;
-}
-
-// ── Column-count variants ────────────────────────────────────────
-
-.metric-cards--4col {
-  grid-template-columns: repeat(4, 1fr);
-
-  @media (max-width: 900px) {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
+  &:hover {
+    filter: brightness(0.95);
   }
 }
 
-.metric-cards--3col {
-  grid-template-columns: repeat(3, 1fr);
-
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  @media (max-width: 400px) {
-    grid-template-columns: 1fr;
-  }
-}
-
-// ── Full-width panel ─────────────────────────────────────────────
-
-.panel--full {
-  width: 100%;
-}
-
-// ── Inventory section (single full-width panel) ──────────────────
-
-.inventory-section {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-// ── Bottom section (locations + best selling) ────────────────────
-
-.bottom-section {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
-  align-items: start;
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
-}
-
-// ── Panel sub-label ──────────────────────────────────────────────
-
-.panel__sub {
-  font-size: 0.78rem;
-  color: var(--text-color-secondary);
-  font-style: italic;
-}
-
-// ── Empty state (Best Selling) ───────────────────────────────────
-
-.empty-state {
+.quick-action {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.6rem;
-  padding: 2rem 1rem;
-  color: var(--text-color-secondary);
-  background: var(--surface-ground);
-  border: 1px solid var(--surface-border);
-  border-radius: 0.6rem;
-  min-height: 6rem;
+  gap: 0.5rem;
+  padding: 1rem 0.5rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--p-text-color);
+  background: var(--p-content-hover-background);
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
 
   i {
-    font-size: 2.2rem;
-    opacity: 0.45;
+    font-size: 1.25rem;
+    color: var(--p-primary-color);
   }
-
-  span {
-    font-size: 0.85rem;
-    font-weight: 500;
-  }
-}
-
-// ── Best Selling list ────────────────────────────────────────────
-
-.best-selling-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.best-selling-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.65rem 0.85rem;
-  background: var(--surface-ground);
-  border: 1px solid var(--surface-border);
-  border-radius: 0.5rem;
-  transition: background 0.15s;
 
   &:hover {
-    background: var(--surface-hover);
-  }
-
-  &__left {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    min-width: 0; // allow text truncation
-  }
-
-  &__img {
-    width: 40px;
-    height: 40px;
-    border-radius: 0.375rem;
-    object-fit: cover;
-    flex-shrink: 0;
-    border: 1px solid var(--surface-border);
-
-    &--placeholder {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--surface-100);
-      color: var(--text-color-secondary);
-      font-size: 1rem;
-    }
-  }
-
-  &__info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-    min-width: 0;
-  }
-
-  &__name {
-    font-size: 0.88rem;
-    font-weight: 600;
-    color: var(--text-color);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__sku {
-    font-size: 0.72rem;
-    color: var(--text-color-secondary);
-  }
-
-  &__right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.1rem;
-    flex-shrink: 0;
-    margin-left: 0.75rem;
-  }
-
-  &__qty {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--primary-color);
-    text-align: right;
-  }
-
-  &__amount {
-    font-size: 0.72rem;
-    font-weight: 500;
-    color: var(--text-color-secondary);
-    text-align: right;
-  }
-
-  &__label {
-    display: block;
-    font-size: 0.62rem;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    color: var(--text-color-secondary);
-    opacity: 0.7;
-    line-height: 1;
-    margin-bottom: 0.1rem;
+    border-color: var(--p-primary-color);
+    color: var(--p-primary-color);
   }
 }

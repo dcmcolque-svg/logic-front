@@ -10,7 +10,7 @@ const EXISTING = {
   id: '1',
   operator_id: 'op',
   provider_name: 'xenvio',
-  config: { url: 'https://x52.shipedge.com', email: 'qa@example.com', api_key: '****' },
+  config: { url: 'https://x52.nuvex.uk', email: 'qa@example.com', api_key: '****' },
   is_active: true,
 }
 
@@ -37,7 +37,7 @@ describe('XenvioFormComponent', () => {
   }
 
   function fillNewConfig(): void {
-    component.form = { url: ' https://x52.shipedge.com ', email: 'qa@example.com', api_key: 'secret' }
+    component.form = { url: ' https://x52.nuvex.uk ', email: 'qa@example.com', api_key: 'secret' }
   }
 
   describe('API key when editing', () => {

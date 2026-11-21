@@ -1,3 +1,4 @@
+import { BreadcrumbService } from '@/app/layout/service/breadcrumb.service'
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -5,6 +6,7 @@ import {
   computed,
   effect,
   inject,
+  OnDestroy,
   OnInit,
   signal,
   ViewChild,
@@ -92,7 +94,7 @@ const LINE_STATUS_MAP: Record<
   templateUrl: './details.html',
   styleUrl: './details.scss',
 })
-export default class ReceivingDetailsComponent implements OnInit {
+export default class ReceivingDetailsComponent implements OnInit, OnDestroy {
 
   @ViewChild('colMs') private readonly colMs?: MultiSelect
 
@@ -108,6 +110,12 @@ export default class ReceivingDetailsComponent implements OnInit {
 
   /** Doc number fetched from receiving header — shown in the page title */
   docNumber = signal<string>('')
+  private readonly breadcrumb = inject(BreadcrumbService)
+  private readonly syncTitle = effect(() => this.breadcrumb.titleDetail.set(this.docNumber() || this.id || null))
+
+  ngOnDestroy(): void {
+    this.breadcrumb.titleDetail.set(null)
+  }
   /** Header status — decides whether the "Receive" button is offered. */
   receivingStatus = signal<string | null>(null)
   canReceive = computed(() => ['IN-WAREHOUSE', 'PROCESSING'].includes(this.receivingStatus() ?? ''))
@@ -222,7 +230,7 @@ export default class ReceivingDetailsComponent implements OnInit {
   /** Active values for each filter field — sourced from commits via the filter components */
   private activeFilters: Record<string, { value: any; matchMode: string }> = {}
 
-  /** Selected status filter values (bound to shipedge-filter-multiselect-panel) */
+  /** Selected status filter values (bound to nuvex-filter-multiselect-panel) */
   statusFilter: string[] = []
 
   /** Chips shown above the table for each active filter */
@@ -362,7 +370,7 @@ export default class ReceivingDetailsComponent implements OnInit {
     this.applyFilters()
   }
 
-  /** Apply a text/numeric filter from shipedge-filter-text-input */
+  /** Apply a text/numeric filter from nuvex-filter-text-input */
   onColumnFilterChange(field: string, event: { value: any; matchMode: string } | null): void {
     if (event === null || event.value === null || event.value === '') {
       delete this.activeFilters[field]

@@ -215,6 +215,8 @@ export interface SkuUpdateInput {
  * PUT /v2/cat/catalog/:skuId
  */
 export interface CatalogUpdateInput {
+  /** cat_skus.sku_code — unique per company */
+  sku_code?: string
   /** cat_products.name */
   product_name?: string | null
   brand?: string | null

@@ -1,5 +1,7 @@
+// Filtros guardados ocultos temporalmente en todas las tablas.
+// Para volver a mostrarlos: display: block;
 :host {
-  display: block;
+  display: none;
 }
 
 // ── Browser-style Tabs Bar ──────────────────────────────────────────────────

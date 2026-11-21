@@ -9,7 +9,6 @@
  * - save() payload construction with master ON/OFF
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { MessageService } from 'primeng/api';
@@ -19,6 +18,7 @@ import { of } from 'rxjs';
 import { FacilitySettingsDialogComponent } from './facility-settings-dialog-component';
 import { FacilitiesService } from '../../facilities.service';
 import { LocationService } from '../../../locations/location.service';
+import { AuthService } from '../../../../../core/services/auth.service';
 import {
     ActivityPODSettings,
     Facility,
@@ -73,9 +73,16 @@ describe('FacilitySettingsDialogComponent', () => {
     let mockFacilitiesService: jasmine.SpyObj<FacilitiesService>;
     let mockLocationService: jasmine.SpyObj<LocationService>;
 
-    function setup(facility?: Facility) {
+    function setup(facility?: Facility, role = '') {
         mockRef = jasmine.createSpyObj('DynamicDialogRef', ['close']);
-        mockFacilitiesService = jasmine.createSpyObj('FacilitiesService', ['updateFacility']);
+        const mockAuth = { getAuthUserInfo: () => ({ role }) };
+        mockFacilitiesService = jasmine.createSpyObj('FacilitiesService', ['updateFacility', 'initializeCosting']);
+        mockFacilitiesService.initializeCosting.and.returnValue(of({
+            costing: { method: 'AVERAGE', currency: 'BOB', cost_required_on_receiving: false },
+            initialized: true,
+            skus: 3,
+            total_value: 1500,
+        }));
         mockFacilitiesService.updateFacility.and.returnValue(of(facility ?? buildFacility()));
 
         mockLocationService = jasmine.createSpyObj('LocationService', ['listLocations']);
@@ -84,7 +91,6 @@ describe('FacilitySettingsDialogComponent', () => {
         TestBed.configureTestingModule({
             imports: [
                 FacilitySettingsDialogComponent,
-                NoopAnimationsModule,
                 HttpClientTestingModule,
                 TranslateModule.forRoot(),
             ],
@@ -97,6 +103,7 @@ describe('FacilitySettingsDialogComponent', () => {
                 },
                 { provide: FacilitiesService, useValue: mockFacilitiesService },
                 { provide: LocationService, useValue: mockLocationService },
+                { provide: AuthService, useValue: mockAuth },
             ],
         });
 
@@ -292,6 +299,99 @@ describe('FacilitySettingsDialogComponent', () => {
             expect(payload.settings?.delivery_pod_setting?.is_signature_required).toBeFalse();
             expect(payload.settings?.delivery_pod_setting?.enable_id_validation).toBeFalse();
             expect(payload.settings?.delivery_pod_setting?.is_location_required).toBeTrue();
+        });
+    });
+
+    // ─── Costing (OWNER only) ───────────────────────────────────────────
+
+    describe('costing', () => {
+        it('defaults to NONE / BOB when the facility has no costing', () => {
+            setup(undefined, 'OWNER');
+            expect(component.form.get('costing.method')?.value).toBe('NONE');
+            expect(component.form.get('costing.currency')?.value).toBe('BOB');
+        });
+
+        it('Update keeps the stored method/currency and only edits the required-cost flag', () => {
+            setup(buildFacility({ costing: { method: 'AVERAGE', currency: 'CLP' } }), 'OWNER');
+            component.form.get('costing.method')?.setValue('NONE');
+            component.form.get('costing.cost_required_on_receiving')?.setValue(true);
+
+            component.save();
+
+            const payload = mockFacilitiesService.updateFacility.calls.mostRecent().args[1];
+            expect(payload.settings?.costing).toEqual({
+                method: 'AVERAGE',
+                currency: 'CLP',
+                cost_required_on_receiving: true,
+            });
+        });
+
+        it('initializes costing in two steps (button, then confirm)', () => {
+            setup(buildFacility(), 'OWNER');
+            component.form.get('costing.method')?.setValue('AVERAGE');
+            expect(component.costingChanged()).toBeTrue();
+            expect(component.costingChangeKind()).toBe('start');
+
+            component.applyCosting();
+            expect(mockFacilitiesService.initializeCosting).not.toHaveBeenCalled();
+            expect(component.confirmingCosting()).toBeTrue();
+
+            component.applyCosting();
+            expect(mockFacilitiesService.initializeCosting).toHaveBeenCalledWith('fac-1', {
+                method: 'AVERAGE',
+                currency: 'BOB',
+                cost_required_on_receiving: false,
+            });
+            expect(component.storedCosting().method).toBe('AVERAGE');
+            expect(component.costingChanged()).toBeFalse();
+        });
+
+        it('changes the currency without costing in one step', () => {
+            setup(buildFacility(), 'OWNER');
+            component.form.get('costing.currency')?.setValue('CLP');
+            expect(component.costingChanged()).toBeTrue();
+            expect(component.costingChangeKind()).toBe('currency');
+            expect(component.costingChangeMessageKey()).toBe('preferences.facilities.costing_change_currency');
+
+            component.applyCosting();
+            expect(mockFacilitiesService.initializeCosting).toHaveBeenCalledWith('fac-1', jasmine.objectContaining({
+                method: 'NONE',
+                currency: 'CLP',
+            }));
+        });
+
+        it('blocks switching between two active valuations', () => {
+            setup(buildFacility({ costing: { method: 'AVERAGE', currency: 'BOB' } }), 'OWNER');
+            component.form.get('costing.currency')?.setValue('USD');
+            expect(component.costingChangeKind()).toBe('blocked');
+
+            component.applyCosting();
+            component.applyCosting();
+            expect(mockFacilitiesService.initializeCosting).not.toHaveBeenCalled();
+        });
+
+        it('offers every method', () => {
+            setup(undefined, 'OWNER');
+            const enabled = component.costingMethodOptions.filter(o => !o.disabled).map(o => o.value);
+            expect(enabled).toEqual(['NONE', 'AVERAGE', 'SPECIFIC', 'FIFO', 'STANDARD']);
+        });
+
+        it('explains each method when turning it on', () => {
+            setup(undefined, 'OWNER');
+            component.form.get('costing.method')?.setValue('FIFO');
+            expect(component.costingChangeMessageKey()).toBe('preferences.facilities.costing_change_start_fifo');
+            component.form.get('costing.method')?.setValue('AVERAGE');
+            expect(component.costingChangeMessageKey()).toBe('preferences.facilities.costing_change_start');
+        });
+
+        it('disables costing and omits it from the payload for non-owners', () => {
+            setup(buildFacility({ costing: { method: 'FIFO', currency: 'USD' } }), 'RECEIVER');
+            expect(component.form.get('costing')?.disabled).toBeTrue();
+
+            component.save();
+
+            const payload = mockFacilitiesService.updateFacility.calls.mostRecent().args[1];
+            expect(payload.settings && 'costing' in payload.settings).toBeFalse();
         });
     });
 });

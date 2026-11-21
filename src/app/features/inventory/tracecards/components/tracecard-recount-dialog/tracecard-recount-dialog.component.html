@@ -1,0 +1,90 @@
+<base-dialog
+  [visible]="visible()"
+  header="tracecard_ops.recount_title"
+  [subHeader]="item()?.tracecard ?? ''"
+  size="sm"
+  [loading]="saving()"
+  saveLabel="tracecard_ops.recount_action"
+  saveIcon="pi pi-clipboard"
+  [saveDisabled]="!canSave()"
+  (save)="save()"
+  (hide)="hide.emit()"
+>
+  @if (item(); as it) {
+    <div class="flex flex-col gap-4">
+      <!-- Tracecard -->
+      <div class="rounded-border border border-surface-200 dark:border-surface-700 p-3 text-sm flex flex-col gap-1">
+        <div class="font-semibold">{{ it.sku }} <span class="font-normal text-surface-500">— {{ it.description }}</span></div>
+        <div class="flex flex-wrap gap-x-4 gap-y-1 text-surface-600 dark:text-surface-300">
+          <span>{{ 'labels.location' | translate }}: <b class="font-mono">{{ it.location_code || '—' }}</b></span>
+          @if (it.container_lpn) {
+            <span>{{ 'labels.container' | translate }}: <b class="font-mono">{{ it.container_lpn }}</b></span>
+          }
+        </div>
+        <div class="flex flex-wrap gap-x-4 gap-y-1 text-surface-600 dark:text-surface-300">
+          <span>{{ 'tracecard_ops.system_qty' | translate }}: <b>{{ it.qty_on_hand | number: '1.0-4' }}</b></span>
+          @if (it.qty_reserved > 0) {
+            <span>{{ 'labels.qty_processing' | translate }}: <b>{{ it.qty_reserved | number: '1.0-4' }}</b></span>
+          }
+        </div>
+      </div>
+
+      <!-- Counted quantity -->
+      <div class="flex flex-col">
+        <label for="rc-qty" class="block font-semibold mb-1 text-sm">{{ 'tracecard_ops.counted_qty' | translate }}</label>
+        <p-inputNumber
+          inputId="rc-qty"
+          [ngModel]="counted()"
+          (ngModelChange)="counted.set($event); formError.set(null)"
+          [min]="0"
+          [maxFractionDigits]="4"
+          [showButtons]="true"
+          styleClass="w-full"
+          inputStyleClass="w-full"
+        />
+        <small class="text-xs mt-1"
+          [class.text-surface-400]="delta() === 0"
+          [class.text-green-600]="delta() > 0"
+          [class.text-red-500]="delta() < 0">
+          @if (delta() === 0) {
+            {{ 'tracecard_ops.no_difference' | translate }}
+          } @else {
+            {{ 'tracecard_ops.difference' | translate }}: <b>{{ delta() > 0 ? '+' : '' }}{{ delta() | number: '1.0-4' }}</b>
+          }
+        </small>
+      </div>
+
+      <!-- Reason -->
+      <div class="flex flex-col">
+        <label for="rc-reason" class="block font-semibold mb-1 text-sm">{{ 'labels.reason' | translate }}</label>
+        <p-select
+          inputId="rc-reason"
+          [options]="reasonOptions()"
+          optionValue="code"
+          [ngModel]="reason()"
+          (ngModelChange)="pickReason($event)"
+          appendTo="body"
+          styleClass="w-full"
+        >
+          <ng-template let-opt #item>{{ opt.label | translate }}</ng-template>
+          <ng-template let-opt #selectedItem>{{ opt?.label | translate }}</ng-template>
+        </p-select>
+      </div>
+
+      @if (writesOff()) {
+        <p-message severity="warn">
+          <div class="flex flex-col gap-1 text-sm">
+            <span>{{ 'tracecard_ops.write_off_warning' | translate: { qty: -delta() } }}</span>
+            <span>{{ 'tracecard_ops.write_off_hint' | translate }}</span>
+          </div>
+        </p-message>
+      }
+      @if (releasesReserved()) {
+        <p-message severity="warn" [text]="'tracecard_ops.releases_reserved' | translate" />
+      }
+      @if (formError()) {
+        <p-message severity="error" [text]="formError()!" />
+      }
+    </div>
+  }
+</base-dialog>

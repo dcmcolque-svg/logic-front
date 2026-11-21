@@ -84,7 +84,7 @@ export class MenuSidebarService {
 
       // Translate using 'pages.{label}' key
       const translatedLabel = await firstValueFrom(
-        this.translate.get('pages.' + item.label)
+        this.translate.get('pages.' + ((item as any)['i18nKey'] ?? item.label))
       )
       item.label = translatedLabel
 

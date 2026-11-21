@@ -24,7 +24,8 @@ function toApiDate(date: Date): string {
 
 /**
  * Converts UI filters into the API's `{ value, match_mode }` shape, skipping
- * empty entries. With `formatDates`, Date values are sent as `yyyy-MM-dd`.
+ * empty entries. With `formatDates`, Date values are sent as `yyyy-MM-dd`: on
+ * created_at the backend takes it as that day in the order's facility zone.
  */
 export function buildOrderApiFilter(filters: UiFilters, formatDates = false): OrderFilter {
   const apiFilter: OrderFilter = {}

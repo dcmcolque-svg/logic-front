@@ -5,12 +5,12 @@ import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { TranslateModule, TranslateService } from '@ngx-translate/core'
 import { ButtonModule } from 'primeng/button'
-import { ChipModule } from 'primeng/chip'
 import { MultiSelectModule } from 'primeng/multiselect'
 import { SelectModule } from 'primeng/select'
 import { ToastModule } from 'primeng/toast'
 import { TooltipModule } from 'primeng/tooltip'
 import { TreeModule } from 'primeng/tree'
+import { SkeletonModule } from 'primeng/skeleton'
 import { ToggleSwitchModule } from 'primeng/toggleswitch'
 import { DrawerModule } from 'primeng/drawer'
 import { BadgeModule } from 'primeng/badge'
@@ -93,12 +93,12 @@ import { scopeApiFilter, dropFacilityFilters, FACILITY_SCOPE_FIELD } from '@/app
     FormsModule,
     TranslateModule,
     ButtonModule,
-    ChipModule,
     MultiSelectModule,
     SelectModule,
     ToastModule,
     TooltipModule,
     TreeModule,
+    SkeletonModule,
     ToggleSwitchModule,
     DrawerModule,
     BadgeModule,
@@ -220,7 +220,7 @@ export default class LocationsComponent implements OnInit {
   // Bin label selection
   selectedBinNodes = signal<TreeNode[]>([])
   /** Whether checking a bin also checks everything nested inside it. */
-  includeNestedBins = signal(true)
+  includeNestedBins = signal(false)
   showBinLabelDialog = signal(false)
 
   /** p-tree hands back TreeNode; the label generator wants the domain object. */
@@ -838,7 +838,7 @@ export default class LocationsComponent implements OnInit {
     // Build batch-create payload
     const containers = result.bins.map(bin => ({
       lpn_code: result.nameFormat.replace('{loc}', loc.location_code).replace('{bin}', bin.id),
-      type: bin.type || 'BOX',
+      type: bin.type || 'BIN',
       tags: bin.tag ? bin.tag.split(',').map(t => t.trim()).filter(Boolean) : [],
     }))
 
@@ -904,7 +904,7 @@ export default class LocationsComponent implements OnInit {
     const requests = locations.map(loc => {
       const containers = result.bins.map(bin => ({
         lpn_code: result.nameFormat.replace('{loc}', loc.location_code).replace('{bin}', bin.id),
-        type: bin.type || 'BOX',
+        type: bin.type || 'BIN',
         tags: bin.tag ? bin.tag.split(',').map(t => t.trim()).filter(Boolean) : [],
       }))
 

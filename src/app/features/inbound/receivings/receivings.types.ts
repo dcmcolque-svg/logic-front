@@ -75,6 +75,9 @@ export interface ReceivingListItem {
   // operator_id: string
   facility_id: string
   company_id: string
+  supplier_id?: string | null
+  /** Supplier name (join) — only on the list projection. */
+  supplier_name?: string | null
   doc_type: string
   doc_number: string
   external_ref?: string | null
@@ -95,6 +98,9 @@ export interface Receiving {
   // operator_id: string
   facility_id: string
   company_id: string
+  supplier_id?: string | null
+  /** Supplier name (join) — only on the list projection. */
+  supplier_name?: string | null
   doc_type: string
   doc_number: string
   external_ref?: string | null
@@ -137,6 +143,12 @@ export interface ReceivingLineDetail {
   product_description?: string | null
   brand?: string | null
 
+  // Costs — OWNER only (omitted by the backend for other roles)
+  /** Expected unit cost of the line (purchase order). */
+  unit_cost?: number | null
+  /** Catalog cost (cat_skus.cost) — pre-fill and comparison. */
+  sku_cost?: number | null
+
   // Fields from cat_skus
   weight?: number
   serial_control_mode?: string | null
@@ -159,12 +171,16 @@ export interface ReceivingFlow {
   expiry_date?: string | null
   user_id?: string | null
   device_id?: string | null
+  /** Resolved cost of this ingress — OWNER only, null when the facility does not cost. */
+  unit_cost?: number | null
   created_at: string
 }
 
 export interface ReceivingCreateItem {
   sku_code: string
   qty_expected: number
+  /** Expected unit cost (purchase order). Applied by the backend only for OWNER. */
+  unit_cost?: number | null
   /** Optional — only used when the backend must auto-create the SKU in cat_skus. */
   sku_barcode?: string | null
   sku_weight?: number
@@ -175,6 +191,8 @@ export interface ReceivingCreateInput {
   // operator_id: string
   facility_id: string
   company_id: string
+  /** Optional — an active supplier of company_id. null clears it on update. */
+  supplier_id?: string | null
   doc_type?: string
   doc_number: string
   external_ref?: string | null
@@ -197,6 +215,8 @@ export interface MakeReceivingItem {
   expiry_date?: string | null
   /** Required for SKUs with serial_control_mode IN or IN/OUT — one per unit. */
   serials?: string[]
+  /** Real unit cost of this ingress (OWNER only). Omitted → line cost, then catalog cost. */
+  unit_cost?: number | null
 }
 
 export interface MakeReceivingInput {
@@ -227,6 +247,7 @@ export interface ReceivingFilter {
   id?: MatchModel
   // operator_id?: MatchModel
   company_id?: MatchModel
+  supplier_id?: MatchModel
   facility_id?: MatchModel
   doc_number?: MatchModel
   doc_type?: MatchModel
@@ -306,6 +327,8 @@ export interface ReceivingSkuOption {
   name?: string | null
   barcode?: string | null
   product_name?: string | null
+  /** cat_skus.cost — pre-fills the line's unit cost. */
+  cost?: number | null
 }
 
 // ── Location lookup (processing) ─────────────────────────────────────────────
@@ -321,4 +344,28 @@ export interface ReceivingLocationOption {
   operational_category_code?: string | null
   content_skus?: number
   content_units?: number
+}
+
+/** Raw node of POST /v2/wms/container/tree (bins nested inside a location). */
+export interface ReceivingContainerTreeNode {
+  id: string
+  lpn_code: string
+  type: string
+  parent_id?: string
+  container_profile_code?: string
+  content_skus: number
+  content_units: number
+  children?: ReceivingContainerTreeNode[]
+}
+
+/** Flattened container (bin/LPN) of a location, used by the processing screen. */
+export interface ReceivingContainerOption {
+  id: string
+  lpn_code: string
+  type: string
+  container_profile_code?: string | null
+  content_skus: number
+  content_units: number
+  /** Nesting level inside the location (0 = directly in the location). */
+  depth: number
 }

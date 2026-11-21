@@ -22,7 +22,7 @@ const BACKORDER_STATUS = 'BACKORDER'
   styleUrl: './backorders.component.scss',
 })
 export default class BackordersComponent extends ScopedOrderListBase {
-  protected readonly stateKey = 'binlogic:backorders'
+  protected readonly stateKey = 'logic:backorders'
   protected override readonly formatDateFilters = true
   readonly PRESET_PAGE_KEY = 'backorders'
 

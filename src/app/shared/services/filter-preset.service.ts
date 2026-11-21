@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core'
+import { inject, Injectable, InjectionToken, signal } from '@angular/core'
 import { Observable, tap } from 'rxjs'
 import {
   FilterPreset,
@@ -19,8 +19,15 @@ import { FilterPresetApiStorage } from './filter-preset-api.storage'
  * Storage is backend-backed via HTTP API. Presets are shared across
  * all users of the same tenant (operator_id scope).
  */
+/** Saved filter presets (tabs above tables). Off for now to save a request per page. */
+export const FILTER_PRESETS_ENABLED = new InjectionToken<boolean>('FILTER_PRESETS_ENABLED', {
+  providedIn: 'root',
+  factory: () => false,
+})
+
 @Injectable({ providedIn: 'root' })
 export class FilterPresetService {
+  readonly enabled = inject(FILTER_PRESETS_ENABLED)
   private readonly storage = inject(FilterPresetApiStorage)
 
   /** Reactive signal of presets for the currently active page */
@@ -39,7 +46,7 @@ export class FilterPresetService {
   private activePageKey = ''
 
   /** localStorage key for the per-page last-applied map */
-  private readonly LAST_APPLIED_STORAGE_KEY = 'binlogic:preset:lastApplied'
+  private readonly LAST_APPLIED_STORAGE_KEY = 'logic:preset:lastApplied'
 
   // ---------------------------------------------------------------------------
   // Public API
@@ -53,6 +60,14 @@ export class FilterPresetService {
   loadPresets(pageKey: string): void {
     this.activePageKey = pageKey
     this.currentPageKey.set(pageKey)
+
+    // Saved filters are turned off for now: no request, no presets.
+    if (!this.enabled) {
+      this.presets.set([])
+      this.lastAppliedPresetId.set(null)
+      this.loading.set(false)
+      return
+    }
     this.loading.set(true)
 
     // Immediately clear presets to avoid stale data from a previous page

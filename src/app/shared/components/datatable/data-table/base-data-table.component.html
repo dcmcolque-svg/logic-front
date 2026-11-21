@@ -170,7 +170,7 @@
                         [matchMode]="matchModesNumeric[0].value"
                       >
                         <ng-template pTemplate="filter" let-value let-filter="filterCallback">
-                          <shipedge-filter-text-input
+                          <nuvex-filter-text-input
                             [value]="value"
                             filterType="numeric"
                             (apply)="filter($event)"
@@ -216,7 +216,7 @@
                           let-value
                           let-filter="filterCallback"
                         >
-                          <shipedge-filter-date-input
+                          <nuvex-filter-date-input
                             [value]="value"
                             (apply)="filter($event)"
                           />
@@ -236,7 +236,7 @@
                         [matchMode]="matchModesText[0].value"
                       >
                         <ng-template pTemplate="filter" let-value let-filter="filterCallback">
-                          <shipedge-filter-text-input
+                          <nuvex-filter-text-input
                             [value]="value"
                             inputType="text"
                             (apply)="filter($event)"
@@ -261,7 +261,7 @@
         let-expanded="expanded"
       >
         <tr
-          [class.bg-primary-50]="isRowSelected(row)"
+          [class.row-selected]="isRowSelected(row)"
           class="transition-colors duration-150"
         >
           <!-- Expand toggle: first -->
@@ -308,6 +308,7 @@
               [style.width]="col.width || 'auto'"
               [style.min-width]="col.width || 'auto'"
               [style.text-align]="col.align || 'left'"
+              (mouseenter)="showOverflowTitle($event)"
             >
               @if (col.template && cellTemplate()) {
                 <ng-container
@@ -348,6 +349,18 @@
                 <i class="pi pi-table text-4xl text-surface-400"></i>
                 <span class="text-surface-500">{{ 'messages.no_columns_selected' | translate }}</span>
               </div>
+            } @else if (hasActiveFilters()) {
+              <div class="flex flex-col items-center gap-3">
+                <i class="pi pi-filter-slash text-4xl text-surface-400"></i>
+                <span class="text-surface-500">{{ 'labels.no_results_with_filters' | translate }}</span>
+                <p-button
+                  [label]="'labels.clear_all_filters' | translate"
+                  icon="pi pi-times"
+                  size="small"
+                  [outlined]="true"
+                  (onClick)="clearAllFilters.emit()"
+                />
+              </div>
             } @else {
               <div class="flex flex-col items-center gap-2">
                 <i class="pi pi-inbox text-4xl text-surface-400"></i>
@@ -382,7 +395,9 @@
         [rows]="pagination().limit"
         [totalRecords]="pagination().total"
         [first]="(pagination().page - 1) * pagination().limit"
-        [rowsPerPageOptions]="[10, 25, 50]"
+        [rowsPerPageOptions]="pagination().rows_per_page || [10, 25, 50, 100]"
+        [showCurrentPageReport]="true"
+        [currentPageReportTemplate]="currentPageReportTpl"
         (onPageChange)="onPageChange($event)"
       />
     </div>

@@ -37,7 +37,7 @@ const STATE_CHIP_MAP: Record<string, string> = {
 }
 
 @Component({
-  selector: 'shipedge-chip-state',
+  selector: 'nuvex-chip-state',
   standalone: true,
   imports: [FormsModule, TagModule, TranslateModule, UpperCasePipe],
   encapsulation: ViewEncapsulation.None,

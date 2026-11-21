@@ -33,9 +33,21 @@ export default [
     loadComponent: () => import('./facilities/facilities.component'),
   },
   {
+    // Companies (inventory owners) of the operator — OWNER only
+    path: 'companies',
+    data: { breadcrumb: 'pages.companies' },
+    loadComponent: () => import('./companies/companies.component'),
+  },
+  {
     path: 'packaging',
     data: { breadcrumb: 'pages.packaging' },
     loadComponent: () => import('./packaging/packaging.component'),
+  },
+  {
+    // The company's look for every user — OWNER only
+    path: 'appearance',
+    data: { breadcrumb: 'pages.appearance' },
+    loadComponent: () => import('./appearance/appearance.component'),
   },
   {
     path: 'addons',

@@ -26,69 +26,184 @@
   min-height: 0;
 }
 
-/* ── Location header card (edge-frontend parity) ────────────── */
-.location-header {
-  .header-card {
-    background: var(--surface-card);
-    border: 1px solid var(--surface-border);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-    transition: all 0.3s ease;
-    max-width: 500px;
+/* ── Compact content stats (table cell + tree node) ──────────── */
+.content-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.875rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 
-    &:hover {
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-    }
-  }
-
-  .header-title {
-    color: var(--text-color);
-    display: flex;
+  .stat {
+    display: inline-flex;
     align-items: center;
+    gap: 0.3rem;
+    font-size: 0.875rem;
+    color: var(--text-color);
 
-    i {
+    i,
+    b {
+      font-size: 0.8rem;
       color: var(--primary-color);
     }
-  }
 
-  .location-info {
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--surface-border);
+    /* Zero reads as "nothing here" instead of competing with real values */
+    &.is-zero {
+      color: var(--text-color-secondary);
+      opacity: 0.55;
 
-      &:last-child {
-        border-bottom: none;
+      i,
+      b {
+        color: inherit;
       }
     }
+  }
+}
 
-    .info-label {
-      color: var(--text-color-secondary);
-      font-size: 0.875rem;
-      font-weight: 500;
-      min-width: 120px;
-      flex-shrink: 0;
-    }
+/* ── Bin count pill: the way into a location's bins ───────────── */
+.bin-qty-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 30%, transparent);
+  background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+  color: var(--primary-color);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 
-    .info-value {
-      color: var(--text-color);
-      font-size: 0.875rem;
-      text-align: right;
-      flex: 1;
-      margin-left: 12px;
+  .chevron {
+    font-size: 0.65rem;
+    opacity: 0.6;
+    transition: transform 0.15s ease;
+  }
+
+  &:hover {
+    background: color-mix(in srgb, var(--primary-color) 16%, transparent);
+    border-color: var(--primary-color);
+
+    .chevron {
+      transform: translateX(2px);
     }
   }
 
-  .summary-stats {
-    border-top: 1px solid var(--surface-border);
-
-    .stats-title {
-      color: var(--text-color);
-      font-size: 0.875rem;
-      font-weight: 600;
-    }
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
   }
+
+  &.is-zero {
+    color: var(--text-color-secondary);
+    border-color: var(--surface-border);
+    background: transparent;
+  }
+}
+
+/* ── Bin panel ─────────────────────────────────────────────────── */
+.bin-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.header-stats {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.header-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 5.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: var(--surface-ground);
+  border: 1px solid var(--surface-border);
+
+  .value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .label {
+    font-size: 0.75rem;
+    color: var(--text-color-secondary);
+  }
+}
+
+.bin-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.bin-node {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Row actions show on hover/focus with a mouse; always visible on touch */
+.bin-node-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  flex-shrink: 0;
+}
+
+@media (hover: hover) {
+  .bin-node-actions {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  ::ng-deep .p-tree-node-content:hover .bin-node-actions,
+  ::ng-deep .p-treenode-content:hover .bin-node-actions,
+  .bin-node:focus-within .bin-node-actions {
+    opacity: 1;
+  }
+}
+
+.simulated-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.bin-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 3rem 1rem;
+  text-align: center;
+  border: 1px dashed var(--surface-border);
+  border-radius: 12px;
 }
 
 /* ── Btn-yellow override (Bin Planner in Bulk) ────────────────── */

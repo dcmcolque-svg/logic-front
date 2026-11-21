@@ -31,7 +31,7 @@
       src="layout/images/logo-dark.png"
       alt="Icon-app"
       class="border-round"
-      style="width: 15rem; height: auto"
+      style="width: 6rem; height: auto"
     />
   </div>
 
@@ -223,7 +223,7 @@
     }
 
     <p-button
-      [disabled]="form.invalid || saving()"
+      [disabled]="saving()"
       label="{{ 'buttons.save' | translate }}"
       severity="success"
       (onClick)="save()"

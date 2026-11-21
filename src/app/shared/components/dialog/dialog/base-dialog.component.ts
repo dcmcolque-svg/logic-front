@@ -69,8 +69,11 @@ export class BaseDialog {
   closable = input(true)
   /** Allow closing with Escape key */
   closeOnEscape = input(true)
-  /** Allow closing by clicking the backdrop */
-  dismissableMask = input(true)
+  /**
+   * Allow closing by clicking the backdrop. Off by default: a stray click
+   * outside a form dialog would throw away everything the user typed.
+   */
+  dismissableMask = input(false)
 
   // Footer config
   /** Show footer section */
@@ -87,11 +90,20 @@ export class BaseDialog {
   saveIcon = input('pi pi-check')
   /** Disable save button */
   saveDisabled = input(false)
+  /** Save button color — e.g. 'danger' for an irreversible action. Default: primary */
+  saveSeverity = input<'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | undefined>(undefined)
+  /**
+   * Enter in a one-line field presses Save. Turn it off for irreversible
+   * actions where the user types several numbers (e.g. a cash count).
+   */
+  submitOnEnter = input(true)
 
   /** Emitted when save is clicked */
   save = output<void>()
   /** Emitted when dialog is hidden */
   hide = output<void>()
+  /** Emitted once the dialog has opened (e.g. to reset the form and focus a field) */
+  shown = output<void>()
 
   translatedHeader = computed(() => {
     const key = this.header()
@@ -113,6 +125,23 @@ export class BaseDialog {
     if (!value) {
       this.hide.emit()
     }
+  }
+
+  /**
+   * Enter in a one-line field saves, like a native form. Skipped for textareas
+   * and buttons, when a component already handled the key (an autocomplete
+   * picking an option calls preventDefault), and while saving is not allowed.
+   */
+  onEnter(event: Event) {
+    const e = event as KeyboardEvent
+    const target = e.target as HTMLElement | null
+    if (e.defaultPrevented || e.isComposing || e.shiftKey) return
+    if (!target || target.tagName !== 'INPUT') return
+    const type = (target as HTMLInputElement).type
+    if (['checkbox', 'radio', 'button', 'submit', 'file'].includes(type)) return
+    if (!this.submitOnEnter() || !this.showFooter() || !this.showSave() || this.saveDisabled() || this.loading()) return
+    e.preventDefault()
+    this.save.emit()
   }
 
   onCancel() {

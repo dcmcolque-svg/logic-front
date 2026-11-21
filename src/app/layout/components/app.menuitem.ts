@@ -232,27 +232,13 @@ export class AppMenuitem implements AfterViewInit {
       return
     }
 
-    // Handle cmd/ctrl + click for opening tabs
+    // cmd/ctrl + click: leave it to the browser (RouterLink lets it through),
+    // which opens the page in a new browser tab.
     if (
       (mouseEvent.metaKey || mouseEvent.ctrlKey) &&
       this.hasRouterLink() &&
       !this.hasChildren()
     ) {
-      event.preventDefault()
-      this.layoutService.openTab({
-        label: this.item().label,
-        labelKey: this.item()['labelOriginal'] ?? this.item().label,
-        icon: this.item().icon,
-        routerLink: this.item().routerLink,
-        routerLinkActiveOptions: this.item().routerLinkActiveOptions,
-        fragment: this.item().fragment,
-        queryParamsHandling: this.item().queryParamsHandling,
-        preserveFragment: this.item().preserveFragment,
-        skipLocationChange: this.item().skipLocationChange,
-        replaceUrl: this.item().replaceUrl,
-        state: this.item().state,
-        queryParams: this.item().queryParams,
-      })
       return
     }
 

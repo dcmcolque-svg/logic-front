@@ -33,6 +33,7 @@ import {
 } from '@/app/features/preferences/locations/types/location.types'
 
 import { LocationService } from '../../location.service'
+import { revealInvalid } from '@/app/shared/utils/form.util'
 
 @Component({
   selector: 'app-location-generator-dialog',
@@ -235,7 +236,7 @@ export class LocationGeneratorDialogComponent implements OnChanges {
   }
 
   onGenerate() {
-    if (!this.generatorForm.valid) return
+    if (revealInvalid(this.generatorForm)) return
 
     const v = this.generatorForm.getRawValue()
     const input: LocationGenerateInput = {

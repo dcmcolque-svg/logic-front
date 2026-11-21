@@ -156,8 +156,7 @@ export class SkuFormDialogComponent extends SkuDialogBase implements OnChanges {
   private openForEdit(row: CatalogItem) {
     this.customAttrs.loadKeys()
     this.patchFormFromRow(row)
-    // sku_code is immutable in edit mode
-    this.skuForm.get('sku_code')?.disable()
+    this.skuForm.get('sku_code')?.enable()
     // Company is read-only in edit mode
     this.companyControl.setValue(row.company_id)
     this.companyControl.disable()
@@ -295,6 +294,7 @@ export class SkuFormDialogComponent extends SkuDialogBase implements OnChanges {
       this.catalogService
         .updateCatalogItem(editingRow.sku_id, {
           ...this.productLinkChange(editingRow),
+          ...(v.sku_code?.trim() && v.sku_code.trim() !== editingRow.sku ? { sku_code: v.sku_code.trim() } : {}),
           barcode: v.barcode?.trim() || null,
           weight: v.weight ?? undefined,
           dimensions: dimensions ?? null,

@@ -35,6 +35,9 @@ class ScopeStub {
   readonly selectedIds = signal<string[]>([])
   readonly inScope = signal<ScopeFacility[]>([MIAMI, DALLAS])
   readonly apiValue = signal<(string | null)[] | null>(null)
+  readonly zone = () => 'America/La_Paz'
+  readonly zoneOf = () => 'America/La_Paz'
+  load(): void {}
 }
 
 /** A list with its chips, whichever base declares them. */

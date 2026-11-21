@@ -50,20 +50,11 @@ import { ImportModule } from '../../types/import.types'
         <div
           class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2"
         >
-          <div class="flex items-center gap-2">
-            <p-button
-              icon="pi pi-angle-left"
-              [rounded]="true"
-              [text]="true"
-              severity="secondary"
-              (onClick)="goBack()"
-            />
+          <div class="flex items-center gap-3">
+            <p-button icon="pi pi-arrow-left" [label]="'buttons.back' | translate" severity="secondary" [outlined]="true" size="small" (onClick)="goBack()" />
             <div>
-              <h2 class="text-2xl font-bold m-0">
-                {{ 'import.upload_logs' | translate | uppercase }}
-              </h2>
               @if (moduleLabel) {
-                <p class="text-surface-400 text-sm m-0">
+                <p class="text-surface-500 text-sm m-0">
                   {{ moduleLabel | translate }}
                 </p>
               }

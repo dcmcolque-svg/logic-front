@@ -2,6 +2,7 @@
   [header]="header() | translate"
   [visible]="visible()"
   (visibleChange)="onVisibleChange($event)"
+  (onShow)="shown.emit()"
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
@@ -27,8 +28,10 @@
   <!-- Loading overlay -->
   <base-loading-overlay [visible]="loading()" />
 
-  <!-- Content -->
-  <ng-content />
+  <!-- Content (Enter in a one-line field = Save) -->
+  <div (keydown.enter)="onEnter($event)">
+    <ng-content />
+  </div>
 
   <!-- Footer -->
   @if (showFooter()) {
@@ -49,6 +52,7 @@
             [label]="saveLabel() | translate"
             [loading]="loading()"
             [disabled]="saveDisabled()"
+            [severity]="saveSeverity()"
             (onClick)="save.emit()"
             [icon]="saveIcon()"
           />

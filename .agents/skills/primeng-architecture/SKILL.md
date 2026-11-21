@@ -1,7 +1,7 @@
 # PrimeNG & TailwindCSS Architecture Skill
 
 ## Purpose
-Este skill define las pautas arquitectónicas y las mejores prácticas para construir componentes de interfaz de usuario (UI) en el frontend de Binlogic utilizando **Angular 21, PrimeNG 21 y Tailwind CSS v4**, basándose en las pantallas y flujos de usuario diseñados en la fase de UX-Research.
+Este skill define las pautas arquitectónicas y las mejores prácticas para construir componentes de interfaz de usuario (UI) en el frontend de Logic utilizando **Angular 21, PrimeNG 21 y Tailwind CSS v4**, basándose en las pantallas y flujos de usuario diseñados en la fase de UX-Research.
 
 ---
 

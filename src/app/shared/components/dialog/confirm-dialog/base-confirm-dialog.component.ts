@@ -47,6 +47,12 @@ export class BaseConfirmDialog {
   cancelLabel = input('labels.cancel')
   /** Confirm button icon */
   confirmIcon = input('pi pi-check')
+  /** Params for the message translation, e.g. { count: 3 } */
+  messageParams = input<Record<string, unknown>>({})
+  /** What the dialog is about (an item's name): plain text, shown bold above the message */
+  subject = input('')
+  /** False for a notice with a single acknowledge button (the confirm button) */
+  showCancel = input(true)
 
   /** Emitted when confirm is clicked */
   confirm = output<void>()

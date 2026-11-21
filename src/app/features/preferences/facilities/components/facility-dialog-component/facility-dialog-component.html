@@ -36,6 +36,15 @@
                         placeholder="{{ 'preferences.facilities.external_ref_id' | translate }}" class="w-full" />
                 </div>
 
+                <!-- Time zone: decides the facility's local day and the times shown -->
+                <div class="flex flex-col gap-1 md:col-span-2">
+                    <label for="fac-tz" class="font-medium text-sm">{{ 'preferences.facilities.time_zone' | translate }} <span class="text-red-500 ml-1">*</span></label>
+                    <p-select inputId="fac-tz" formControlName="time_zone" [options]="timeZones" optionLabel="label" optionValue="value"
+                        [filter]="true" filterBy="label" appendTo="body" class="w-full"
+                        placeholder="{{ 'preferences.facilities.time_zone' | translate }}" />
+                    <small class="text-surface-500 text-xs">{{ 'preferences.facilities.time_zone_hint' | translate }}</small>
+                </div>
+
             </div>
 
             <!-- ══════════════════════ ADDRESS ══════════════════════ -->

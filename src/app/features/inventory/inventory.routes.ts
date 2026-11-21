@@ -3,7 +3,7 @@ import { Routes } from '@angular/router'
 export default [
   {
     path: 'catalog',
-    data: { breadcrumb: 'Catalog' },
+    data: { breadcrumb: 'pages.catalog' },
     loadComponent: () => import('./catalog/catalog.component'),
   },
   {
@@ -18,12 +18,18 @@ export default [
   },
   {
     path: 'tracecards',
-    data: { breadcrumb: 'Tracecards' },
+    data: { breadcrumb: 'pages.tracecards' },
     loadComponent: () => import('./tracecards/warehouse.component'),
   },
   {
+    // Inventory valued at cost — OWNER only (costing phase 5)
+    path: 'valuation',
+    data: { breadcrumb: 'pages.valuation' },
+    loadComponent: () => import('./valuation/valuation.component'),
+  },
+  {
     path: 'tracecards/history/:kardexId',
-    data: { breadcrumb: 'History' },
+    data: { breadcrumb: 'pages.history_kardex' },
     loadComponent: () =>
       import('./tracecards/history/history.component'),
   },

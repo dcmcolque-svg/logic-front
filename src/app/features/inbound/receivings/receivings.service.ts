@@ -16,7 +16,10 @@ import {
   CompanyListResponse,
   ReceivingSkuOption,
   ReceivingLocationOption,
+  ReceivingContainerOption,
+  ReceivingContainerTreeNode,
 } from './receivings.types'
+import { CostingSettings } from '@/app/shared/utils/costing.util'
 
 @Injectable({ providedIn: 'root' })
 export class ReceivingService {
@@ -138,6 +141,24 @@ export class ReceivingService {
       .pipe(map(res => res.data ?? []))
   }
 
+  // ── Costing ────────────────────────────────────────────────────────────────
+
+  /**
+   * Costing settings of one facility (settings.costing), NONE when absent.
+   * POST /v2/facility/my filtered by id.
+   */
+  getFacilityCosting(facilityId: string): Observable<CostingSettings> {
+    return this.http
+      .post<{ data: Array<{ id: string; settings?: { costing?: CostingSettings } }> }>(
+        `${environment.URL_API}v2/facility/my`,
+        {
+          filter: { id: { match_mode: 'equals', value: facilityId } },
+          config: { page: 1, rows: 1, populate_data: false },
+        }
+      )
+      .pipe(map(res => res.data?.find(f => f.id === facilityId)?.settings?.costing ?? { method: 'NONE' }))
+  }
+
   // ── Location lookup ────────────────────────────────────────────────────────
 
   /**
@@ -158,6 +179,33 @@ export class ReceivingService {
         config: { page: 1, rows, sort_field: [{ field: 'location_code', order: 1 }] },
       })
       .pipe(map(res => res.data ?? []))
+  }
+
+  /**
+   * Containers (bins/LPNs) stored in a location, flattened depth-first so
+   * nested containers follow their parent.
+   * POST /v2/wms/container/tree
+   */
+  listLocationContainers(locationId: string): Observable<ReceivingContainerOption[]> {
+    const flatten = (nodes: ReceivingContainerTreeNode[], depth: number): ReceivingContainerOption[] =>
+      nodes.flatMap(n => [
+        {
+          id: n.id,
+          lpn_code: n.lpn_code,
+          type: n.type,
+          container_profile_code: n.container_profile_code ?? null,
+          content_skus: n.content_skus ?? 0,
+          content_units: n.content_units ?? 0,
+          depth,
+        },
+        ...flatten(n.children ?? [], depth + 1),
+      ])
+    return this.http
+      .post<ReceivingContainerTreeNode[] | null>(`${environment.URL_API}v2/wms/container/tree`, {
+        location_id: locationId,
+        type: 'BIN',
+      })
+      .pipe(map(res => flatten(res ?? [], 0)))
   }
 
   // ── Receiving Lines ────────────────────────────────────────────────────────

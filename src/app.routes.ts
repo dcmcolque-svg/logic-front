@@ -41,7 +41,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'inbound',
-        data: { breadcrumb: 'Inbound' },
+        data: { breadcrumb: 'pages.inbound' },
         loadChildren: () =>
           import('@/app/features/inbound/inbound.routes'),
       },
@@ -50,20 +50,20 @@ export const appRoutes: Routes = [
         data: { breadcrumb: 'pages.outbound' },
         loadChildren: () =>
           import('@/app/features/outbound/outbound.routes'),
-      },{
+      },
+      {
+        path: 'sales',
+        data: { breadcrumb: 'pages.sales' },
+        loadChildren: () => import('@/app/features/sales/sales.routes'),
+      },
+      {
         path: 'parcels',
         data: { breadcrumb: 'pages.parcels' },
         loadChildren: () => import('@/app/features/parcels/parcels.routes'),
       },
       {
-        path: 'marketplace',
-        data: { breadcrumb: 'Marketplace' },
-        loadChildren: () =>
-          import('@/app/features/marketplace/marketplace.routes'),
-      },
-      {
         path: 'inventory',
-        data: { breadcrumb: 'Inventory' },
+        data: { breadcrumb: 'pages.inventory' },
         loadChildren: () => import('@/app/features/inventory/inventory.routes'),
       },
     ],
@@ -102,6 +102,14 @@ export const appRoutes: Routes = [
     loadComponent: () =>
       import('@/app/pages/auth/login-landing/login-landing.component').then(
         (c) => c.LoginLandingComponent
+      ),
+  },
+  {
+    // Private sign-up link (only valid with the backend REGISTER_SECRET key).
+    path: 'register/:key',
+    loadComponent: () =>
+      import('@/app/pages/auth/register/register.component').then(
+        (c) => c.RegisterComponent
       ),
   },
   { path: '**', redirectTo: '/notfound' },

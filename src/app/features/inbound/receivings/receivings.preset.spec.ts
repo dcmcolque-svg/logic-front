@@ -60,7 +60,7 @@ describe('Receivings — custom filter presets', () => {
         provideRouter([]),
         {
           provide: FacilityScopeService,
-          useValue: { inScope: signal([]), apiValue: scopeValue, all: signal([]), selectedIds: signal([]) },
+          useValue: { inScope: signal([]), apiValue: scopeValue, all: signal([]), selectedIds: signal([]), load: () => {}, zone: () => 'America/La_Paz', zoneOf: () => 'America/La_Paz', mixedZones: () => false },
         },
         {
           provide: ReceivingService,

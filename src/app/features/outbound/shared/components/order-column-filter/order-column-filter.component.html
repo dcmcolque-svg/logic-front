@@ -1,7 +1,7 @@
 @if (filter(); as f) {
   @switch (f.kind) {
     @case ('text') {
-      <shipedge-filter-text-input
+      <nuvex-filter-text-input
         [value]="list.getActiveFilterValue(field())"
         [matchMode]="list.getActiveFilterMatchMode(field())"
         [placeholder]="f.placeholder | translate"
@@ -9,7 +9,7 @@
       />
     }
     @case ('numeric') {
-      <shipedge-filter-text-input
+      <nuvex-filter-text-input
         filterType="numeric"
         [value]="list.getActiveFilterValue(field())"
         [matchMode]="list.getActiveFilterMatchMode(field())"
@@ -18,7 +18,7 @@
       />
     }
     @case ('date') {
-      <shipedge-filter-date-input
+      <nuvex-filter-date-input
         [value]="list.getActiveFilterValue(field())"
         [matchMode]="list.getActiveFilterMatchMode(field())"
         [placeholder]="f.placeholder | translate"
@@ -27,7 +27,7 @@
     }
     @case ('multiselect') {
       @if (multiselect(); as m) {
-        <shipedge-filter-multiselect-panel
+        <nuvex-filter-multiselect-panel
           [options]="m.options()"
           [optionLabel]="m.optionLabel"
           [optionValue]="m.optionValue"

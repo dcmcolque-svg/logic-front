@@ -1,4 +1,5 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   inject,
@@ -12,11 +13,16 @@ import { InputTextModule } from 'primeng/inputtext'
 import { PasswordModule } from 'primeng/password'
 import { SelectButton, SelectButtonChangeEvent } from 'primeng/selectbutton'
 import { Message } from 'primeng/message'
+import { IconField } from 'primeng/iconfield'
+import { InputIcon } from 'primeng/inputicon'
 import { TranslateModule, TranslateService } from '@ngx-translate/core'
+import { TooltipModule } from 'primeng/tooltip'
 import { AuthService } from '@/app/core/services/auth.service'
 import { LayoutService } from '@/app/layout/service/layout.service'
 import { TranslateLanService } from '@/app/core/services/translate-lan.service'
 import { FieldErrorComponent, handleFormError, resolveErrorMessage } from '@/app/shared/components'
+import { AuthBrandPanelComponent } from '../auth-brand-panel.component'
+import { revealInvalid } from '@/app/shared/utils/form.util'
 
 @Component({
   selector: 'app-login-landing',
@@ -30,124 +36,156 @@ import { FieldErrorComponent, handleFormError, resolveErrorMessage } from '@/app
     PasswordModule,
     SelectButton,
     Message,
+    IconField,
+    InputIcon,
     TranslateModule,
+    TooltipModule,
     FieldErrorComponent,
+    AuthBrandPanelComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <!-- Full-screen surface background (adapts to light/dark theme) -->
-    <div class="min-h-screen flex flex-col items-center justify-center surface-ground px-4">
+    <div class="min-h-screen flex bg-surface-50 dark:bg-surface-950">
 
-      <!-- Central card -->
-      <div
-        class="w-full max-w-md surface-card shadow-2xl px-10 py-12 flex flex-col items-center gap-6"
-        style="border-radius: 16px;"
-      >
-        <!-- Logo — switches between dark/light variant -->
-        <div class="flex flex-col items-center gap-1 mb-2">
-          <img
-            [src]="isDark() ? '/layout/images/logo-light.png' : '/layout/images/logo-dark.png'"
-            alt="BINLOGIC"
-            class="h-12 w-auto object-contain"
-          />
-          <p class="text-sm text-color-secondary tracking-widest mt-1">
-            {{ 'auth.wms_subtitle' | translate }}
-          </p>
-        </div>
+      <app-auth-brand-panel />
 
-        <!-- Email + password form -->
-        <form
-          [formGroup]="form"
-          (ngSubmit)="login()"
-          class="w-full flex flex-col gap-4"
-          autocomplete="on"
-        >
-          <div class="flex flex-col gap-2">
-            <label for="login-email" class="text-sm font-medium">{{ 'auth.email' | translate }}</label>
-            <input
-              pInputText
-              id="login-email"
-              type="email"
-              formControlName="email"
-              autocomplete="username"
-              [placeholder]="'auth.emailPlaceholder' | translate"
-              class="w-full"
+      <!-- Form panel -->
+      <main class="flex-1 flex flex-col items-center justify-center px-6 py-10">
+        <div class="w-full max-w-sm flex flex-col gap-8">
+
+          <!-- Logo (mobile/tablet only) -->
+          <div class="flex lg:hidden flex-col items-center gap-1">
+            <img
+              [src]="isDark() ? '/layout/images/logo-light.png' : '/layout/images/logo-dark.png'"
+              alt="LOGIC"
+              class="h-20 w-auto object-contain"
             />
-            <sh-field-error [ctrl]="form.get('email')" />
+            <p class="text-sm text-muted-color tracking-widest m-0">
+              {{ 'auth.wms_subtitle' | translate }}
+            </p>
           </div>
 
-          <div class="flex flex-col gap-2">
-            <label for="login-password" class="text-sm font-medium">{{ 'auth.password' | translate }}</label>
-            <p-password
-              inputId="login-password"
-              formControlName="password"
-              [feedback]="false"
-              [toggleMask]="true"
-              autocomplete="current-password"
-              [placeholder]="'auth.passwordPlaceholder' | translate"
-              styleClass="w-full"
-              [inputStyle]="{ width: '100%' }"
-            />
-            <sh-field-error [ctrl]="form.get('password')" />
+          <div>
+            <h2 class="text-3xl font-bold text-color m-0">{{ 'auth.welcome_title' | translate }}</h2>
+            <p class="text-muted-color mt-2 mb-0">{{ 'auth.welcome_subtitle' | translate }}</p>
           </div>
 
-          @if (errorMessage()) {
-            <p-message
-              id="login-error"
-              severity="error"
-              [text]="errorMessage()"
-              styleClass="w-full"
-            />
-          }
-
-          <p-button
-            id="btn-login"
-            type="submit"
-            [label]="'auth.login' | translate"
-            icon="pi pi-sign-in"
-            styleClass="w-full justify-center"
-            [style]="{ width: '100%' }"
-            [loading]="isSubmitting()"
-            [disabled]="form.invalid"
-          />
-        </form>
-
-        <!-- Divider inside card -->
-        <div class="w-full border-t surface-border mt-2"></div>
-
-        <!-- Language selector -->
-        <div class="flex justify-center">
-          <p-selectbutton
-            [options]="languageOptions"
-            [(ngModel)]="selectedLanguage"
-            optionLabel="label"
-            [allowEmpty]="false"
-            size="small"
-            (onChange)="handleLanguageChange($event)"
+          <form
+            [formGroup]="form"
+            (ngSubmit)="login()"
+            class="w-full flex flex-col gap-5"
+            autocomplete="on"
           >
-            <ng-template let-item pTemplate="item">
-              <div class="flex items-center gap-2 px-1">
-                <img
-                  [src]="item.icon"
-                  [alt]="item.label"
-                  style="width: 1.1rem; height: 1.1rem; border-radius: 50%"
+            <div class="flex flex-col gap-2">
+              <label for="login-email" class="text-sm font-medium">{{ 'auth.email' | translate }}</label>
+              <p-iconfield>
+                <p-inputicon styleClass="pi pi-envelope" />
+                <input
+                  pInputText
+                  id="login-email"
+                  type="email"
+                  formControlName="email"
+                  autocomplete="username"
+                  [placeholder]="'auth.emailPlaceholder' | translate"
+                  class="w-full"
+                  (keyup)="checkCapsLock($event)"
                 />
-                <span class="text-xs">{{ item.label | translate }}</span>
-              </div>
-            </ng-template>
-          </p-selectbutton>
-        </div>
+              </p-iconfield>
+              <sh-field-error [ctrl]="form.get('email')" />
+            </div>
 
-        <!-- Copyright footer -->
-        <div class="text-center opacity-60">
-          <p class="text-xs font-semibold text-color">
-            &copy; Novacrest Systems
-          </p>
-          <p class="text-[10px] text-color-secondary mt-0.5">
-            {{ 'auth.all_rights_reserved' | translate }}
-          </p>
+            <div class="flex flex-col gap-2">
+              <label for="login-password" class="text-sm font-medium">{{ 'auth.password' | translate }}</label>
+              <p-password
+                inputId="login-password"
+                formControlName="password"
+                [feedback]="false"
+                [toggleMask]="true"
+                autocomplete="current-password"
+                [placeholder]="'auth.passwordPlaceholder' | translate"
+                styleClass="w-full"
+                [inputStyle]="{ width: '100%' }"
+                (keydown)="checkCapsLock($event)"
+                (keyup)="checkCapsLock($event)"
+              />
+              @if (capsLock()) {
+                <small id="login-caps-lock" class="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400" role="status">
+                  <i class="pi pi-exclamation-triangle text-xs"></i>{{ 'auth.caps_lock_on' | translate }}
+                </small>
+              }
+              <sh-field-error [ctrl]="form.get('password')" />
+            </div>
+
+            @if (errorMessage()) {
+              <p-message
+                id="login-error"
+                severity="error"
+                [text]="errorMessage()"
+                styleClass="w-full"
+              />
+            }
+
+            <p-button
+              id="btn-login"
+              type="submit"
+              [label]="'auth.login' | translate"
+              icon="pi pi-arrow-right"
+              iconPos="right"
+              size="large"
+              styleClass="w-full justify-center"
+              [style]="{ width: '100%' }"
+              [loading]="isSubmitting()"
+              [disabled]="isSubmitting()"
+            />
+
+            <!-- No self-service reset yet: the way back in is a new invitation -->
+            <p class="text-xs text-muted-color text-center m-0 leading-relaxed">
+              <i class="pi pi-question-circle mr-1 text-xs"></i>{{ 'auth.forgot_password_hint' | translate }}
+            </p>
+          </form>
+
+          <div class="flex flex-col items-center gap-4">
+            <div class="flex items-center gap-2">
+            <p-selectbutton
+              [options]="languageOptions"
+              [(ngModel)]="selectedLanguage"
+              optionLabel="label"
+              [allowEmpty]="false"
+              size="small"
+              (onChange)="handleLanguageChange($event)"
+            >
+              <ng-template let-item pTemplate="item">
+                <div class="flex items-center gap-2 px-1">
+                  <img
+                    [src]="item.icon"
+                    [alt]="item.label"
+                    style="width: 1.1rem; height: 1.1rem; border-radius: 50%"
+                  />
+                  <span class="text-xs">{{ item.label | translate }}</span>
+                </div>
+              </ng-template>
+            </p-selectbutton>
+            <!-- Light / dark, before signing in (same setting as the topbar) -->
+            <p-button
+              id="btn-login-theme"
+              [icon]="isDark() ? 'pi pi-sun' : 'pi pi-moon'"
+              [rounded]="true"
+              [text]="true"
+              severity="secondary"
+              [ariaLabel]="(isDark() ? 'auth.theme_light' : 'auth.theme_dark') | translate"
+              [pTooltip]="(isDark() ? 'auth.theme_light' : 'auth.theme_dark') | translate"
+              tooltipPosition="top"
+              (onClick)="toggleTheme()"
+            />
+            </div>
+
+            <!-- Copyright (mobile/tablet only; desktop shows it in the brand panel) -->
+            <p class="lg:hidden text-xs text-muted-color text-center m-0">
+              &copy; {{ year }} J3B · {{ 'auth.all_rights_reserved' | translate }}
+            </p>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   `,
 })
@@ -159,6 +197,8 @@ export class LoginLandingComponent {
   private readonly translateLan  = inject(TranslateLanService)
 
   constructor() {
+    // Ready to type: the cursor starts in the email field
+    afterNextRender(() => document.getElementById('login-email')?.focus())
     this.translate.use(this.translateLan.getLanguage())
     const lan = this.translateLan.getLanguage()
     this.selectedLanguage =
@@ -167,6 +207,7 @@ export class LoginLandingComponent {
   }
 
   readonly isDark = this.layoutService.isDarkTheme
+  readonly year = new Date().getFullYear()
 
   isSubmitting = signal(false)
   /** Form-level error from the backend (bad credentials, inactive account…). */
@@ -183,6 +224,18 @@ export class LoginLandingComponent {
     password: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
   })
 
+  /** Caps Lock is on (read from the last key event in a field). */
+  readonly capsLock = signal(false)
+
+  checkCapsLock(event: Event): void {
+    const e = event as KeyboardEvent
+    if (typeof e.getModifierState === 'function') this.capsLock.set(e.getModifierState('CapsLock'))
+  }
+
+  toggleTheme(): void {
+    this.layoutService.layoutConfig.update(prev => ({ ...prev, darkTheme: !prev.darkTheme }))
+  }
+
   handleLanguageChange(event: SelectButtonChangeEvent): void {
     const lan = event.value?.value
     if (!lan) return
@@ -191,7 +244,7 @@ export class LoginLandingComponent {
   }
 
   login(): void {
-    if (this.form.invalid || this.isSubmitting()) return
+    if (this.isSubmitting() || revealInvalid(this.form)) return
     this.isSubmitting.set(true)
     this.errorMessage.set('')
 
@@ -205,6 +258,8 @@ export class LoginLandingComponent {
       error: (err) => {
         this.isSubmitting.set(false)
         this.form.controls.password.reset()
+        // The password was cleared: put the cursor back there to retry
+        setTimeout(() => document.getElementById('login-password')?.focus())
         handleFormError(err, this.form, this.translate)
         // Errors tied to a field (422 + meta.field) are shown under the input
         // by handleFormError; the rest (401/403/500, network) go in the banner.
@@ -218,6 +273,12 @@ export class LoginLandingComponent {
   /** Translated message for a login error, falling back to a generic one. */
   private resolveLoginError(err: { code?: string; error?: { code?: string } } | null): string {
     const code = err?.code ?? err?.error?.code ?? ''
+    // Known login codes resolved explicitly (backend: logic-back auth/login).
+    const known: Record<string, string> = {
+      AUTH_INVALID_CREDENTIALS: 'auth.invalidCredentials',
+    }
+    if (known[code]) return this.translate.instant(known[code])
+
     const msg = resolveErrorMessage(err, this.translate)
     // translate.instant returns the key itself when there is no translation.
     if (code && msg && msg !== `errors.${code}`) return msg

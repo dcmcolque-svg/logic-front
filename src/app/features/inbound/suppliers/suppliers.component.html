@@ -1,0 +1,204 @@
+<p-menu #rowMenu [popup]="true" appendTo="body" [model]="menuItems" />
+
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+    <div>
+        <p class="text-surface-500 text-sm m-0">{{ 'suppliers.subtitle' | translate }}<i class="pi pi-info-circle text-surface-500 cursor-help ml-1 align-middle" [pTooltip]="'suppliers.hint' | translate" tooltipPosition="bottom"></i></p>
+    </div>
+    <div class="flex gap-2">
+        <p-button icon="pi pi-plus" [label]="'suppliers.new' | translate" size="small" (onClick)="edit(null)" />
+        <p-button
+            [label]="'buttons.clear' | translate"
+            icon="pi pi-filter-slash"
+            [outlined]="true"
+            severity="secondary"
+            size="small"
+            (onClick)="clearFilters()"
+        />
+    </div>
+</div>
+
+<!-- ──────── Table ──────── -->
+<div class="card">
+    <base-data-table
+        [columns]="selectedCols"
+        [data]="suppliers()"
+        [loading]="loading()"
+        [pagination]="pagination()"
+        [disableMobileView]="false"
+        [disableFacilityScope]="true"
+        [initialFilters]="activeRawFilters"
+        [activeFilterChips]="activeFilters()"
+        (stateChange)="onTableStateChange($event)"
+        (chipRemoved)="removeFilterChip($event)"
+        (clearAllFilters)="clearFilters()"
+    >
+        <!-- Paginator left: column toggle -->
+        <ng-template #paginatorLeft>
+            <app-column-toggle
+                [options]="translatedColumnDefs"
+                [selected]="selectedCols"
+                (selectionChange)="onColumnSelectionChange($event)"
+            />
+        </ng-template>
+
+        <!-- Custom cell rendering -->
+        <ng-template #cell let-row let-col="col">
+            @switch (col.field) {
+                @case ('name') {
+                    <span class="font-medium" [class.opacity-50]="!row.is_active">{{ row.name }}</span>
+                }
+                @case ('code') {
+                    <span class="font-mono text-sm">{{ row.code || '—' }}</span>
+                }
+                @case ('company_id') {
+                    <span class="text-sm">{{ row.company_name || '—' }}</span>
+                }
+                @case ('is_active') {
+                    <p-tag
+                        [value]="(row.is_active ? 'suppliers.active' : 'suppliers.inactive') | translate"
+                        [severity]="row.is_active ? 'success' : 'secondary'"
+                    />
+                }
+                @case ('created_at') {
+                    <span class="text-sm text-nowrap">{{ row.created_at | displayDate: 'dateTime' }}</span>
+                }
+                @default {
+                    @if (row[col.field]) {
+                        <span class="text-sm">{{ row[col.field] }}</span>
+                    } @else {
+                        <span class="text-surface-400 text-sm">—</span>
+                    }
+                }
+            }
+        </ng-template>
+
+        <!-- Row actions -->
+        <ng-template #actions let-row>
+            <p-button
+                icon="pi pi-ellipsis-v"
+                [text]="true"
+                [rounded]="true"
+                size="small"
+                severity="secondary"
+                (onClick)="openRowMenu($event, row, rowMenu)"
+            />
+        </ng-template>
+
+        <!-- Custom filter row -->
+        <ng-template #filterRow let-columns="columns">
+            <!-- actions col spacer -->
+            <th style="width: 4rem"></th>
+            @for (col of columns; track col.field) {
+                <th class="p-1" [style.width]="col.width">
+                    @switch (col.filterType) {
+                        @case ('multiselect') {
+                            <nuvex-filter-multiselect-panel
+                                [options]="multiselectOptions(col.field)"
+                                optionLabel="label"
+                                optionValue="value"
+                                [placeholder]="col.header | translate"
+                                [showFilter]="multiselectOptions(col.field).length > 5"
+                                [value]="getActiveFilterValue(col.field) ?? []"
+                                (apply)="onColumnFilterChange(col.field, $event)"
+                                (clear)="onColumnFilterChange(col.field, null)"
+                            />
+                        }
+                        @case ('date') {
+                            <nuvex-filter-date-input
+                                [value]="getActiveFilterValue(col.field)"
+                                [matchMode]="getActiveFilterMatchMode(col.field)"
+                                [placeholder]="col.header | translate"
+                                (applyWithMode)="onColumnFilterChange(col.field, $event)"
+                            />
+                        }
+                        @case ('text') {
+                            <nuvex-filter-text-input
+                                [value]="getActiveFilterValue(col.field)"
+                                [matchMode]="getActiveFilterMatchMode(col.field)"
+                                [placeholder]="col.header | translate"
+                                filterType="text"
+                                (applyWithMode)="onColumnFilterChange(col.field, $event)"
+                            />
+                        }
+                    }
+                </th>
+            }
+        </ng-template>
+    </base-data-table>
+</div>
+
+<!-- ──────── Create / edit dialog ──────── -->
+<base-dialog
+    [visible]="dialogVisible()"
+    [header]="editingId() ? 'suppliers.edit' : 'suppliers.new'"
+    size="md"
+    [loading]="saving()"
+    [saveDisabled]="!form.name.trim() || !form.company_id"
+    (save)="save()"
+    (hide)="dialogVisible.set(false)"
+>
+    <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1">
+            <label for="supCompany" class="text-sm">{{ 'labels.company' | translate }} *</label>
+            <p-select
+                inputId="supCompany"
+                name="company_id"
+                [options]="companies()"
+                optionLabel="name"
+                optionValue="id"
+                [(ngModel)]="form.company_id"
+                [disabled]="!!editingId()"
+                appendTo="body"
+            />
+            @if (editingId()) {
+                <small class="text-surface-500">{{ 'suppliers.company_fixed' | translate }}</small>
+            }
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="flex flex-col gap-1 md:col-span-2">
+                <label for="supName" class="text-sm">{{ 'suppliers.name' | translate }} *</label>
+                <input pInputText id="supName" name="name" [(ngModel)]="form.name" maxlength="120" [autofocus]="true" />
+            </div>
+            <div class="flex flex-col gap-1">
+                <label for="supCode" class="text-sm">{{ 'suppliers.code' | translate }}</label>
+                <input pInputText id="supCode" name="code" [(ngModel)]="form.code" maxlength="30" class="uppercase font-mono" />
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="flex flex-col gap-1">
+                <label for="supTax" class="text-sm">{{ 'suppliers.tax_id' | translate }}</label>
+                <input pInputText id="supTax" name="tax_id" [(ngModel)]="form.tax_id" maxlength="30" />
+            </div>
+            <div class="flex flex-col gap-1">
+                <label for="supContact" class="text-sm">{{ 'suppliers.contact_name' | translate }}</label>
+                <input pInputText id="supContact" name="contact_name" [(ngModel)]="form.contact_name" maxlength="120" />
+            </div>
+            <div class="flex flex-col gap-1">
+                <label for="supPhone" class="text-sm">{{ 'suppliers.phone' | translate }}</label>
+                <input pInputText id="supPhone" name="phone" [(ngModel)]="form.phone" maxlength="40" />
+            </div>
+            <div class="flex flex-col gap-1">
+                <label for="supEmail" class="text-sm">{{ 'suppliers.email' | translate }}</label>
+                <input pInputText id="supEmail" name="email" type="email" [(ngModel)]="form.email" maxlength="120" />
+            </div>
+        </div>
+        <div class="flex flex-col gap-1">
+            <label for="supAddress" class="text-sm">{{ 'suppliers.address' | translate }}</label>
+            <input pInputText id="supAddress" name="address" [(ngModel)]="form.address" maxlength="250" />
+        </div>
+        <div class="flex flex-col gap-1">
+            <label for="supNotes" class="text-sm">{{ 'labels.notes' | translate }}</label>
+            <textarea pTextarea id="supNotes" name="notes" rows="2" [(ngModel)]="form.notes" maxlength="1000"></textarea>
+        </div>
+        <label class="flex items-center gap-3 cursor-pointer">
+            <p-toggleswitch name="is_active" [(ngModel)]="form.is_active" />
+            <span class="text-sm">{{ 'suppliers.active' | translate }}</span>
+            @if (!form.is_active) {
+                <small class="text-surface-500">{{ 'suppliers.inactive_hint' | translate }}</small>
+            }
+        </label>
+        @for (e of errors(); track e) {
+            <p-message severity="error">{{ e }}</p-message>
+        }
+    </div>
+</base-dialog>

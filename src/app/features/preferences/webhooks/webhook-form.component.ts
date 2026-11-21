@@ -23,6 +23,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { TranslateLanService } from '../../../core/services/translate-lan.service'
 import { WebhookService } from './webhooks.service'
 import { CredentialsService } from '../credentials/credentials.service'
+import { formatDisplayDate } from '@/app/shared/utils/display-format'
 import { OAuth2CredentialResponse } from '../credentials/credentials.types'
 import { FieldErrorComponent, isInvalidCtrl, resolveErrorMessage } from '../../../shared/components'
 import {
@@ -34,6 +35,7 @@ import {
   WebhookScope,
   VERSION_BY_SCOPE,
 } from './webhooks.types'
+import { revealInvalid } from '@/app/shared/utils/form.util'
 
 /**
  * Strict HTTPS URL validator for webhook endpoint URLs.
@@ -403,7 +405,7 @@ function isValidHostLabel(label: string): boolean {
         <p-button
           type="submit"
           [label]="'buttons.save' | translate"
-          [disabled]="webhookForm.invalid || isLoading"
+          [disabled]="isLoading"
           [loading]="isLoading"
         ></p-button>
       </div>
@@ -487,7 +489,7 @@ export class WebhookFormDialogComponent implements OnInit {
   getTokenExpDate(): string {
     const token = this.oauthCredential()?.token
     if (!token?.exp) return '—'
-    return new Date(token.exp * 1000).toLocaleDateString()
+    return formatDisplayDate(token.exp * 1000, 'dateTime')
   }
 
   constructor() {
@@ -624,10 +626,7 @@ export class WebhookFormDialogComponent implements OnInit {
   }
 
   saveWebhook(): void {
-    if (!this.webhookForm.valid) {
-      this.markFormGroupTouched()
-      return
-    }
+    if (revealInvalid(this.webhookForm)) return
 
     this.isLoading = true
     const v = this.webhookForm.value
@@ -686,10 +685,6 @@ export class WebhookFormDialogComponent implements OnInit {
 
   isInvalid(field: string): boolean {
     return isInvalidCtrl(this.webhookForm.get(field))
-  }
-
-  private markFormGroupTouched(): void {
-    Object.values(this.webhookForm.controls).forEach((c) => c.markAsTouched())
   }
 
   private translateEvents(): void {

@@ -3,7 +3,6 @@
   [header]="editing() ? 'preferences.bin.title_edit' : 'preferences.bin.title_create'"
   size="sm"
   [loading]="saving()"
-  [saveDisabled]="!binForm?.valid"
   (save)="onSave()"
   (hide)="hide.emit()"
 >

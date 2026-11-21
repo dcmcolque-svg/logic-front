@@ -45,6 +45,7 @@
         />
       }
 
+      <!-- TODO: carga de imágenes deshabilitada temporalmente
       <div class="flex flex-col gap-3" [style.display]="workspaceOpen() ? 'none' : null">
         <div class="flex items-center gap-2 mb-1">
           <i class="pi pi-images text-primary text-sm"></i>
@@ -53,7 +54,7 @@
           </span>
         </div>
 
-        <!-- Upload button + drop zone hint -->
+        Upload button + drop zone hint
         <div class="flex items-stretch gap-3">
           <p-fileUpload
             class="shrink-0"
@@ -72,7 +73,7 @@
           </div>
         </div>
 
-        <!-- Pending file previews -->
+        Pending file previews
         @for (file of pendingFiles; track file.name; let fi = $index) {
           <div class="flex items-center gap-3 p-2 rounded-lg border border-surface-200 bg-surface-50 dark:bg-surface-800">
             <img
@@ -95,6 +96,7 @@
           </div>
         }
       </div>
+      -->
     </div>
   </div>
 </base-dialog>

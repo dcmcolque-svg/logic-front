@@ -1,6 +1,7 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http'
 import {
   ApplicationConfig,
+  LOCALE_ID,
   provideZonelessChangeDetection,
 } from '@angular/core'
 import {
@@ -18,6 +19,7 @@ import { appRoutes } from './app.routes'
 import { apiInterceptor } from './app/core/interceptors/api.interceptor'
 import { errorInterceptor } from './app/core/interceptors/error.interceptor'
 import { TranslateLanService } from './app/core/services/translate-lan.service'
+import { DISPLAY_LOCALE } from './app/shared/utils/display-format'
 
 const AppPreset = definePreset(Aura, {
   semantic: {
@@ -49,6 +51,8 @@ export const appConfig: ApplicationConfig = {
     ),
     provideHttpClient(withInterceptors([apiInterceptor, errorInterceptor])),
     provideZonelessChangeDetection(),
+    // Numbers (1.234,56) and dates through Angular pipes; see display-format.
+    { provide: LOCALE_ID, useValue: DISPLAY_LOCALE },
     providePrimeNG({
       theme: { preset: AppPreset, options: { darkModeSelector: '.app-dark' } },
     }),

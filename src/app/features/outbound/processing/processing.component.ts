@@ -2,12 +2,16 @@ import { Component, inject, signal } from '@angular/core'
 import { Router } from '@angular/router'
 
 import { ButtonModule } from 'primeng/button'
+import { map } from 'rxjs'
+import { TranslateModule } from '@ngx-translate/core'
+import { BaseImportExportMenu, ExportPageFetcher } from '@/app/shared/components/import-export-menu/base-import-export-menu.component'
 
 import { ActiveFilterChip, ShColumnDef } from '@/app/shared/types/table.types'
 import { buildFilterChipsFromColumns } from '@/app/shared/utils/filter-chips.util'
 
 import { Order, OrderFilter } from '../types/order.types'
 import { OrderListBase } from '../shared/order-list.base'
+import { orderSortField } from '../shared/order-filter.util'
 import { OrderColumnFilter, OrderMenuAction } from '../shared/order-list.types'
 import { ORDER_LIST_IMPORTS, provideOrderList } from '../shared/order-list.imports'
 
@@ -16,7 +20,7 @@ const PROCESSING_STATUS = 'PROCESSING'
 @Component({
   selector: 'app-processing',
   standalone: true,
-  imports: [ORDER_LIST_IMPORTS, ButtonModule],
+  imports: [ORDER_LIST_IMPORTS, ButtonModule, TranslateModule, BaseImportExportMenu],
   providers: provideOrderList(() => ProcessingComponent),
   templateUrl: './processing.component.html',
   styleUrl: './processing.component.scss',
@@ -24,7 +28,7 @@ const PROCESSING_STATUS = 'PROCESSING'
 export default class ProcessingComponent extends OrderListBase {
   private readonly router = inject(Router)
 
-  protected readonly stateKey = 'binlogic:processing'
+  protected readonly stateKey = 'logic:processing'
   protected override readonly formatDateFilters = true
 
   readonly columnFilters: Record<string, OrderColumnFilter> = {
@@ -34,6 +38,15 @@ export default class ProcessingComponent extends OrderListBase {
     created_at: { kind: 'date', placeholder: 'labels.order_date' },
     required_delivery_date: { kind: 'date', placeholder: 'labels.required_delivery_date' },
   }
+
+  /** Feeds the export menu: every PROCESSING order matching the filters and sort in use. */
+  readonly fetchExportPage: ExportPageFetcher = (page, rows) =>
+    this.orderService
+      .listOrders({
+        config: { page, rows, sort_field: orderSortField(this.currentSort()) },
+        filter: this.scopedRequestFilter(),
+      })
+      .pipe(map(resp => ({ data: resp.data || [], total: resp.meta_data?.total_records || 0 })))
 
   // Filter chips
   activeFilters = signal<ActiveFilterChip[]>([])

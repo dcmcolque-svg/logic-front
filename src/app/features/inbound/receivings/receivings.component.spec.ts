@@ -1,4 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http'
+import { provideHttpClientTesting } from '@angular/common/http/testing'
+import { provideRouter } from '@angular/router'
+import { provideTranslateService } from '@ngx-translate/core'
+import { providePrimeNG } from 'primeng/config'
 
 import { Receivings } from './receivings.component';
 
@@ -8,7 +13,14 @@ describe('Receivings', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Receivings]
+      imports: [Receivings],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideTranslateService(),
+        providePrimeNG(),
+      ],
     })
     .compileComponents();
 

@@ -9,7 +9,7 @@ import { AuthService } from '@/app/core/services/auth.service'
 import { TranslateLanService } from '@/app/core/services/translate-lan.service'
 import { AppTopbar } from './app.topbar'
 
-describe('AppTopbar – itemsApps', () => {
+describe('AppTopbar', () => {
   let fixture: ComponentFixture<AppTopbar>
   let component: AppTopbar
 
@@ -41,33 +41,8 @@ describe('AppTopbar – itemsApps', () => {
     component = fixture.componentInstance
   })
 
-  it('should only contain Omniorders, Ionflows and Xenvio', () => {
-    const labels = component.itemsApps.map((item) => item.label)
-    expect(labels).toEqual(['Omniorders', 'Ionflows', 'Xenvio'])
-  })
-
-  it('should NOT contain Shelfter', () => {
-    const labels = component.itemsApps.map((item) => item.label)
-    expect(labels).not.toContain('Shelfter')
-  })
-
-  it('should NOT contain Binlogic', () => {
-    const labels = component.itemsApps.map((item) => item.label)
-    expect(labels).not.toContain('Binlogic')
-  })
-
-  it('should NOT contain Templatemaker', () => {
-    const labels = component.itemsApps.map((item) => item.label)
-    expect(labels).not.toContain('Templatemaker')
-  })
-
-  it('should have exactly 3 app items', () => {
-    expect(component.itemsApps.length).toBe(3)
-  })
-
-  it('every app item should have a non-empty img path', () => {
-    for (const item of component.itemsApps) {
-      expect(item.img).toBeTruthy()
-    }
+  it('should create without the apps grid launcher', () => {
+    expect(component).toBeTruthy()
+    expect('itemsApps' in component).toBe(false)
   })
 })

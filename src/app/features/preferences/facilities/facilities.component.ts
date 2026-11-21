@@ -2,7 +2,6 @@ import {
     ChangeDetectionStrategy,
     ChangeDetectorRef,
     Component,
-    computed,
     effect,
     inject,
     OnInit,
@@ -11,12 +10,12 @@ import {
     ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FacilityScopeService } from '@/app/core/services/facility-scope.service';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { MessageService, MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { Menu, MenuModule } from 'primeng/menu';
-import { ChipModule } from 'primeng/chip';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
@@ -33,6 +32,7 @@ import { ShColumnDef, ShPaginationConfig, ShTableEvent, ActiveFilterChip } from 
 import { persistedConfigOverrides, pickColumns, removedColumnFields, translateColumnDefs } from '../../shared/list-columns.util';
 import { buildFilterChipsFromColumns } from '../../../shared/utils/filter-chips.util';
 import { FacilitiesService } from './facilities.service';
+import { zoneLabel } from '@/app/shared/utils/time-zone.util';
 import { TableStateService } from '../../../shared/services/table-state.service';
 import { FilterPresetService } from '@/app/shared/services/filter-preset.service';
 import { FilterPreset, buildFiltersFromConditions } from '@/app/shared/types/filter-preset.types';
@@ -41,9 +41,7 @@ import {
     FacilityDTO,
     FacilityFilter,
     FacilityListResponse,
-    OptionSelect,
 } from './facilities.types';
-import { isAppErrorResponse } from '../../../core/interceptors/app-error.schema';
 import { FacilityDialogComponent } from './components/facility-dialog-component/facility-dialog-component';
 import { FacilitySettingsDialogComponent } from './components/facility-settings-dialog-component/facility-settings-dialog-component';
 
@@ -54,15 +52,12 @@ const DEFAULT_DTO: FacilityDTO = {
     filter: {} as FacilityFilter,
 };
 
-/** PUT error codes meaning the listed Xenvio locations are out of date */
-const XENVIO_STALE_LOCATIONS = ['PROVIDER_NOT_FOUND', 'XENVIO_PROVIDER_CHANGED', 'XENVIO_LOCATION_NOT_FOUND'];
-
 @Component({
     selector: 'app-facilities',
     standalone: true,
     imports: [
         CommonModule, FormsModule,
-        TranslateModule, ButtonModule, TagModule, ChipModule,
+        TranslateModule, ButtonModule, TagModule,
         ToastModule, TooltipModule,
         MenuModule,
         CapitalizePipe,
@@ -78,6 +73,7 @@ const XENVIO_STALE_LOCATIONS = ['PROVIDER_NOT_FOUND', 'XENVIO_PROVIDER_CHANGED',
 export default class FacilitiesComponent implements OnInit {
 
     private readonly svc = inject(FacilitiesService);
+    private readonly facilityScope = inject(FacilityScopeService);
     private readonly translate = inject(TranslateService);
     private readonly translateLanService = inject(TranslateLanService);
     private readonly cdr = inject(ChangeDetectorRef);
@@ -85,7 +81,7 @@ export default class FacilitiesComponent implements OnInit {
     private readonly messageService = inject(MessageService);
     private readonly tableState = inject(TableStateService);
     private readonly filterPresetService = inject(FilterPresetService);
-    private readonly STATE_KEY = 'binlogic:facilities';
+    private readonly STATE_KEY = 'logic:facilities';
     readonly PRESET_PAGE_KEY = 'facilities';
     activePresetColor = signal<string | null>(null);
     activePresetName = signal<string | null>(null);
@@ -110,32 +106,6 @@ export default class FacilitiesComponent implements OnInit {
         rows_per_page: [15, 30, 50],
     });
 
-    // Xenvio connection: options (loaded once on init) and facility_id → location id
-    xenvioLocations  = signal<OptionSelect[]>([]);
-    xenvioByFacility = signal<Record<string, string>>({});
-    /** Locations the facilities are connected to, with the name saved with the connection */
-    xenvioConnected  = signal<OptionSelect[]>([]);
-    xenvioLoading    = signal(false);
-    /**
-     * Options of every facility's select: the Xenvio locations plus the ones
-     * already connected that Xenvio did not return (it failed to answer, or
-     * the location was removed there). Those extra options are disabled: the
-     * connected facility still shows its location and can clear it, but no
-     * other facility can pick a location Xenvio may no longer have. Without a
-     * provider the backend returns no connections, so nothing is left selected.
-     */
-    xenvioOptions = computed(() => {
-        const options: OptionSelect[] = [...this.xenvioLocations()];
-        const ids = new Set(options.map(l => l.id));
-        for (const loc of this.xenvioConnected()) {
-            if (!ids.has(loc.id)) {
-                options.push({ ...loc, disabled: true });
-                ids.add(loc.id);
-            }
-        }
-        return options;
-    });
-
     // ── Filter chips ────────────────────────────────────────────────────────
     activeFilters = signal<ActiveFilterChip[]>([]);
     protected activeRawFilters: Record<string, any> = {};
@@ -146,10 +116,17 @@ export default class FacilitiesComponent implements OnInit {
     };
 
     // ── Column definitions ──────────────────────────────────────────────────
+    /** City part of an IANA zone (America/La_Paz → La Paz). */
+    readonly zoneLabel = zoneLabel;
+
     columnDefs: ShColumnDef[] = [
         { field: 'name',    header: 'preferences.facilities.name',    width: '14rem', sortable: true,  filterable: true,  filterType: 'text', template: 'account', mobileLabel: true },
         { field: 'address', header: 'preferences.facilities.address', width: '16rem', sortable: false, filterable: false, filterType: 'text', template: 'address', mobileVisible: true },
-        { field: 'xenvio_connection', header: 'preferences.facilities.xenvio_connection', width: '14rem', sortable: false, filterable: false, template: 'xenvio' },
+        // The zone every time of this facility is shown in (sales, receivings, orders…)
+        { field: 'time_zone', header: 'preferences.facilities.time_zone', width: '11rem', sortable: false, filterable: false, template: 'time_zone',
+          exportValue: (row: any) => row.time_zone ?? '' },
+        { field: 'is_active', header: 'labels.status', width: '8rem', sortable: false, filterable: false, template: 'active',
+          exportValue: (row: any) => this.translate.instant(row.is_active === false ? 'labels.inactive' : 'labels.active') },
     ];
 
     selectedCols: ShColumnDef[] = this.columnDefs;
@@ -199,9 +176,9 @@ export default class FacilitiesComponent implements OnInit {
         });
 
         // ----- DEBUG: show what's in storage at startup -----
-        // NOTE: PrimeNG [stateKey] and TableStateService use THE SAME key 'binlogic:facilities'
+        // NOTE: PrimeNG [stateKey] and TableStateService use THE SAME key 'logic:facilities'
         // PrimeNG saves its format; TableStateService overwrites with its own format → CONFLICT
-        const sharedKey = this.STATE_KEY // 'binlogic:facilities'
+        const sharedKey = this.STATE_KEY // 'logic:facilities'
         const rawInStorage = localStorage.getItem(sharedKey)
         console.log('%c[Facilities] constructor START', 'color:#6366f1;font-weight:bold')
         console.log('  Shared localStorage key:', sharedKey)
@@ -267,7 +244,6 @@ export default class FacilitiesComponent implements OnInit {
             this.buildFilterChips(this.activeRawFilters);
         }
         this.filterPresetService.loadPresets(this.PRESET_PAGE_KEY);
-        this.loadXenvioConnections();
     }
 
     private saveState(): void {
@@ -437,7 +413,11 @@ export default class FacilitiesComponent implements OnInit {
             data: { facility },
         });
         ref?.onClose?.subscribe((result: Facility | undefined) => {
-            if (result) this.loadFacilities();
+            if (!result) return;
+            this.loadFacilities();
+            // The scope holds every facility's zone: refresh it so the new
+            // zone (or facility) applies to dates without a reload.
+            this.facilityScope.load(true);
         });
     }
 
@@ -478,104 +458,5 @@ export default class FacilitiesComponent implements OnInit {
             },
         ];
         menu.toggle(event);
-    }
-
-    // ── Xenvio Connection (Fulfillment Location) ────────────────────────────
-
-    /**
-     * Loads the fulfillment locations of the Xenvio account configured in
-     * Providers, and the location each facility is connected to.
-     */
-    loadXenvioConnections(): void {
-        this.xenvioLoading.set(true);
-        this.svc.getXenvioFulfillmentLocations().subscribe({
-            next: (resp) => {
-                this.xenvioLocations.set((resp.data ?? []).map(loc => ({
-                    id: String(loc.id),
-                    name: loc.name,
-                    company: loc.company ?? '',
-                })));
-                this.xenvioLoading.set(false);
-            },
-            error: (err) => {
-                this.xenvioLocations.set([]);
-                this.xenvioLoading.set(false);
-                // No Xenvio provider (never configured or deleted): the column
-                // just stays empty. Any other failure is reported.
-                if (!(isAppErrorResponse(err) && err.code === 'PROVIDER_NOT_FOUND')) this.showXenvioError(err);
-            },
-        });
-        this.loadXenvioFacilities();
-    }
-
-    private loadXenvioFacilities(): void {
-        this.svc.getXenvioFacilities().subscribe({
-            next: (resp) => {
-                const map: Record<string, string> = {};
-                const connected: OptionSelect[] = [];
-                for (const f of resp.data ?? []) {
-                    map[f.facility_id] = f.fulfillment_location_id;
-                    connected.push({ id: f.fulfillment_location_id, name: f.name, company: f.company ?? '' });
-                }
-                this.xenvioByFacility.set(map);
-                this.xenvioConnected.set(connected);
-            },
-        });
-    }
-
-    /** Called when the user picks (location id) or clears (null) the dropdown */
-    updateFulfillmentLocation(facility: Facility, locationId: string | null): void {
-        // Only a location Xenvio listed can be connected (the extra options are disabled).
-        const location = locationId
-            ? this.xenvioLocations().find(l => l.id === locationId) ?? null
-            : null;
-        if (locationId && !location) return;
-
-        // Optimistic UI update
-        this.xenvioByFacility.update(map => {
-            const next = { ...map };
-            if (location) next[facility.id] = location.id;
-            else delete next[facility.id];
-            return next;
-        });
-
-        this.svc.setXenvioFacility(facility.id, location).subscribe({
-            next: () => {
-                const key = location
-                    ? 'messages.xenvio_connected'
-                    : 'messages.xenvio_disconnected';
-                this.messageService.add({
-                    severity: 'success',
-                    summary: this.translate.instant('messages.success'),
-                    detail:  this.translate.instant(key),
-                });
-            },
-            error: (err) => {
-                this.showXenvioError(err);
-                // Revert the optimistic update. When the listed locations are
-                // stale (provider deleted or saved with another account, or the
-                // location removed in Xenvio), reload them too.
-                if (isAppErrorResponse(err) && XENVIO_STALE_LOCATIONS.includes(err.code)) this.loadXenvioConnections();
-                else this.loadXenvioFacilities();
-            },
-        });
-    }
-
-    /**
-     * The translated `preferences.facilities.xenvio_errors.<code>` message;
-     * anything else (another code, network failure, proxy error page) gets
-     * the generic one. The API message is never shown: it is in English and
-     * XENVIO_EXTERNAL_FAILED carries the raw upstream error.
-     */
-    private showXenvioError(err: unknown): void {
-        const key = isAppErrorResponse(err) ? `preferences.facilities.xenvio_errors.${err.code}` : '';
-        const translated = key ? this.translate.instant(key) : key;
-        this.messageService.add({
-            severity: 'error',
-            summary: this.translate.instant('messages.error'),
-            detail: translated && translated !== key
-                ? translated
-                : this.translate.instant('messages.error_generic'),
-        });
     }
 }

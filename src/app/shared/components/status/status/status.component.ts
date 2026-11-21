@@ -49,7 +49,7 @@ const STATUS_CHIP_MAP: Record<string, string> = {
 }
 
 @Component({
-  selector: 'shipedge-chip-status',
+  selector: 'nuvex-chip-status',
   standalone: true,
   imports: [
     ChipModule,

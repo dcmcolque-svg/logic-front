@@ -8,6 +8,7 @@ import {
   ViewChild,
 } from '@angular/core'
 import { CommonModule, UpperCasePipe } from '@angular/common'
+import { DisplayDatePipe } from '@/app/shared/pipes/display-date.pipe'
 import { FormsModule } from '@angular/forms'
 import { TranslateModule, TranslateService } from '@ngx-translate/core'
 import { ButtonModule } from 'primeng/button'
@@ -32,6 +33,7 @@ import { translateOAuth2TestError, translateOAuth2TestSuccess } from './oauth2-t
   standalone: true,
   imports: [
     CommonModule,
+    DisplayDatePipe,
     FormsModule,
     TranslateModule,
     ButtonModule,
@@ -56,7 +58,7 @@ import { translateOAuth2TestError, translateOAuth2TestSuccess } from './oauth2-t
     <div class="card shadow-none">
       <div class="flex justify-between mb-4">
         <h5 class="text-2xl pb-2 font-semibold">
-          {{ 'credential_types.oauth2.description' | translate | uppercase }}
+          {{ 'credential_types.oauth2.description' | translate }}
         </h5>
         <div class="flex gap-2">
           <p-button
@@ -151,7 +153,7 @@ import { translateOAuth2TestError, translateOAuth2TestSuccess } from './oauth2-t
             <td class="text-surface-400 text-sm">
               {{
                 item.updated_at
-                  ? (item.updated_at | date: 'yyyy-MM-dd HH:mm')
+                  ? (item.updated_at | displayDate: 'dateTime')
                   : '—'
               }}
             </td>

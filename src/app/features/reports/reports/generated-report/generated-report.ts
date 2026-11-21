@@ -71,7 +71,7 @@ export default class GeneratedReport implements OnInit {
   private readonly cdr             = inject(ChangeDetectorRef);
   private readonly destroyRef      = inject(DestroyRef);
   private readonly tableState      = inject(TableStateService);
-  private readonly STATE_KEY       = 'binlogic:generated-reports';
+  private readonly STATE_KEY       = 'logic:generated-reports';
   /** Resets the sort icon on Clear */
   @ViewChild(BaseDataTable) private readonly baseTable!: BaseDataTable;
 

@@ -11,7 +11,8 @@ import {
   ViewChild,
 } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
-import { CommonModule, DatePipe } from '@angular/common'
+import { CommonModule } from '@angular/common'
+import { DisplayDatePipe } from '@/app/shared/pipes/display-date.pipe'
 import { FormsModule } from '@angular/forms'
 import { TranslateModule, TranslateService } from '@ngx-translate/core'
 import { startWith } from 'rxjs'
@@ -182,7 +183,7 @@ const ALLOWED_COLUMNS: ShColumnDef[] = [
     TagModule,
     ToastModule,
     CapitalizePipe,
-    DatePipe,
+    DisplayDatePipe,
     DateSeparatePipe,
     TimeSeparatePipe,
     AvatarModule,
@@ -209,9 +210,6 @@ const ALLOWED_COLUMNS: ShColumnDef[] = [
       class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4"
     >
       <div>
-        <h5 class="text-2xl font-bold m-0 mb-1 text-color">
-          {{ 'pages.user_account' | translate }}
-        </h5>
         <p class="text-surface-500 text-sm m-0">
           {{ 'preferences.user_account.subtitle' | translate }}
         </p>
@@ -246,6 +244,7 @@ const ALLOWED_COLUMNS: ShColumnDef[] = [
         [activeFilterChips]="activeFilters()"
         (stateChange)="onTableStateChange($event)"
         (chipRemoved)="removeFilterChip($event)"
+        (clearAllFilters)="clearFilters()"
       >
 
         <!-- Filter row -->
@@ -257,7 +256,7 @@ const ALLOWED_COLUMNS: ShColumnDef[] = [
               @switch (col.field) {
 
                 @case ('full_name') {
-                  <shipedge-filter-text-input
+                  <nuvex-filter-text-input
                     [value]="getActiveFilterValue('full_name')"
                     [placeholder]="'labels.full_name' | translate"
                     (applyWithMode)="onColumnFilterChange('full_name', $event)"
@@ -265,7 +264,7 @@ const ALLOWED_COLUMNS: ShColumnDef[] = [
                 }
 
                 @case ('email') {
-                  <shipedge-filter-text-input
+                  <nuvex-filter-text-input
                     [value]="getActiveFilterValue('email')"
                     [placeholder]="'labels.email' | translate"
                     (applyWithMode)="onColumnFilterChange('email', $event)"
@@ -274,7 +273,7 @@ const ALLOWED_COLUMNS: ShColumnDef[] = [
 
 
                 @case ('facilities') {
-                  <shipedge-filter-multiselect-panel
+                  <nuvex-filter-multiselect-panel
                     [options]="getFacilityOptions()"
                     optionLabel="label"
                     optionValue="value"
@@ -287,7 +286,7 @@ const ALLOWED_COLUMNS: ShColumnDef[] = [
                 }
 
                 @case ('role_id') {
-                  <shipedge-filter-multiselect-panel
+                  <nuvex-filter-multiselect-panel
                     [options]="getRoleOptions()"
                     optionLabel="label"
                     optionValue="value"
@@ -300,7 +299,7 @@ const ALLOWED_COLUMNS: ShColumnDef[] = [
                 }
 
                 @case ('user_status') {
-                  <shipedge-filter-multiselect-panel
+                  <nuvex-filter-multiselect-panel
                     [options]="statusOptions"
                     optionLabel="state"
                     optionValue="id"
@@ -312,7 +311,7 @@ const ALLOWED_COLUMNS: ShColumnDef[] = [
                 }
 
                 @case ('is_active') {
-                  <shipedge-filter-multiselect-panel
+                  <nuvex-filter-multiselect-panel
                     [options]="activeOptions"
                     optionLabel="label"
                     optionValue="value"
@@ -324,7 +323,7 @@ const ALLOWED_COLUMNS: ShColumnDef[] = [
                 }
 
                 @case ('created_at') {
-                  <shipedge-filter-date-input
+                  <nuvex-filter-date-input
                     [value]="getActiveFilterValue('created_at')"
                     [matchMode]="getActiveFilterMatchMode('created_at')"
                     [placeholder]="'labels.created_at' | translate"
@@ -333,7 +332,7 @@ const ALLOWED_COLUMNS: ShColumnDef[] = [
                 }
 
                 @case ('last_login_at') {
-                  <shipedge-filter-date-input
+                  <nuvex-filter-date-input
                     [value]="getActiveFilterValue('last_login_at')"
                     [matchMode]="getActiveFilterMatchMode('last_login_at')"
                     [placeholder]="'labels.last_login_at' | translate"
@@ -359,7 +358,7 @@ const ALLOWED_COLUMNS: ShColumnDef[] = [
             }
             @case ('user') {
               <span
-                style="font-weight:600;font-size:.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block"
+                class="block truncate text-sm font-semibold"
                 [pTooltip]="row.full_name || ''"
                 tooltipPosition="top"
               >
@@ -368,7 +367,7 @@ const ALLOWED_COLUMNS: ShColumnDef[] = [
             }
             @case ('email') {
               <span
-                style="font-size:.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block"
+                class="block truncate text-sm text-muted-color"
                 [pTooltip]="row.email || ''"
                 tooltipPosition="top"
               >
@@ -377,25 +376,25 @@ const ALLOWED_COLUMNS: ShColumnDef[] = [
             }
             @case ('facilities') {
               @if (row.facility_ids?.length) {
-                <div class="flex align-items-center gap-2 flex-nowrap">
+                <div class="flex items-center gap-2 flex-nowrap">
                   <div
-                    class="flex align-items-center gap-1 px-2 border-round-3xl white-space-nowrap overflow-hidden"
+                    class="flex items-center gap-1 px-2 rounded-3xl whitespace-nowrap overflow-hidden"
                     style="height:1.5rem;background:color-mix(in srgb,var(--primary-color) 10%,transparent);max-width:8.5rem"
                   >
                     <span
-                      class="border-circle flex-shrink-0"
+                      class="rounded-full flex-shrink-0"
                       style="width:.4rem;height:.4rem;background:var(--primary-color);opacity:.85"
                     ></span>
                     <span
-                      class="text-xs font-medium overflow-hidden text-overflow-ellipsis"
+                      class="text-xs font-medium overflow-hidden text-ellipsis"
                       style="color:var(--primary-color)"
                       >{{ getFacilityName(row.facility_ids[0]) }}</span
                     >
                   </div>
                   @if (row.facility_ids.length > 1) {
                     <span
-                      class="flex-shrink-0 text-xs font-semibold px-1 border-round cursor-pointer"
-                      style="height:1.5rem;line-height:1.5rem;background:var(--surface-100);color:var(--text-color-secondary)"
+                      class="flex-shrink-0 text-xs font-semibold px-1 rounded cursor-pointer"
+                      style="height:1.5rem;line-height:1.5rem;background:var(--p-content-hover-background);color:var(--text-color-secondary)"
                       [pTooltip]="
                         row.facility_ids
                           .slice(1)
@@ -432,11 +431,11 @@ const ALLOWED_COLUMNS: ShColumnDef[] = [
                       <span
                         class="font-mono font-bold text-xs tracking-widest px-2 py-0.5 rounded select-none"
                         [style]="expired
-                          ? 'background:color-mix(in srgb,var(--surface-400) 20%,transparent);color:var(--surface-500)'
-                          : 'background:color-mix(in srgb,var(--amber-400) 15%,transparent);color:var(--amber-600)'"
+                          ? 'background:color-mix(in srgb,var(--p-surface-400) 20%,transparent);color:var(--p-surface-500)'
+                          : 'background:color-mix(in srgb,var(--p-amber-400) 15%,transparent);color:var(--p-amber-600)'"
                         [pTooltip]="expired
                           ? '⚠ ' + ('users.codeExpired' | translate)
-                          : ('users.codeExpires' | translate) + ': ' + (row.invite_metadata?.expires_at || row.invite_code_expires_at | date:'yyyy-MM-dd')"
+                          : ('users.codeExpires' | translate) + ': ' + (row.invite_metadata?.expires_at || row.invite_code_expires_at | displayDate: 'date')"
                         tooltipPosition="top"
                       >{{ revealed ? code : '••••••' }}</span>
 
@@ -495,7 +494,7 @@ const ALLOWED_COLUMNS: ShColumnDef[] = [
             @case ('role') {
               @if (getRoleName(row.role_id); as roleName) {
                 <span
-                  class="inline-flex align-items-center gap-1 px-2 py-1 border-round surface-200 text-xs font-medium"
+                  class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-200 dark:bg-surface-700 text-xs font-medium"
                 >
                   <i
                     class="pi pi-shield text-primary"
@@ -573,7 +572,7 @@ export default class UserAccountComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef)
   private readonly filterservice = inject(FilterApplyService)
   private readonly tableState = inject(TableStateService)
-  private readonly STATE_KEY = 'binlogic:users'
+  private readonly STATE_KEY = 'logic:users'
 
   ref: DynamicDialogRef | null | undefined
 

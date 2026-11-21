@@ -10,7 +10,8 @@ import {
   ViewChild,
 } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
-import { CommonModule, DatePipe } from '@angular/common'
+import { CommonModule } from '@angular/common'
+import { DisplayDatePipe } from '@/app/shared/pipes/display-date.pipe'
 import { FormsModule } from '@angular/forms'
 import { TranslateModule, TranslateService } from '@ngx-translate/core'
 import { startWith } from 'rxjs'
@@ -105,7 +106,7 @@ const DEFAULT_KEY_DTO: KeyDTO = {
     MenuModule,
     DateTimeSeparatePipe,
     CapitalizePipe,
-    DatePipe,
+    DisplayDatePipe,
     TabsModule,
     MultiSelectModule,
     SkeletonModule,
@@ -152,10 +153,7 @@ const DEFAULT_KEY_DTO: KeyDTO = {
     <!-- ──────── Header ──────── -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
       <div>
-        <h5 class="text-2xl font-semibold m-0 mb-1">
-          {{ 'pages.integrations' | translate }}
-        </h5>
-        <p class="text-surface-400 text-sm m-0">
+        <p class="text-surface-500 text-sm m-0">
           {{ 'labels.integrations_description' | translate }}
         </p>
       </div>
@@ -297,7 +295,7 @@ const DEFAULT_KEY_DTO: KeyDTO = {
                     @switch (col.field) {
 
                       @case ('name') {
-                        <shipedge-filter-text-input
+                        <nuvex-filter-text-input
                           [value]="getKeyActiveFilterValue('name')"
                           [placeholder]="'labels.name' | translate"
                           (applyWithMode)="onKeyTextApply('name', $event)"
@@ -305,7 +303,7 @@ const DEFAULT_KEY_DTO: KeyDTO = {
                       }
 
                       @case ('facility_id') {
-                        <shipedge-filter-multiselect-panel
+                        <nuvex-filter-multiselect-panel
                           [options]="getKeyFacilityOptions()"
                           optionLabel="label"
                           optionValue="value"
@@ -318,7 +316,7 @@ const DEFAULT_KEY_DTO: KeyDTO = {
                       }
 
                       @case ('status') {
-                        <shipedge-filter-multiselect-panel
+                        <nuvex-filter-multiselect-panel
                           [options]="keyStatusOptions()"
                           optionLabel="label"
                           optionValue="value"
@@ -447,21 +445,21 @@ const DEFAULT_KEY_DTO: KeyDTO = {
                   <th class="filter-th">
                     @switch (col.field) {
                       @case ('provider_name') {
-                        <shipedge-filter-text-input
+                        <nuvex-filter-text-input
                           [value]="getOAuthActiveFilterValue('provider_name')"
                           [placeholder]="'labels.provider' | translate"
                           (applyWithMode)="onOAuthTextApply('provider_name', $event)"
                         />
                       }
                       @case ('client_id') {
-                        <shipedge-filter-text-input
+                        <nuvex-filter-text-input
                           [value]="getOAuthActiveFilterValue('client_id')"
                           [placeholder]="'labels.client_id' | translate"
                           (applyWithMode)="onOAuthTextApply('client_id', $event)"
                         />
                       }
                       @case ('environment') {
-                        <shipedge-filter-multiselect-panel
+                        <nuvex-filter-multiselect-panel
                           [options]="oauthEnvOptions()"
                           optionLabel="label"
                           optionValue="value"
@@ -473,7 +471,7 @@ const DEFAULT_KEY_DTO: KeyDTO = {
                         />
                       }
                       @case ('token') {
-                        <shipedge-filter-multiselect-panel
+                        <nuvex-filter-multiselect-panel
                           [options]="oauthTokenStatusOptions()"
                           optionLabel="label"
                           optionValue="value"
@@ -485,7 +483,7 @@ const DEFAULT_KEY_DTO: KeyDTO = {
                         />
                       }
                       @case ('updated_at') {
-                        <shipedge-filter-date-input
+                        <nuvex-filter-date-input
                           [value]="getOAuthActiveFilterValue('updated_at')"
                           [matchMode]="getOAuthActiveFilterMatchMode('updated_at')"
                           [placeholder]="'labels.updated_at' | translate"
@@ -535,7 +533,7 @@ const DEFAULT_KEY_DTO: KeyDTO = {
                   @case ('date') {
                     <span class="text-surface-400 text-sm">
                       <i class="pi pi-calendar mr-1 text-xs"></i>
-                      {{ row.updated_at ? (row.updated_at | date: 'yyyy-MM-dd HH:mm') : '—' }}
+                      {{ row.updated_at ? (row.updated_at | displayDate: 'dateTime') : '—' }}
                     </span>
                   }
                   @case ('test') {
@@ -815,7 +813,7 @@ export default class CredentialsComponent implements OnInit {
     effect(() => this.translate.use(this.translateLanService.changeLanguage()))
 
     // Restore persisted API Keys state BEFORE the first keyDto effect run triggers loadKeys()
-    const saved = this.tableState.load('binlogic:credentials-keys')
+    const saved = this.tableState.load('logic:credentials-keys')
     if (saved?.filters && Object.keys(saved.filters).length > 0) {
       this.keyActiveRawFilters = saved.filters as Record<string, any>
       const f = this.keyActiveRawFilters
@@ -874,7 +872,7 @@ export default class CredentialsComponent implements OnInit {
   private saveKeyState(): void {
     const cfg = this.keyDto().config
     const sf  = cfg.sort_field?.[0]
-    this.tableState.save('binlogic:credentials-keys', {
+    this.tableState.save('logic:credentials-keys', {
       filters: this.keyActiveRawFilters as Record<string, unknown>,
       page:    cfg.page,
       sort:    sf ? { field: sf.field, order: sf.order === 1 ? 'asc' : 'desc' } : undefined,
@@ -1163,7 +1161,7 @@ export default class CredentialsComponent implements OnInit {
   }
 
   clearKeyFilters(): void {
-    this.tableState.clear('binlogic:credentials-keys')
+    this.tableState.clear('logic:credentials-keys')
     this.keyActiveRawFilters = {}
     this.keySort.set(undefined)
     this.keyDto.set({

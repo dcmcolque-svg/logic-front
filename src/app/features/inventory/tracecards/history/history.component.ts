@@ -1,13 +1,16 @@
+import { BreadcrumbService } from '@/app/layout/service/breadcrumb.service'
+import { facilityDayFilters, formatInZone } from '@/app/shared/utils/time-zone.util'
 import {
   Component,
   OnInit,
+  OnDestroy,
   HostListener,
   inject,
   signal,
   computed,
   ChangeDetectionStrategy,
 } from '@angular/core'
-import { CommonModule, UpperCasePipe, Location } from '@angular/common'
+import { CommonModule, Location } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute } from '@angular/router'
 import { TranslateModule, TranslateService } from '@ngx-translate/core'
@@ -66,6 +69,9 @@ import {
 } from '../shared/tracecards-filters.util'
 import { ColumnFilterHost } from '../shared/column-filter-host'
 import { provideTableColumns } from '@/app/shared/services/table-columns.bus'
+import { AuthService } from '@/app/core/services/auth.service'
+import { FacilityScopeService } from '@/app/core/services/facility-scope.service'
+import { CostingCurrency, formatCost, isOwnerRole } from '@/app/shared/utils/costing.util'
 
 /**
  * Fields the context card renders. A tracecard row supplies them all; a SKU
@@ -108,13 +114,40 @@ export function buildContextFields(item: HistoryContext, source: HistorySource):
   return [{ label: 'labels.facility_name', value: item.facility_name || '—' }, ...bySource[source]]
 }
 
+const FIELD_ICONS: Record<string, string> = {
+  'labels.facility_name': 'pi-building',
+  'labels.location': 'pi-map-marker',
+  'labels.zone': 'pi-th-large',
+  'labels.container': 'pi-box',
+  'labels.tracecard': 'pi-id-card',
+  'labels.sku': 'pi-tag',
+  'labels.barcode': 'pi-barcode',
+}
+
+export interface ContextView {
+  /** The entity the history is about: location code, tracecard or SKU. */
+  title: ContextField
+  description: string | null
+  meta: (ContextField & { icon: string })[]
+}
+
+/** Header layout of the context card: identifier first, description under it, the rest as small fields. */
+export function buildContextView(item: HistoryContext, source: HistorySource): ContextView {
+  const fields = buildContextFields(item, source)
+  const title = fields[1]
+  const description = fields.find(f => f.label === 'labels.description')?.value || null
+  const meta = fields
+    .filter(f => f !== title && f.label !== 'labels.description')
+    .map(f => ({ ...f, value: f.value || '—', icon: FIELD_ICONS[f.label] ?? 'pi-info-circle' }))
+  return { title, description, meta }
+}
+
 @Component({
   selector: 'app-tracecards-history',
   standalone: true,
   imports: [
     CommonModule,
     FormsModule,
-    UpperCasePipe,
     TranslateModule,
     ButtonModule,
     CardModule,
@@ -137,13 +170,18 @@ export function buildContextFields(item: HistoryContext, source: HistorySource):
   templateUrl: './history.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class HistoryComponent extends ColumnFilterHost implements OnInit {
+export default class HistoryComponent extends ColumnFilterHost implements OnInit, OnDestroy {
   private readonly tracecardsService = inject(TracecardsService)
   private readonly catalogService = inject(CatalogService)
   private readonly route = inject(ActivatedRoute)
   private readonly location = inject(Location)
   private readonly translate = inject(TranslateService)
+  private readonly facilityScope = inject(FacilityScopeService)
   private readonly filterService = inject(FilterApplyService)
+  private readonly auth = inject(AuthService)
+
+  /** Costs are OWNER-only; the backend omits them for other roles too. */
+  readonly isOwner = isOwnerRole(this.auth.getAuthUserInfo()?.role)
 
   // Route param — the entity ID (kardex, location, container, or sku depending on source)
   entityId = ''
@@ -194,6 +232,10 @@ export default class HistoryComponent extends ColumnFilterHost implements OnInit
     const item = this.contextItem()
     return item ? buildContextFields(item, this.historySource()) : []
   })
+  contextView = computed(() => {
+    const item = this.contextItem()
+    return item ? buildContextView(item, this.historySource()) : null
+  })
   pagination = signal<ShPaginationConfig>({
     page: 1,
     limit: 15,
@@ -227,6 +269,12 @@ export default class HistoryComponent extends ColumnFilterHost implements OnInit
     this.timelineAlign.set(window.innerWidth < 768 ? 'left' : 'alternate')
   }
 
+  private readonly breadcrumb = inject(BreadcrumbService)
+
+  ngOnDestroy() {
+    this.breadcrumb.titleOverride.set(null)
+  }
+
   ngOnInit() {
     this.entityId = this.route.snapshot.paramMap.get('kardexId') || ''
     this.facilityId = this.route.snapshot.queryParamMap.get('facility') || ''
@@ -234,6 +282,7 @@ export default class HistoryComponent extends ColumnFilterHost implements OnInit
     if (['location', 'bin', 'tracecard', 'sku'].includes(source)) {
       this.historySource.set(source)
     }
+    this.breadcrumb.titleOverride.set(this.pageTitle)
     // Build columns AFTER source is known
     this.cols = this.buildColumns()
     this.selectedColumns = [...this.cols]
@@ -331,7 +380,34 @@ export default class HistoryComponent extends ColumnFilterHost implements OnInit
       },
     )
 
+    if (this.isOwner) {
+      base.push(
+        {
+          field: 'unit_cost',
+          header: 'labels.unit_cost',
+          width: '9rem',
+          align: 'right',
+          template: 'cost',
+          exportValue: (row: KardexFlowItem) => row.unit_cost ?? null,
+        },
+        {
+          field: 'total_cost',
+          header: 'labels.total_cost',
+          width: '10rem',
+          align: 'right',
+          template: 'cost',
+          exportValue: (row: KardexFlowItem) => row.total_cost ?? null,
+        },
+      )
+    }
+
     return base
+  }
+
+  /** "Bs 10.67" — "—" when the movement has no cost (facility without costing). */
+  costText(value: number | null | undefined, currency: CostingCurrency | null | undefined): string {
+    if (value === null || value === undefined || !currency) return '—'
+    return formatCost(value, currency)
   }
 
   /** Text column for the entity shown alongside the history context (location, tracecard, sku). */
@@ -453,7 +529,7 @@ export default class HistoryComponent extends ColumnFilterHost implements OnInit
    */
   private listRequest(page: number, rows: number) {
     return {
-      filter: { ...this.buildPrimaryFilter(), ...this.currentFilters() },
+      filter: { ...this.buildPrimaryFilter(), ...facilityDayFilters(this.currentFilters()) },
       config: {
         page,
         rows,
@@ -604,31 +680,18 @@ export default class HistoryComponent extends ColumnFilterHost implements OnInit
     return item.transaction_type?.toUpperCase() === 'MOVE_OUT'
   }
 
+  /** yyyy-MM-dd of a movement, in the facilities' zone. */
   formatDate(dateStr: string | undefined | null): string {
     if (!dateStr) return '—'
-    try {
-      const d = new Date(dateStr)
-      const y = d.getFullYear()
-      const m = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      return `${y}-${m}-${day}`
-    } catch {
-      return dateStr
-    }
+    return formatInZone(dateStr, 'date', this.facilityScope.zone()) || dateStr
   }
 
+  /** HH:mm:ss of a movement, in the facilities' zone. */
   formatTime(dateStr: string | undefined | null): string {
     if (!dateStr) return ''
-    try {
-      const d = new Date(dateStr)
-      const h = String(d.getHours()).padStart(2, '0')
-      const m = String(d.getMinutes()).padStart(2, '0')
-      const s = String(d.getSeconds()).padStart(2, '0')
-      return `${h}:${m}:${s}`
-    } catch {
-      return ''
-    }
+    return formatInZone(dateStr, 'timeSec', this.facilityScope.zone())
   }
+
 
   formatDateTime(dateStr: string | undefined | null): string {
     if (!dateStr) return '—'

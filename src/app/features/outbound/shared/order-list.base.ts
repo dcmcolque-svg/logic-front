@@ -1,3 +1,4 @@
+import { facilityDayFilters } from '@/app/shared/utils/time-zone.util'
 import {
   computed,
   Directive,
@@ -215,7 +216,7 @@ export abstract class OrderListBase implements OnInit {
 
   /** `requestFilter()` bounded by the global facility scope. */
   protected scopedRequestFilter(): OrderFilter {
-    return scopeApiFilter(this.requestFilter(), this.facilityScope.apiValue())
+    return scopeApiFilter(facilityDayFilters(this.requestFilter()), this.facilityScope.apiValue())
   }
 
   loadData() {

@@ -6,6 +6,8 @@ import {
   AuthInformationData,
   AuthResponse,
   Activity,
+  RegisterRequest,
+  RegisterResponse,
 } from '../types/auth.types'
 import { catchError, of, tap } from 'rxjs'
 import {
@@ -58,6 +60,19 @@ export class AuthService {
         { withCredentials: true }
       )
       .pipe(tap(() => this.loadAuthInfo()))
+  }
+
+  /** Validates the private sign-up link key (404 when invalid or disabled). */
+  checkRegisterKey(key: string) {
+    return this.http.post(`${environment.URL_API}register/check`, { key })
+  }
+
+  /**
+   * Private sign-up: creates operator + OWNER user + facility with default
+   * locations. Does not sign in — call `login()` afterwards.
+   */
+  register(data: RegisterRequest) {
+    return this.http.post<RegisterResponse>(`${environment.URL_API}register`, data)
   }
 
   goToMainPage() {
@@ -223,7 +238,7 @@ export class AuthService {
     document.cookie = `access_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${domain};`
     document.cookie = `payload=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${domain};`
 
-    // Clear with root domain (e.g. .shipedge.com)
+    // Clear with root domain (e.g. .nuvex.uk)
     if (rootDomain !== domain) {
       document.cookie = `access_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${rootDomain};`
       document.cookie = `payload=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${rootDomain};`

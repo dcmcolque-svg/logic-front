@@ -1,0 +1,313 @@
+@if (!isOwner) {
+  <div class="card p-8 text-center text-surface-500">
+    <i class="pi pi-lock text-3xl block mb-3"></i>
+    {{ 'valuation.owner_only' | translate }}
+  </div>
+} @else {
+  <div class="card">
+    <div class="flex items-center gap-2 mb-4">
+      <p class="m-0 text-sm text-surface-500">{{ 'valuation.subtitle' | translate }}<i class="pi pi-info-circle text-surface-500 cursor-help ml-1 align-middle" [pTooltip]="'valuation.hint' | translate" tooltipPosition="bottom"></i></p>
+    </div>
+
+    <p-tabs [value]="activeTab()" (valueChange)="onTabChange($event)">
+      <p-tablist>
+        <p-tab value="stock"><i class="pi pi-box mr-2"></i>{{ 'valuation.tab_stock' | translate }}</p-tab>
+        <p-tab value="variances"><i class="pi pi-sort-alt mr-2"></i>{{ 'valuation.tab_variances' | translate }}</p-tab>
+      </p-tablist>
+
+      <p-tabpanels>
+        <!-- ═══════════════ Stock valued at cost ═══════════════ -->
+        <p-tabpanel value="stock">
+          <!-- Totals: one card per currency — amounts in different currencies are never added -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            @for (t of balanceTotals(); track t.currency) {
+              <div class="border border-surface-200 dark:border-surface-700 rounded-md p-3">
+                <div class="text-xs text-surface-500 uppercase">{{ 'valuation.total_value' | translate }} · {{ t.currency }}</div>
+                <div class="text-2xl font-semibold mt-1">{{ cost(t.total_value, t.currency) }}</div>
+                <div class="text-xs text-surface-500 mt-1">
+                  {{ t.skus }} {{ 'valuation.skus' | translate }} · {{ t.qty | number: '1.0-2' }} {{ 'valuation.units' | translate }}
+                </div>
+              </div>
+            } @empty {
+              @if (!balanceLoading()) {
+                <div class="sm:col-span-3 text-sm text-surface-500">{{ 'valuation.no_costing' | translate }}</div>
+              }
+            }
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 mb-3">
+            <input
+              pInputText
+              class="w-full sm:w-64"
+              [(ngModel)]="balanceSku"
+              (ngModelChange)="onBalanceSkuInput($event)"
+              [placeholder]="'valuation.search_sku' | translate"
+              (keydown.enter)="applyBalanceFilters()"
+            />
+            <p-select
+              [options]="methodOptions"
+              [(ngModel)]="balanceMethod"
+              optionValue="value"
+              optionLabel="label"
+              [showClear]="true"
+              [placeholder]="'preferences.facilities.costing_method' | translate"
+              styleClass="w-full sm:w-56"
+              appendTo="body"
+              (onChange)="applyBalanceFilters()"
+            >
+              <ng-template #selectedItem let-opt>{{ opt.label | translate }}</ng-template>
+              <ng-template #item let-opt>{{ opt.label | translate }}</ng-template>
+            </p-select>
+            <p-select
+              [options]="currencyOptions"
+              [(ngModel)]="balanceCurrency"
+              optionValue="value"
+              optionLabel="label"
+              [showClear]="true"
+              [placeholder]="'preferences.facilities.costing_currency' | translate"
+              styleClass="w-full sm:w-36"
+              appendTo="body"
+              (onChange)="applyBalanceFilters()"
+            />
+            <p-button icon="pi pi-search" [outlined]="true" (onClick)="applyBalanceFilters()" />
+            <p-menu #exportMenu [model]="exportItems" [popup]="true" appendTo="body" />
+            <p-button class="ml-auto" [label]="'buttons.export' | translate" icon="pi pi-download" severity="secondary"
+              [outlined]="true" [loading]="exporting()" [disabled]="balanceCount() === 0"
+              (onClick)="exportMenu.toggle($event)" />
+          </div>
+
+          <p-table
+            [value]="balances()"
+            [lazy]="true"
+            (onLazyLoad)="onBalanceLazyLoad($event)"
+            [paginator]="true"
+            [rows]="pageSize"
+            [rowsPerPageOptions]="[25, 50, 100]"
+            [totalRecords]="balanceCount()"
+            [loading]="balanceLoading()"
+            [scrollable]="true"
+            styleClass="p-datatable-sm"
+            dataKey="id"
+          >
+            <ng-template #header>
+              <tr>
+                <th pSortableColumn="facility_name">{{ 'labels.facility' | translate }} <p-sortIcon field="facility_name" /></th>
+                <th pSortableColumn="sku">{{ 'labels.sku' | translate }} <p-sortIcon field="sku" /></th>
+                <th>{{ 'labels.company' | translate }}</th>
+                <th pSortableColumn="method">{{ 'preferences.facilities.costing_method' | translate }} <p-sortIcon field="method" /></th>
+                <th pSortableColumn="qty" class="text-right">{{ 'labels.quantity' | translate }} <p-sortIcon field="qty" /></th>
+                <th pSortableColumn="avg_cost" class="text-right">{{ 'labels.unit_cost' | translate }} <p-sortIcon field="avg_cost" /></th>
+                <th pSortableColumn="total_value" class="text-right">{{ 'labels.cost_value' | translate }} <p-sortIcon field="total_value" /></th>
+                <th pSortableColumn="last_cost" class="text-right">{{ 'valuation.last_cost' | translate }} <p-sortIcon field="last_cost" /></th>
+                <th pSortableColumn="updated_at">{{ 'valuation.updated_at' | translate }} <p-sortIcon field="updated_at" /></th>
+                <th></th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-row>
+              <tr>
+                <td>{{ row.facility_name }}</td>
+                <td>
+                  <span class="font-medium">{{ row.sku }}</span>
+                  @if (row.sku_name) {
+                    <small class="block text-surface-500">{{ row.sku_name }}</small>
+                  }
+                </td>
+                <td>{{ row.company_name || '—' }}</td>
+                <td>
+                  <p-tag
+                    [value]="('preferences.facilities.costing_method_' + row.method.toLowerCase()) | translate"
+                    [severity]="methodSeverity(row.method)"
+                  />
+                </td>
+                <td class="text-right font-mono">{{ row.qty | number: '1.0-4' }}</td>
+                <td class="text-right font-mono">{{ cost(row.avg_cost, row.currency) }}</td>
+                <td class="text-right font-mono font-semibold">{{ cost(row.total_value, row.currency) }}</td>
+                <td class="text-right font-mono">{{ cost(row.last_cost, row.currency) }}</td>
+                <td class="text-sm text-surface-500">{{ row.updated_at | facilityDate: 'dateTime' : row.facility_id }}</td>
+                <td class="text-center">
+                  @if (row.method === 'FIFO') {
+                    <p-button
+                      icon="pi pi-th-large"
+                      [text]="true"
+                      [rounded]="true"
+                      size="small"
+                      [pTooltip]="'valuation.view_layers' | translate"
+                      (onClick)="openLayers(row)"
+                    />
+                  }
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+              <tr>
+                <td colspan="10" class="p-6 text-center text-surface-400">{{ 'valuation.empty_stock' | translate }}</td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </p-tabpanel>
+
+        <!-- ═══════════════ Standard-cost variances ═══════════════ -->
+        <p-tabpanel value="variances">
+          <p class="mt-0 mb-3 text-sm text-surface-500">{{ 'valuation.variances_hint' | translate }}</p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
+            @for (t of varianceTotals(); track t.currency + t.kind) {
+              <div class="border border-surface-200 dark:border-surface-700 rounded-md p-3">
+                <div class="text-xs text-surface-500 uppercase">
+                  {{ ('valuation.kind_' + t.kind.toLowerCase()) | translate }} · {{ t.currency }}
+                </div>
+                <div class="text-2xl font-semibold mt-1" [class.text-red-600]="t.variance > 0" [class.text-green-600]="t.variance < 0">
+                  {{ t.variance > 0 ? '+' : '' }}{{ cost(t.variance, t.currency) }}
+                </div>
+                <div class="text-xs text-surface-500 mt-1">{{ t.count }} {{ 'valuation.movements' | translate }}</div>
+              </div>
+            }
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 mb-3">
+            <input
+              pInputText
+              class="w-full sm:w-64"
+              [(ngModel)]="varianceSku"
+              [placeholder]="'valuation.search_sku' | translate"
+              (keydown.enter)="applyVarianceFilters()"
+            />
+            <p-select
+              [options]="kindOptions"
+              [(ngModel)]="varianceKind"
+              optionValue="value"
+              optionLabel="label"
+              [showClear]="true"
+              [placeholder]="'valuation.kind' | translate"
+              styleClass="w-full sm:w-56"
+              appendTo="body"
+              (onChange)="applyVarianceFilters()"
+            >
+              <ng-template #selectedItem let-opt>{{ opt.label | translate }}</ng-template>
+              <ng-template #item let-opt>{{ opt.label | translate }}</ng-template>
+            </p-select>
+            <p-button icon="pi pi-search" [outlined]="true" (onClick)="applyVarianceFilters()" />
+          </div>
+
+          <p-table
+            [value]="variances()"
+            [lazy]="true"
+            (onLazyLoad)="onVarianceLazyLoad($event)"
+            [paginator]="true"
+            [rows]="pageSize"
+            [rowsPerPageOptions]="[25, 50, 100]"
+            [totalRecords]="varianceCount()"
+            [loading]="varianceLoading()"
+            [scrollable]="true"
+            styleClass="p-datatable-sm"
+            dataKey="id"
+          >
+            <ng-template #header>
+              <tr>
+                <th pSortableColumn="created_at">{{ 'labels.timestamp' | translate }} <p-sortIcon field="created_at" /></th>
+                <th pSortableColumn="facility_name">{{ 'labels.facility' | translate }} <p-sortIcon field="facility_name" /></th>
+                <th pSortableColumn="sku">{{ 'labels.sku' | translate }} <p-sortIcon field="sku" /></th>
+                <th pSortableColumn="kind">{{ 'valuation.kind' | translate }} <p-sortIcon field="kind" /></th>
+                <th>{{ 'valuation.reference' | translate }}</th>
+                <th pSortableColumn="qty" class="text-right">{{ 'labels.quantity' | translate }} <p-sortIcon field="qty" /></th>
+                <th class="text-right">{{ 'valuation.standard_cost' | translate }}</th>
+                <th class="text-right">{{ 'valuation.actual_cost' | translate }}</th>
+                <th pSortableColumn="variance" class="text-right">{{ 'valuation.variance' | translate }} <p-sortIcon field="variance" /></th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-row>
+              <tr>
+                <td class="text-sm">{{ row.created_at | facilityDate: 'dateTime' : row.facility_id }}</td>
+                <td>{{ row.facility_name }}</td>
+                <td>
+                  <span class="font-medium">{{ row.sku }}</span>
+                  @if (row.sku_name) {
+                    <small class="block text-surface-500">{{ row.sku_name }}</small>
+                  }
+                </td>
+                <td>
+                  <p-tag
+                    [value]="('valuation.kind_' + row.kind.toLowerCase()) | translate"
+                    [severity]="row.kind === 'PURCHASE' ? 'info' : 'secondary'"
+                  />
+                </td>
+                <td class="text-sm">
+                  {{ row.receiving_number || row.event_code || '—' }}
+                  @if (row.transaction_type) {
+                    <small class="block text-surface-500">{{ row.transaction_type }}</small>
+                  }
+                </td>
+                <td class="text-right font-mono">{{ row.qty | number: '1.0-4' }}</td>
+                <td class="text-right font-mono">{{ cost(row.standard_cost, row.currency) }}</td>
+                <td class="text-right font-mono"
+                    [pTooltip]="row.kind === 'REVALUATION' ? ('valuation.previous_standard' | translate) : ''">
+                  {{ cost(row.actual_cost, row.currency) }}
+                </td>
+                <td class="text-right font-mono font-semibold" [class.text-red-600]="row.variance > 0" [class.text-green-600]="row.variance < 0">
+                  {{ row.variance > 0 ? '+' : '' }}{{ cost(row.variance, row.currency) }}
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+              <tr>
+                <td colspan="9" class="p-6 text-center text-surface-400">{{ 'valuation.empty_variances' | translate }}</td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  </div>
+
+  <!-- ═══════════════ FIFO layers ═══════════════ -->
+  <p-drawer
+    [visible]="!!layersOf()"
+    (visibleChange)="!$event && closeLayers()"
+    position="right"
+    styleClass="!w-full md:!w-[36rem]"
+    [header]="('valuation.layers_title' | translate) + ' · ' + (layersOf()?.sku ?? '')"
+  >
+    @if (layersOf(); as row) {
+      <p class="mt-0 text-sm text-surface-500">{{ 'valuation.layers_hint' | translate }}</p>
+      <p-table [value]="layers()" [loading]="layersLoading()" styleClass="p-datatable-sm">
+        <ng-template #header>
+          <tr>
+            <th>#</th>
+            <th>{{ 'valuation.layer_origin' | translate }}</th>
+            <th class="text-right">{{ 'valuation.layer_remaining' | translate }}</th>
+            <th class="text-right">{{ 'labels.unit_cost' | translate }}</th>
+            <th class="text-right">{{ 'labels.cost_value' | translate }}</th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-l let-i="rowIndex">
+          <tr>
+            <td>{{ i + 1 }}</td>
+            <td class="text-sm">
+              @if (l.source_flow_id) {
+                {{ l.event_code || l.transaction_type }}
+                @if (l.tracecard) {
+                  <small class="block text-surface-500">{{ l.tracecard }}</small>
+                }
+              } @else {
+                <span class="text-surface-500">{{ 'valuation.opening_layer' | translate }}</span>
+              }
+              <small class="block text-surface-400">{{ l.created_at | facilityDate: 'dateTime' : l.facility_id }}</small>
+            </td>
+            <td class="text-right font-mono">{{ l.qty_remaining | number: '1.0-4' }} / {{ l.qty_in | number: '1.0-4' }}</td>
+            <td class="text-right font-mono">{{ cost(l.unit_cost, row.currency) }}</td>
+            <td class="text-right font-mono">{{ cost(l.value, row.currency) }}</td>
+          </tr>
+        </ng-template>
+        <ng-template #footer>
+          <tr>
+            <td colspan="4" class="text-right font-semibold">{{ 'valuation.total_value' | translate }}</td>
+            <td class="text-right font-mono font-semibold">{{ cost(layersTotal(), row.currency) }}</td>
+          </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          <tr><td colspan="5" class="p-4 text-center text-surface-400">{{ 'valuation.no_layers' | translate }}</td></tr>
+        </ng-template>
+      </p-table>
+    }
+  </p-drawer>
+}

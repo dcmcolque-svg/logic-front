@@ -1,6 +1,6 @@
-import { Component, input, inject } from '@angular/core'
+import { Component, computed, input, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
-import { ReactiveFormsModule, FormControl } from '@angular/forms'
+import { ReactiveFormsModule, FormControl, Validators } from '@angular/forms'
 import { TranslateModule, TranslateService } from '@ngx-translate/core'
 import { InputTextModule } from 'primeng/inputtext'
 import { InputNumberModule } from 'primeng/inputnumber'
@@ -77,8 +77,25 @@ export class BaseFormField {
   label = input('')
   /** Placeholder translation key */
   placeholder = input('')
-  /** Mark as required (visual indicator) */
+  /** Mark as required (visual indicator). Also on automatically when the control has Validators.required. */
   required = input(false)
+
+  /** Asterisk shown: the explicit input, or the control's own required validator. */
+  readonly isRequired = computed(
+    () => this.required() || this.control().hasValidator(Validators.required)
+  )
+
+  /** Id of the error message, referenced by aria-describedby. */
+  readonly errorId = computed(() => `${this.fieldId()}-error`)
+
+  /**
+   * Errors show once the user has touched or edited the field, or the form was
+   * submitted (markAllAsTouched) — the same rule as sh-field-error.
+   */
+  showError(): boolean {
+    const c = this.control()
+    return c.invalid && (c.dirty || c.touched)
+  }
   /** Options for dropdown/multiselect */
   options = input<any[]>([])
   /** Option label property */

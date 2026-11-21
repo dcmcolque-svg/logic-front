@@ -21,6 +21,7 @@ import {
   AddonConfigDto,
 } from '../../services/addons.types'
 import { ConfirmationService } from 'primeng/api'
+import { revealInvalid } from '@/app/shared/utils/form.util'
 
 @Component({
   selector: 'app-addon-form',
@@ -99,7 +100,7 @@ export class AddonFormComponent implements OnInit {
   }
 
   save() {
-    if (this.form.invalid) return
+    if (revealInvalid(this.form)) return
 
     this.saving.set(true)
     const formValues = this.form.getRawValue()

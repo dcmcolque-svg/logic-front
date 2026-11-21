@@ -20,7 +20,7 @@ import { filterConfigMatchModes } from '../../config/filter-column.config'
 import { Subscription } from 'rxjs'
 
 @Component({
-  selector: 'shipedge-filter-input',
+  selector: 'nuvex-filter-input',
   standalone: true,
   imports: [
     CommonModule,

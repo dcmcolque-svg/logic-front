@@ -36,6 +36,7 @@
         (stateChange)="onTableStateChange($event)"
         (selectionChange)="selectedOrders.set($event)"
         (chipRemoved)="removeFilterChip($event)"
+        (clearAllFilters)="clearFilters()"
       >
 
         <!-- Paginator left: column toggle -->
@@ -70,7 +71,7 @@
 
         <!-- Row expansion: shipments sub-table -->
         <ng-template #rowExpansion let-order>
-          <div class="px-6 py-3 bg-surface-50">
+          <div class="px-6 py-3 bg-surface-50 dark:bg-surface-800">
             @if (isLoadingDetail(order.id)) {
               <div class="flex flex-col gap-2">
                 @for (_ of [1, 2]; track $index) {

@@ -4,6 +4,7 @@ import { environment } from '../../../../environments/environment'
 import {
   AuthUser,
   AuthUserListRequest,
+  AuthUserCreateInput,
   AuthUserListResponse,
   AuthUserUpdateInput,
   CreateWithInviteCodeRequest,
@@ -33,7 +34,7 @@ export class UserAccountService {
     this.http.get<{ data: AuthUser }>(`${this.base}/${id}`)
 
   // ── Create (POST /v2/authuser) ────────────────────────────────────────────
-  postCreateUser = (user: AuthUser) =>
+  postCreateUser = (user: AuthUserCreateInput) =>
     this.http.post<AuthUser>(`${this.base}`, user)
 
   // ── Update (PUT /v2/authuser/:id) ─────────────────────────────────────────

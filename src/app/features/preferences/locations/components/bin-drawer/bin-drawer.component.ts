@@ -87,11 +87,8 @@ export class BinDrawerComponent implements OnChanges {
   parentIdForCreate: string | null = null
   binForm!: FormGroup
 
-  containerTypes = [
-    { label: 'BOX', value: 'BOX' },
-    { label: 'PALLET', value: 'PALLET' },
-    { label: 'TOTE', value: 'TOTE' },
-  ]
+  // For now bins can only be of type BIN
+  containerTypes = [{ label: 'BIN', value: 'BIN' }]
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['visible'] && this.visible && this.selectedLocation) {
@@ -203,7 +200,7 @@ export class BinDrawerComponent implements OnChanges {
         Validators.required,
         Validators.minLength(2),
       ]),
-      type: new FormControl(existing?.type || 'BOX', [Validators.required]),
+      type: new FormControl('BIN', [Validators.required]),
     })
   }
 
@@ -282,7 +279,7 @@ export class BinDrawerComponent implements OnChanges {
     const locationCode = this.selectedLocation.location_code
     const containers = result.bins.map(bin => ({
       lpn_code: result.nameFormat.replace('{loc}', locationCode).replace('{bin}', bin.id),
-      type: bin.type || 'BOX',
+      type: bin.type || 'BIN',
       tags: bin.tag ? bin.tag.split(',').map(t => t.trim()).filter(Boolean) : [],
     }))
 

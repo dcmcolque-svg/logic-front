@@ -1,0 +1,135 @@
+<p-menu #rowMenu [popup]="true" appendTo="body" [model]="menuItems" />
+<p-confirmdialog />
+
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+    <div>
+        <p class="text-surface-500 text-sm m-0">{{ 'companies.subtitle' | translate }}<i class="pi pi-info-circle text-surface-500 cursor-help ml-1 align-middle" [pTooltip]="'companies.hint' | translate" tooltipPosition="bottom"></i></p>
+    </div>
+    <div class="flex gap-2">
+        <p-button icon="pi pi-plus" [label]="'companies.new' | translate" size="small" (onClick)="edit(null)" />
+        <p-button
+            [label]="'buttons.clear' | translate"
+            icon="pi pi-filter-slash"
+            [outlined]="true"
+            severity="secondary"
+            size="small"
+            (onClick)="clearFilters()"
+        />
+    </div>
+</div>
+
+<!-- ──────── Table ──────── -->
+<div class="card">
+    <base-data-table
+        [columns]="selectedCols"
+        [data]="companies()"
+        [loading]="loading()"
+        [pagination]="pagination()"
+        [disableMobileView]="false"
+        [disableFacilityScope]="true"
+        [initialFilters]="activeRawFilters"
+        [activeFilterChips]="activeFilters()"
+        (stateChange)="onTableStateChange($event)"
+        (chipRemoved)="removeFilterChip($event)"
+        (clearAllFilters)="clearFilters()"
+    >
+        <ng-template #paginatorLeft>
+            <app-column-toggle
+                [options]="translatedColumnDefs"
+                [selected]="selectedCols"
+                (selectionChange)="onColumnSelectionChange($event)"
+            />
+        </ng-template>
+
+        <ng-template #cell let-row let-col="col">
+            @switch (col.field) {
+                @case ('name') {
+                    <span class="font-medium">{{ row.name }}</span>
+                }
+                @case ('co_code') {
+                    <span class="font-mono text-sm">{{ row.co_code || '—' }}</span>
+                }
+                @case ('created_at') {
+                    <span class="text-sm text-nowrap">{{ row.created_at | displayDate: 'dateTime' }}</span>
+                }
+                @default {
+                    @if (row[col.field]) {
+                        <span class="text-sm">{{ row[col.field] }}</span>
+                    } @else {
+                        <span class="text-surface-400 text-sm">—</span>
+                    }
+                }
+            }
+        </ng-template>
+
+        <ng-template #actions let-row>
+            <p-button
+                icon="pi pi-ellipsis-v"
+                [text]="true"
+                [rounded]="true"
+                size="small"
+                severity="secondary"
+                (onClick)="openRowMenu($event, row, rowMenu)"
+            />
+        </ng-template>
+
+        <ng-template #filterRow let-columns="columns">
+            <th style="width: 4rem"></th>
+            @for (col of columns; track col.field) {
+                <th class="p-1" [style.width]="col.width">
+                    @switch (col.filterType) {
+                        @case ('date') {
+                            <nuvex-filter-date-input
+                                [value]="getActiveFilterValue(col.field)"
+                                [matchMode]="getActiveFilterMatchMode(col.field)"
+                                [placeholder]="col.header | translate"
+                                (applyWithMode)="onColumnFilterChange(col.field, $event)"
+                            />
+                        }
+                        @case ('text') {
+                            <nuvex-filter-text-input
+                                [value]="getActiveFilterValue(col.field)"
+                                [matchMode]="getActiveFilterMatchMode(col.field)"
+                                [placeholder]="col.header | translate"
+                                filterType="text"
+                                (applyWithMode)="onColumnFilterChange(col.field, $event)"
+                            />
+                        }
+                    }
+                </th>
+            }
+        </ng-template>
+    </base-data-table>
+</div>
+
+<!-- ──────── Create / edit dialog ──────── -->
+<base-dialog
+    [visible]="dialogVisible()"
+    [header]="editingId() ? 'companies.edit' : 'companies.new'"
+    size="sm"
+    [loading]="saving()"
+    [saveDisabled]="!form.name.trim()"
+    (save)="save()"
+    (hide)="dialogVisible.set(false)"
+>
+    <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1">
+            <label for="coName" class="text-sm">{{ 'companies.name' | translate }} *</label>
+            <input pInputText id="coName" name="name" [(ngModel)]="form.name" maxlength="120" />
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="flex flex-col gap-1">
+                <label for="coCode" class="text-sm">{{ 'companies.co_code' | translate }}</label>
+                <input pInputText id="coCode" name="co_code" [(ngModel)]="form.co_code" maxlength="20" class="uppercase font-mono" />
+                <small class="text-surface-500">{{ 'companies.co_code_hint' | translate }}</small>
+            </div>
+            <div class="flex flex-col gap-1">
+                <label for="coTax" class="text-sm">{{ 'companies.tax_id' | translate }}</label>
+                <input pInputText id="coTax" name="tax_id" [(ngModel)]="form.tax_id" maxlength="30" />
+            </div>
+        </div>
+        @for (e of errors(); track e) {
+            <p-message severity="error">{{ e }}</p-message>
+        }
+    </div>
+</base-dialog>

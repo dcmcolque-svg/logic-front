@@ -1,0 +1,615 @@
+<p-confirmdialog />
+
+<!-- ═══════════════ Header: facility + register state ═══════════════ -->
+<div class="card !p-3 !mb-3">
+  <div class="flex flex-wrap items-center gap-3">
+    <div class="flex items-center gap-2">
+      <i class="pi pi-shop text-primary text-xl"></i>
+      <h2 class="m-0 text-lg font-semibold">{{ 'pages.point of sale' | translate }}</h2>
+    </div>
+
+    <p-select
+      [options]="facilities()"
+      [ngModel]="facilityId()"
+      (ngModelChange)="selectFacility($event)"
+      optionLabel="name"
+      optionValue="id"
+      [filter]="facilities().length > 8"
+      [placeholder]="'labels.facility' | translate"
+      [disabled]="charging()"
+      styleClass="w-full sm:w-64"
+      appendTo="body"
+    />
+
+    @if (register(); as r) {
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 text-sm">
+        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+        <span class="font-semibold">{{ r.session.session_number }}</span>
+        <span class="hidden md:inline">· {{ (r.session.scope === 'FACILITY' ? 'sales.register.scope_facility' : 'sales.register.scope_user') | translate }}</span>
+        <span class="hidden md:inline">· {{ 'sales.register.since' | translate }} {{ r.session.opened_at | facilityDate: 'time' : r.session.facility_id }}</span>
+      </div>
+      <div class="hidden lg:flex items-center gap-4 text-sm text-surface-600 dark:text-surface-300">
+        <span><i class="pi pi-receipt mr-1"></i>{{ r.sales_count }} {{ 'sales.register.sales_short' | translate }}</span>
+        <span><i class="pi pi-chart-line mr-1"></i>{{ m(r.sales_total) }}</span>
+        <span [pTooltip]="'sales.register.expected_cash' | translate"><i class="pi pi-money-bill mr-1"></i>{{ m(r.expected) }}</span>
+      </div>
+      <div class="flex items-center gap-1 ml-auto">
+        <p-button icon="pi pi-arrow-down" [text]="true" severity="success" [pTooltip]="'sales.register.cash_in' | translate"
+          [ariaLabel]="'sales.register.cash_in' | translate" (onClick)="openMovement('IN')" />
+        <p-button icon="pi pi-arrow-up" [text]="true" severity="warn" [pTooltip]="'sales.register.cash_out' | translate"
+          [ariaLabel]="'sales.register.cash_out' | translate" (onClick)="openMovement('OUT')" />
+        <p-button icon="pi pi-history" [text]="true" severity="secondary" [pTooltip]="'pages.sales history' | translate"
+          [ariaLabel]="'pages.sales history' | translate" routerLink="/app/sales/history" />
+        <p-button [label]="'sales.register.close' | translate" icon="pi pi-lock" severity="secondary" [outlined]="true"
+          size="small" [disabled]="charging()" (onClick)="closeVisible.set(true)" />
+      </div>
+    } @else if (!registerLoading()) {
+      <p-tag [value]="'sales.register.status_closed' | translate" severity="secondary" icon="pi pi-lock" />
+    }
+  </div>
+</div>
+
+@if (registerLoading()) {
+  <div class="card p-10 text-center text-surface-500"><i class="pi pi-spin pi-spinner text-3xl"></i></div>
+} @else if (!facilityId()) {
+  <div class="card p-10 text-center text-surface-500">
+    <i class="pi pi-building text-4xl block mb-3"></i>{{ 'sales.pos.no_facility' | translate }}
+  </div>
+} @else if (registerError().length > 0) {
+  <div class="card">
+    @for (e of registerError(); track e) { <p-message severity="error">{{ e }}</p-message> }
+    <p-button class="mt-3 inline-block" [label]="'buttons.retry' | translate" icon="pi pi-refresh" (onClick)="loadRegister()" />
+  </div>
+} @else if (!register()) {
+  <!-- ═══════════════ Open the register ═══════════════ -->
+  <div class="card max-w-xl mx-auto mt-6 !p-8">
+    <div class="text-center mb-6">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary-50 dark:bg-primary-900/30 mb-3">
+        <i class="pi pi-wallet text-3xl text-primary"></i>
+      </div>
+      <h3 class="m-0 text-xl font-semibold">{{ 'sales.register.open_title' | translate }}</h3>
+      <p class="mt-2 mb-0 text-surface-500">{{ 'sales.register.open_hint' | translate: { facility: facilityName() } }}</p>
+    </div>
+    <form (ngSubmit)="openRegister()" class="flex flex-col gap-4">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium">{{ 'sales.register.scope' | translate }}</label>
+        <p-selectbutton name="openScope" [(ngModel)]="openScope" [options]="scopeOptions" optionValue="value" [allowEmpty]="false" [fluid]="true">
+          <ng-template #item let-o>{{ o.label | translate }}</ng-template>
+        </p-selectbutton>
+        <small class="text-surface-500">{{ (openScope === 'FACILITY' ? 'sales.register.scope_facility_hint' : 'sales.register.scope_user_hint') | translate }}</small>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label for="openingAmount" class="text-sm font-medium">{{ 'sales.register.opening_amount' | translate }}</label>
+        <p-inputnumber
+          inputId="openingAmount"
+          name="openingAmount"
+          [(ngModel)]="openingAmount"
+          mode="decimal"
+          [minFractionDigits]="0"
+          [maxFractionDigits]="decimals()"
+          [min]="0"
+          [placeholder]="m(0)"
+          inputStyleClass="w-full text-right text-2xl font-semibold"
+          [autofocus]="true"
+        />
+        <small class="text-surface-500">{{ 'sales.register.opening_amount_hint' | translate }}</small>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label for="openingNote" class="text-sm font-medium">{{ 'sales.register.note' | translate }}</label>
+        <input pInputText id="openingNote" name="openingNote" [(ngModel)]="openingNote" class="w-full" />
+      </div>
+      @for (e of openErrors(); track e) { <p-message severity="error">{{ e }}</p-message> }
+      <p-button type="submit" [label]="'sales.register.open' | translate" icon="pi pi-lock-open" size="large"
+        styleClass="w-full" [loading]="opening()" />
+    </form>
+  </div>
+} @else {
+  <!-- ═══════════════ Selling ═══════════════ -->
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-3">
+    <!-- Left: search + cart -->
+    <div class="xl:col-span-2 flex flex-col gap-3 min-w-0">
+      <div class="card !p-3 !mb-0 relative">
+        <div class="flex flex-wrap items-center gap-2">
+          <p-iconfield class="flex-1 min-w-64">
+            <p-inputicon [styleClass]="searching() ? 'pi pi-spin pi-spinner' : 'pi pi-barcode'" />
+            <input
+              #searchInput
+              pInputText
+              type="search"
+              autocomplete="off"
+              class="w-full !text-lg"
+              [ngModel]="query()"
+              (ngModelChange)="onQuery($event)"
+              (keydown.enter)="onSearchEnter()"
+              (keydown.arrowdown)="moveActive(1, $event)"
+              (keydown.arrowup)="moveActive(-1, $event)"
+              (keydown.escape)="clearSearch()"
+              [placeholder]="'sales.pos.search_placeholder' | translate"
+              [attr.aria-label]="'sales.pos.search_placeholder' | translate"
+            />
+          </p-iconfield>
+          <p-selectbutton
+            [options]="priceListOptions"
+            [ngModel]="priceList()"
+            (ngModelChange)="setPriceList($event)"
+            optionValue="value"
+            [allowEmpty]="false"
+          >
+            <ng-template #item let-opt>{{ opt.label | translate }}</ng-template>
+          </p-selectbutton>
+        </div>
+
+        @if (query().trim() && searched()) {
+          <div class="absolute left-3 right-3 top-full mt-1 z-20 rounded-lg border border-surface-200 dark:border-surface-700
+                      bg-surface-0 dark:bg-surface-900 shadow-lg max-h-96 overflow-auto">
+            @for (r of results(); track r.sku_id; let i = $index) {
+              <button
+                type="button"
+                class="w-full flex items-center gap-3 px-3 py-2 text-left border-b border-surface-100 dark:border-surface-800
+                       hover:bg-surface-50 dark:hover:bg-surface-800"
+                [class]="i === activeIndex() ? 'bg-primary-50 dark:bg-primary-900/30' : ''"
+                (mouseenter)="activeIndex.set(i)"
+                (click)="addItem(r)"
+              >
+                @if (r.image_url) {
+                  <img [src]="r.image_url" alt="" class="w-10 h-10 rounded object-cover shrink-0" loading="lazy" />
+                } @else {
+                  <div class="w-10 h-10 rounded bg-surface-100 dark:bg-surface-800 flex items-center justify-center shrink-0">
+                    <i class="pi pi-box text-surface-400"></i>
+                  </div>
+                }
+                <div class="flex-1 min-w-0">
+                  <div class="font-medium truncate">{{ r.sku_name || r.sku_code }}</div>
+                  <div class="text-xs text-surface-500 truncate">
+                    {{ r.sku_code }}@if (r.barcode) { · {{ r.barcode }} }
+                    @if (cartCompany() && cartCompany() !== r.company_id) {
+                      · <span class="text-orange-500">{{ r.company_name }}</span>
+                    }
+                  </div>
+                </div>
+                <div class="text-right shrink-0">
+                  <div class="font-semibold">{{ m(priceList() === 'WHOLESALE' && r.wholesale_price > 0 ? r.wholesale_price : r.retail_price) }}</div>
+                  @if (r.available <= 0) {
+                    <div class="text-xs font-semibold text-red-600 dark:text-red-400">{{ 'sales.pos.out_of_stock' | translate }}</div>
+                  } @else {
+                    <div class="text-xs" [class]="r.available <= 5 ? 'text-orange-500' : 'text-surface-500'">
+                      {{ 'sales.pos.stock' | translate }}: {{ r.available | number: '1.0-2' }}
+                    </div>
+                  }
+                </div>
+              </button>
+            } @empty {
+              <div class="p-4 text-center text-surface-500">{{ 'sales.pos.not_found' | translate }}</div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="card !p-0 !mb-0 overflow-hidden">
+        @if (cart().length === 0) {
+          <div class="p-12 text-center text-surface-400">
+            <i class="pi pi-shopping-cart text-5xl block mb-3"></i>
+            <div class="text-lg">{{ 'sales.pos.empty_cart' | translate }}</div>
+            <div class="text-sm mt-1">{{ 'sales.pos.empty_cart_hint' | translate }}</div>
+          </div>
+        } @else {
+          <!-- Phones: one card per line (the table's three inputs per row don't fit) -->
+          <div class="md:hidden divide-y divide-surface-100 dark:divide-surface-800">
+            @for (l of cart(); track l.item.sku_id; let i = $index) {
+              <div class="p-3 flex flex-col gap-2 transition-colors"
+                   [class]="lastAdded() === l.item.sku_id ? 'bg-green-50 dark:bg-green-900/20' : ''">
+                <div class="flex items-start gap-3">
+                  <ng-container *ngTemplateOutlet="lineThumb; context: { $implicit: l.item }" />
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium truncate">{{ l.item.sku_name || l.item.sku_code }}</div>
+                    <div class="text-xs text-surface-500">{{ l.item.sku_code }}</div>
+                    @if (lineIssues()[l.item.sku_id]; as issue) {
+                      <div class="text-xs text-red-600 mt-0.5"><i class="pi pi-exclamation-triangle mr-1"></i>{{ issue }}</div>
+                    } @else if (l.qty > l.item.available) {
+                      <div class="text-xs text-orange-500 mt-0.5">
+                        <i class="pi pi-exclamation-triangle mr-1"></i>{{ 'sales.pos.only_available' | translate: { available: l.item.available } }}
+                      </div>
+                    }
+                  </div>
+                  <div class="text-right">
+                    <div class="font-semibold font-mono whitespace-nowrap">{{ m(lineAmount(l)) }}</div>
+                    <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger"
+                      [ariaLabel]="'buttons.delete' | translate" (onClick)="removeLine(i)" />
+                  </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 items-end">
+                  <div class="flex flex-col gap-1">
+                    <small class="text-surface-500">{{ 'labels.quantity' | translate }}</small>
+                    <div class="flex items-center">
+                      <p-button icon="pi pi-minus" [text]="true" [rounded]="true" size="small" severity="secondary"
+                        [ariaLabel]="'sales.pos.less' | translate" (onClick)="stepQty(i, -1)" />
+                      <p-inputnumber [ngModel]="l.qty" (ngModelChange)="setQty(i, $event)" [min]="0.0001" [maxFractionDigits]="4"
+                        inputStyleClass="w-full text-center !px-1" styleClass="min-w-0 flex-1" [ariaLabel]="'labels.quantity' | translate" />
+                      <p-button icon="pi pi-plus" [text]="true" [rounded]="true" size="small" severity="secondary"
+                        [ariaLabel]="'sales.pos.more' | translate" (onClick)="stepQty(i, 1)" />
+                    </div>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <small class="text-surface-500">{{ 'sales.pos.price' | translate }}</small>
+                    <p-inputnumber [ngModel]="l.unit_price" (ngModelChange)="setPrice(i, $event)" mode="decimal"
+                      [minFractionDigits]="0" [maxFractionDigits]="decimals()" [min]="0"
+                      inputStyleClass="w-full text-right !px-2" [ariaLabel]="'sales.pos.price' | translate" />
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <small class="text-surface-500">{{ 'sales.pos.discount' | translate }}</small>
+                    <p-inputnumber [ngModel]="l.discount || null" (ngModelChange)="setLineDiscount(i, $event)" mode="decimal"
+                      [minFractionDigits]="0" [maxFractionDigits]="decimals()" [min]="0" placeholder="0"
+                      inputStyleClass="w-full text-right !px-2" [ariaLabel]="'sales.pos.discount' | translate" />
+                  </div>
+                </div>
+                @if (l.unit_price !== l.list_price) {
+                  <button type="button" class="self-end text-xs text-orange-500 hover:underline" (click)="resetPrice(i)">
+                    <s>{{ m(l.list_price) }}</s> <i class="pi pi-undo text-[10px]"></i> {{ 'sales.pos.reset_price' | translate }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-surface-50 dark:bg-surface-800 text-surface-600 dark:text-surface-300">
+                <tr>
+                  <th class="text-left px-3 py-2 font-medium">{{ 'labels.sku' | translate }}</th>
+                  <th class="text-center px-2 py-2 font-medium w-36">{{ 'labels.quantity' | translate }}</th>
+                  <th class="text-right px-2 py-2 font-medium w-32">{{ 'sales.pos.price' | translate }}</th>
+                  <th class="text-right px-2 py-2 font-medium w-28">{{ 'sales.pos.discount' | translate }}</th>
+                  <th class="text-right px-3 py-2 font-medium w-28">{{ 'sales.pos.amount' | translate }}</th>
+                  <th class="w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of cart(); track l.item.sku_id; let i = $index) {
+                  <tr class="border-t border-surface-100 dark:border-surface-800 transition-colors"
+                      [class]="lastAdded() === l.item.sku_id ? 'bg-green-50 dark:bg-green-900/20' : ''">
+                    <td class="px-3 py-2">
+                      <div class="flex items-center gap-3">
+                      <ng-container *ngTemplateOutlet="lineThumb; context: { $implicit: l.item }" />
+                      <div class="min-w-0">
+                      <div class="font-medium">{{ l.item.sku_name || l.item.sku_code }}</div>
+                      <div class="text-xs text-surface-500">
+                        {{ l.item.sku_code }}
+                        @if (isOwner && l.item.unit_cost !== null && l.item.unit_cost !== undefined) {
+                          · {{ 'labels.unit_cost' | translate }} {{ m(l.item.unit_cost) }}
+                        }
+                      </div>
+                      @if (lineIssues()[l.item.sku_id]; as issue) {
+                        <div class="text-xs text-red-600 mt-0.5"><i class="pi pi-exclamation-triangle mr-1"></i>{{ issue }}</div>
+                      } @else if (l.qty > l.item.available) {
+                        <div class="text-xs text-orange-500 mt-0.5">
+                          <i class="pi pi-exclamation-triangle mr-1"></i>{{ 'sales.pos.only_available' | translate: { available: l.item.available } }}
+                        </div>
+                      }
+                      </div>
+                      </div>
+                    </td>
+                    <td class="px-2 py-2">
+                      <div class="flex items-center justify-center gap-1">
+                        <p-button icon="pi pi-minus" [text]="true" [rounded]="true" size="small" severity="secondary"
+                          [ariaLabel]="'sales.pos.less' | translate" (onClick)="stepQty(i, -1)" />
+                        <p-inputnumber
+                          [ngModel]="l.qty"
+                          (ngModelChange)="setQty(i, $event)"
+                          [min]="0.0001"
+                          [maxFractionDigits]="4"
+                          inputStyleClass="w-14 text-center !px-1"
+                          [ariaLabel]="'labels.quantity' | translate"
+                        />
+                        <p-button icon="pi pi-plus" [text]="true" [rounded]="true" size="small" severity="secondary"
+                          [ariaLabel]="'sales.pos.more' | translate" (onClick)="stepQty(i, 1)" />
+                      </div>
+                    </td>
+                    <td class="px-2 py-2 text-right">
+                      <p-inputnumber
+                        [ngModel]="l.unit_price"
+                        (ngModelChange)="setPrice(i, $event)"
+                        mode="decimal"
+                        [minFractionDigits]="0"
+                        [maxFractionDigits]="decimals()"
+                        [min]="0"
+                        inputStyleClass="w-24 text-right !px-2"
+                        [ariaLabel]="'sales.pos.price' | translate"
+                      />
+                      @if (l.unit_price !== l.list_price) {
+                        <button type="button" class="block ml-auto text-xs text-orange-500 hover:underline"
+                          [pTooltip]="'sales.pos.reset_price' | translate" (click)="resetPrice(i)">
+                          <s>{{ m(l.list_price) }}</s> <i class="pi pi-undo text-[10px]"></i>
+                        </button>
+                      }
+                    </td>
+                    <td class="px-2 py-2 text-right">
+                      <p-inputnumber
+                        [ngModel]="l.discount || null"
+                        (ngModelChange)="setLineDiscount(i, $event)"
+                        mode="decimal"
+                        [minFractionDigits]="0"
+                        [maxFractionDigits]="decimals()"
+                        [min]="0"
+                        placeholder="0"
+                        inputStyleClass="w-20 text-right !px-2"
+                        [ariaLabel]="'sales.pos.discount' | translate"
+                      />
+                    </td>
+                    <td class="px-3 py-2 text-right font-semibold font-mono whitespace-nowrap">{{ m(lineAmount(l)) }}</td>
+                    <td class="pr-2">
+                      <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger"
+                        [ariaLabel]="'buttons.delete' | translate" (onClick)="removeLine(i)" />
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <div class="hidden md:flex flex-wrap gap-x-4 gap-y-1 text-xs text-surface-500 px-1">
+        <span><kbd class="px-1.5 py-0.5 rounded bg-surface-100 dark:bg-surface-800">F2</kbd> {{ 'sales.pos.charge' | translate }}</span>
+        <span><kbd class="px-1.5 py-0.5 rounded bg-surface-100 dark:bg-surface-800">F4</kbd> {{ 'sales.pos.search' | translate }}</span>
+        <span><kbd class="px-1.5 py-0.5 rounded bg-surface-100 dark:bg-surface-800">F7</kbd> {{ 'sales.pos.customer' | translate }}</span>
+        <span><kbd class="px-1.5 py-0.5 rounded bg-surface-100 dark:bg-surface-800">F9</kbd> {{ 'sales.pos.clear' | translate }}</span>
+        <span><kbd class="px-1.5 py-0.5 rounded bg-surface-100 dark:bg-surface-800">↑ ↓ Enter</kbd> {{ 'sales.pos.pick_result' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- Right: customer + totals + charge -->
+    <div class="flex flex-col gap-3">
+      <div class="card !p-4 !mb-0">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-semibold">{{ 'sales.pos.customer' | translate }}</span>
+          @if (!customer()) {
+            <span class="text-xs text-surface-500">{{ 'sales.pos.walk_in' | translate }}</span>
+          }
+        </div>
+        <app-customer-picker
+          [(selected)]="customer"
+          [companyId]="cartCompany()"
+          [facilityId]="facilityId()"
+          [facilityName]="facilityName()"
+          [currency]="currency()"
+          [methods]="methods()"
+          [disabled]="charging()"
+          (paid)="onCustomerPaid()"
+        />
+        @if (showNote()) {
+          <textarea pTextarea class="w-full mt-3" rows="2" [ngModel]="note()" (ngModelChange)="note.set($event)"
+            [placeholder]="'sales.pos.note' | translate" [attr.aria-label]="'sales.pos.note' | translate"></textarea>
+        } @else {
+          <button type="button" class="mt-2 text-xs text-primary hover:underline" (click)="showNote.set(true)">
+            <i class="pi pi-pencil mr-1"></i>{{ 'sales.pos.add_note' | translate }}
+          </button>
+        }
+      </div>
+
+      <div class="card !p-4 !mb-0 xl:sticky xl:top-20">
+        @let t = totals();
+        <div class="flex justify-between text-sm py-1">
+          <span class="text-surface-500">{{ t.lines }} {{ 'sales.pos.items' | translate }} · {{ t.units | number: '1.0-2' }} {{ 'sales.pos.units' | translate }}</span>
+          <span class="font-mono">{{ m(t.gross) }}</span>
+        </div>
+        @if (t.lineDiscounts > 0) {
+          <div class="flex justify-between text-sm py-1 text-green-600">
+            <span>{{ 'sales.pos.line_discounts' | translate }}</span><span class="font-mono">− {{ m(t.lineDiscounts) }}</span>
+          </div>
+        }
+        <div class="flex items-center justify-between gap-2 py-2">
+          <span class="text-sm">{{ 'sales.pos.sale_discount' | translate }}</span>
+          <div class="flex items-center gap-1">
+            <p-selectbutton
+              [options]="discountModeOptions"
+              [ngModel]="discountMode()"
+              (ngModelChange)="setDiscountMode($event)"
+              optionLabel="label"
+              optionValue="value"
+              [allowEmpty]="false"
+              size="small"
+            />
+            <p-inputnumber
+              [ngModel]="discountInput()"
+              (ngModelChange)="setDiscountInput($event)"
+              mode="decimal"
+              [minFractionDigits]="0"
+              [maxFractionDigits]="discountMode() === 'percent' ? 2 : decimals()"
+              [min]="0"
+              [max]="discountMode() === 'percent' ? 100 : undefined"
+              placeholder="0"
+              inputStyleClass="w-20 text-right !px-2"
+              [disabled]="cart().length === 0"
+              [ariaLabel]="'sales.pos.sale_discount' | translate"
+            />
+          </div>
+        </div>
+        @if (t.discount > 0) {
+          <div class="flex justify-between text-sm py-1 text-green-600">
+            <span>{{ 'sales.pos.sale_discount' | translate }}</span><span class="font-mono">− {{ m(t.discount) }}</span>
+          </div>
+        }
+        <div class="border-t border-surface-200 dark:border-surface-700 mt-2 pt-3 flex items-end justify-between">
+          <span class="text-lg font-semibold">{{ 'sales.pos.total' | translate }}</span>
+          <span class="text-4xl font-bold tracking-tight">{{ m(t.total) }}</span>
+        </div>
+        @if (estimatedCost() !== null && cart().length > 0) {
+          <div class="flex justify-between text-xs text-surface-500 mt-2">
+            <span>{{ 'sales.pos.est_margin' | translate }}</span>
+            <span class="font-mono">{{ m(t.total - estimatedCost()!) }}
+              @if (t.total > 0) { ({{ ((t.total - estimatedCost()!) / t.total) * 100 | number: '1.0-1' }}%) }
+            </span>
+          </div>
+        }
+
+        @if (uncertain()) {
+          <p-message severity="warn" styleClass="mt-3" size="small">{{ 'sales.errors.UNCERTAIN' | translate }}</p-message>
+        }
+
+        <p-button
+          [label]="('sales.pos.charge' | translate) + '  ·  F2'"
+          icon="pi pi-check-circle"
+          size="large"
+          styleClass="w-full mt-4 !py-4 !text-lg"
+          [disabled]="!canCharge()"
+          [loading]="charging()"
+          (onClick)="startCharge()"
+        />
+        <p-button
+          [label]="'sales.pos.clear' | translate"
+          icon="pi pi-times"
+          [text]="true"
+          severity="secondary"
+          styleClass="w-full mt-1"
+          [disabled]="cart().length === 0 || charging()"
+          (onClick)="clearSale()"
+        />
+      </div>
+    </div>
+
+    <!-- Below xl the totals sit under the cart: keep total + Charge in reach -->
+    @if (cart().length > 0) {
+      <div class="xl:hidden sticky bottom-0 z-10 -mx-1 px-3 py-2 rounded-t-xl border-t border-surface-200 dark:border-surface-700
+                  bg-surface-0/95 dark:bg-surface-900/95 backdrop-blur shadow-[0_-4px_12px_rgba(0,0,0,0.08)]
+                  flex items-center gap-3">
+        <div class="flex flex-col min-w-0">
+          <span class="text-xs text-surface-500">{{ 'sales.pos.total' | translate }} · {{ totals().lines }} {{ 'sales.pos.items' | translate }}</span>
+          <span class="text-2xl font-bold tracking-tight truncate">{{ m(totals().total) }}</span>
+        </div>
+        <p-button
+          class="ml-auto"
+          [label]="'sales.pos.charge' | translate"
+          icon="pi pi-check-circle"
+          size="large"
+          [disabled]="!canCharge()"
+          [loading]="charging()"
+          (onClick)="startCharge()"
+        />
+      </div>
+    }
+  </div>
+}
+
+<!-- Cart line thumbnail (same look as the search results) -->
+<ng-template #lineThumb let-item>
+  @if (item.image_url) {
+    <img [src]="item.image_url" alt="" class="w-10 h-10 rounded object-cover shrink-0" loading="lazy" />
+  } @else {
+    <div class="w-10 h-10 rounded bg-surface-100 dark:bg-surface-800 flex items-center justify-center shrink-0">
+      <i class="pi pi-box text-surface-400"></i>
+    </div>
+  }
+</ng-template>
+
+<!-- ═══════════════ Charge ═══════════════ -->
+<app-payment-dialog
+  [(visible)]="paymentVisible"
+  [total]="totals().total"
+  [currency]="currency()"
+  [methods]="methods()"
+  [hasCustomer]="hasCustomer()"
+  [loading]="charging()"
+  [errors]="chargeErrors()"
+  (confirmed)="charge($event)"
+/>
+
+<!-- ═══════════════ Receipt ═══════════════ -->
+<p-dialog
+  [visible]="receiptVisible()"
+  (visibleChange)="receiptVisible.set($event); !$event && focusSearch()"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{ width: '30rem', maxWidth: '96vw' }"
+  [showHeader]="false"
+>
+  @if (lastSale(); as s) {
+    <div class="text-center pt-6">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/40 mb-3">
+        <i class="pi pi-check text-3xl text-green-600"></i>
+      </div>
+      <div class="text-xl font-semibold">{{ 'sales.pos.sale_done' | translate }}</div>
+      <div class="text-surface-500">{{ s.sale_number }}@if (s.idempotent) { · {{ 'sales.pos.already_charged' | translate }} }</div>
+
+      @if (s.change_amount > 0) {
+        <div class="mt-5 rounded-xl bg-green-50 dark:bg-green-900/30 p-4">
+          <div class="text-sm uppercase text-green-700 dark:text-green-300">{{ 'sales.pos.change_due' | translate }}</div>
+          <div class="text-5xl font-bold text-green-700 dark:text-green-300">{{ m(s.change_amount) }}</div>
+        </div>
+      }
+
+      <div class="mt-4 text-left text-sm">
+        <div class="flex justify-between py-1"><span>{{ 'sales.pos.total' | translate }}</span><span class="font-semibold">{{ m(s.total) }}</span></div>
+        @for (p of s.payments; track p.id) {
+          <div class="flex justify-between py-1 text-surface-600 dark:text-surface-300">
+            <span>{{ p.method_name }}@if (p.reference) { <small> #{{ p.reference }}</small> }</span>
+            <span>{{ m(p.received > p.amount ? p.received : p.amount) }}</span>
+          </div>
+        }
+      </div>
+
+      <label class="flex items-center justify-center gap-2 mt-4 text-sm text-surface-500 cursor-pointer">
+        <p-toggleswitch [ngModel]="autoPrint()" (ngModelChange)="setAutoPrint($event)" />
+        {{ 'sales.pos.auto_print' | translate }}
+      </label>
+    </div>
+  }
+  <ng-template #footer>
+    <p-button [label]="'sales.pos.print' | translate" icon="pi pi-print" [outlined]="true" (onClick)="printLast()" />
+    <p-button [label]="('sales.pos.new_sale' | translate) + ' (Enter)'" icon="pi pi-plus" (onClick)="newSale()" [autofocus]="true" />
+  </ng-template>
+</p-dialog>
+
+<!-- ═══════════════ Cash in / out ═══════════════ -->
+<!-- Cash in / out moves money: no Enter-to-save, the button must be pressed -->
+<base-dialog
+  [visible]="movementVisible()"
+  header="sales.register.movement_title"
+  size="sm"
+  [loading]="movementSaving()"
+  [submitOnEnter]="false"
+  [saveDisabled]="!movementAmount || !movementReason.trim()"
+  (save)="saveMovement()"
+  (hide)="movementVisible.set(false)"
+>
+  <div class="flex flex-col gap-4">
+    <p-selectbutton
+      [options]="movementKindOptions"
+      [ngModel]="movementKind()"
+      (ngModelChange)="$event && movementKind.set($event)"
+      name="kind"
+      optionValue="value"
+      [allowEmpty]="false"
+      styleClass="w-full"
+    >
+      <ng-template #item let-opt>{{ opt.label | translate }}</ng-template>
+    </p-selectbutton>
+    <div class="flex flex-col gap-1">
+      <label for="movementAmount" class="text-sm">{{ 'sales.pos.amount' | translate }}</label>
+      <p-inputnumber
+        inputId="movementAmount"
+        name="amount"
+        [(ngModel)]="movementAmount"
+        mode="decimal"
+        [minFractionDigits]="0"
+        [maxFractionDigits]="decimals()"
+        [min]="0"
+        inputStyleClass="w-full text-right text-xl font-semibold"
+        [autofocus]="true"
+      />
+      @if (movementKind() === 'OUT' && register(); as r) {
+        <small class="text-surface-500">{{ 'sales.register.in_drawer' | translate }}: {{ m(r.expected) }}</small>
+      }
+    </div>
+    <div class="flex flex-col gap-1">
+      <label for="movementReason" class="text-sm">{{ 'sales.register.reason' | translate }}</label>
+      <input pInputText id="movementReason" name="reason" [(ngModel)]="movementReason" maxlength="200"
+        [placeholder]="'sales.register.reason_hint' | translate" />
+    </div>
+    @for (e of movementErrors(); track e) { <p-message severity="error">{{ e }}</p-message> }
+  </div>
+</base-dialog>
+
+<!-- ═══════════════ Close register ═══════════════ -->
+@if (register(); as r) {
+  <app-close-register-dialog [(visible)]="closeVisible" [sessionId]="r.session.id" (closed)="onRegisterClosed($event)" />
+}

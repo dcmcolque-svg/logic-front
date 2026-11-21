@@ -248,9 +248,9 @@ export class FeatureService {
 
 This project has 7 environments configured in `angular.json`:
 - `development` (localhost:8082)
-- `production` (apibl7.binlogic.io)
+- `production` (apilogic.nuvex.uk)
 - `edge01` through `edge04` (edgeXX.shipedge.com)
-- `bl8` (apibl8.binlogic.io)
+- `bl8` (apilogic.nuvex.uk)
 
 To serve/build with a specific environment:
 ```bash

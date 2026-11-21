@@ -55,6 +55,8 @@ import { provideTableColumns } from '@/app/shared/services/table-columns.bus'
 
 // Label Generator
 import { LabelGeneratorDialog } from '@/app/shared/components'
+import { AuthService } from '@/app/core/services/auth.service'
+import { isOwnerRole } from '@/app/shared/utils/costing.util'
 
 @Component({
   selector: 'app-catalog',
@@ -95,6 +97,8 @@ export default class CatalogComponent implements OnInit {
   private readonly catalogService = inject(CatalogService)
   private readonly messageService = inject(MessageService)
   private readonly translate = inject(TranslateService)
+  /** Costs are OWNER-only. */
+  private readonly isOwner = isOwnerRole(inject(AuthService).getAuthUserInfo()?.role)
   private readonly filterService = inject(FilterApplyService)
   private readonly filterPresetService = inject(FilterPresetService)
 
@@ -117,7 +121,7 @@ export default class CatalogComponent implements OnInit {
   private readonly tableState = inject(TableStateService)
   private readonly router = inject(Router)
   /** localStorage key holding this table's filters / sort / page / column selection */
-  private readonly STATE_KEY = 'binlogic:catalog'
+  private readonly STATE_KEY = 'logic:catalog'
 
   /** Reference to base-data-table — used to reset its internal filters on Clear */
   @ViewChild(BaseDataTable) private readonly baseTable!: BaseDataTable
@@ -175,6 +179,11 @@ export default class CatalogComponent implements OnInit {
       { field: 'sku', header: 'labels.sku', sortable: true, filterable: true, filterType: 'text', width: '12rem', template: 'sku', mobileLabel: true, mobileVisible: true },
       { field: 'barcode', header: 'labels.barcode', sortable: true, filterable: true, filterType: 'text', width: '12rem', template: 'barcode' },
       { field: 'description', header: 'labels.description', sortable: true, filterable: true, filterType: 'text', width: '20rem', template: 'description', mobileVisible: true },
+      ...(this.isOwner
+        ? [<ShColumnDef>{ field: 'cost', header: 'labels.cost', sortable: true, filterable: true, filterType: 'numeric', width: '8rem', template: 'money' }]
+        : []),
+      { field: 'retail_price', header: 'labels.retail_price', sortable: true, filterable: true, filterType: 'numeric', width: '9rem', template: 'money' },
+      { field: 'wholesale_price', header: 'labels.wholesale_price', sortable: true, filterable: true, filterType: 'numeric', width: '9rem', template: 'money' },
       { field: 'available', header: 'labels.available', sortable: true, filterable: true, filterType: 'numeric', width: '8rem', template: 'number' },
       { field: 'asign', header: 'labels.asign', sortable: true, filterable: true, filterType: 'numeric', width: '8rem', template: 'number' },
       { field: 'reserved', header: 'labels.reserved', sortable: true, filterable: true, filterType: 'numeric', width: '8rem', template: 'number' },

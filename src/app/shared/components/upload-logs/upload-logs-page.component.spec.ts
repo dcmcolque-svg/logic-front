@@ -49,7 +49,7 @@ describe('UploadLogsPageComponent — the export menu reaches the table', () => 
         { provide: Location, useValue: { back: () => undefined } },
         {
           provide: FacilityScopeService,
-          useValue: { all: () => [], selectedIds: () => [], isSingle: () => false, inScope: () => [] },
+          useValue: { all: () => [], selectedIds: () => [], isSingle: () => false, inScope: () => [], load: () => {}, zone: () => 'America/La_Paz', zoneOf: () => 'America/La_Paz', mixedZones: () => false },
         },
       ],
     })

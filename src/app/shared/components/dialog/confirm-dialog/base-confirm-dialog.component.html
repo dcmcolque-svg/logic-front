@@ -22,21 +22,28 @@
       <i [class]="iconClass()" style="font-size: 2rem"></i>
     </div>
 
-    <!-- Message -->
-    <p class="text-center text-surface-600 dark:text-surface-300 mx-4">
-      {{ message() | translate }}
-    </p>
+    <!-- Subject (optional) + message -->
+    <div class="text-center mx-4">
+      @if (subject()) {
+        <p class="mt-0 mb-2 font-semibold text-surface-900 dark:text-surface-0">{{ subject() }}</p>
+      }
+      <p class="m-0 text-surface-600 dark:text-surface-300">
+        {{ message() | translate: messageParams() }}
+      </p>
+    </div>
   </div>
 
   <ng-template pTemplate="footer">
     <div class="flex justify-center gap-3">
-      <p-button
-        [label]="cancelLabel() | translate"
-        severity="secondary"
-        [outlined]="true"
-        (onClick)="hide.emit()"
-        icon="pi pi-times"
-      />
+      @if (showCancel()) {
+        <p-button
+          [label]="cancelLabel() | translate"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="hide.emit()"
+          icon="pi pi-times"
+        />
+      }
       <p-button
         [label]="confirmLabel() | translate"
         [severity]="severity()"

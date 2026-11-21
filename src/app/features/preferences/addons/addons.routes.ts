@@ -3,7 +3,7 @@ import { Routes } from '@angular/router'
 export default [
   {
     path: '',
-    data: { breadcrumb: 'Addons' },
+    data: { breadcrumb: 'pages.addons' },
     loadComponent: () =>
       import('./addons.component').then((m) => m.AddonsComponent),
   },

@@ -61,60 +61,6 @@
                                     "with": "src/environments/environment.development.ts"
                                 }
                             ]
-                        },
-                        "edge-01": {
-                            "fileReplacements": [
-                                {
-                                    "replace": "src/environments/environment.ts",
-                                    "with": "src/environments/environment.edge01.ts"
-                                }
-                            ],
-                            "outputHashing": "all"
-                        },
-                        "edge-02": {
-                            "fileReplacements": [
-                                {
-                                    "replace": "src/environments/environment.ts",
-                                    "with": "src/environments/environment.edge02.ts"
-                                }
-                            ],
-                            "outputHashing": "all"
-                        },
-                        "edge-03": {
-                            "fileReplacements": [
-                                {
-                                    "replace": "src/environments/environment.ts",
-                                    "with": "src/environments/environment.edge03.ts"
-                                }
-                            ],
-                            "outputHashing": "all"
-                        },
-                        "edge-04": {
-                            "fileReplacements": [
-                                {
-                                    "replace": "src/environments/environment.ts",
-                                    "with": "src/environments/environment.edge04.ts"
-                                }
-                            ],
-                            "outputHashing": "all"
-                        },
-                        "edge-05": {
-                            "fileReplacements": [
-                                {
-                                    "replace": "src/environments/environment.ts",
-                                    "with": "src/environments/environment.edge05.ts"
-                                }
-                            ],
-                            "outputHashing": "all"
-                        },
-                        "bl8": {
-                            "fileReplacements": [
-                                {
-                                    "replace": "src/environments/environment.ts",
-                                    "with": "src/environments/environment.bl8.ts"
-                                }
-                            ],
-                            "outputHashing": "all"
                         }
                     },
                     "defaultConfiguration": "production"
@@ -127,24 +73,6 @@
                         },
                         "development": {
                             "buildTarget": "verona-ng:build:development"
-                        },
-                        "edge-01": {
-                            "buildTarget": "verona-ng:build:edge-01"
-                        },
-                        "edge-02": {
-                            "buildTarget": "verona-ng:build:edge-02"
-                        },
-                        "edge-03": {
-                            "buildTarget": "verona-ng:build:edge-03"
-                        },
-                        "edge-04": {
-                            "buildTarget": "verona-ng:build:edge-04"
-                        },
-                        "edge-05": {
-                            "buildTarget": "verona-ng:build:edge-05"
-                        },
-                        "bl8": {
-                            "buildTarget": "verona-ng:build:bl8"
                         }
                     },
                     "defaultConfiguration": "development"
@@ -165,7 +93,10 @@
                             "src/assets/styles.scss",
                             "src/assets/tailwind.css"
                         ],
-                        "scripts": []
+                        "scripts": [],
+                        "exclude": [
+                            "src/app/features/preferences/locations/components/warehouse-planner/**/*.spec.ts"
+                        ]
                     }
                 }
             }

@@ -134,10 +134,10 @@ interface KeyState {
         <ng-template pTemplate="caption">
           @if (enformato.length > 0) {
             <div class="flex justify-end">
-              <shipedge-filter-clear
+              <nuvex-filter-clear
                 (removeEvent)="removeFilter($event)"
                 [enformato]="enformato"
-              ></shipedge-filter-clear>
+              ></nuvex-filter-clear>
             </div>
           }
         </ng-template>
@@ -210,21 +210,21 @@ interface KeyState {
                   <th></th>
                 }
                 @case ('name') {
-                  <th><shipedge-filter-input field="name" /></th>
+                  <th><nuvex-filter-input field="name" /></th>
                 }
                 @case ('operator_id') {
-                  <th><shipedge-filter-input field="operator_id" /></th>
+                  <th><nuvex-filter-input field="operator_id" /></th>
                 }
                 @case ('status') {
-                  <th><shipedge-filter-input field="status" /></th>
+                  <th><nuvex-filter-input field="status" /></th>
                 }
                 @case ('created_at') {
                   <th>
-                    <shipedge-filter-input field="created_at" type="date" />
+                    <nuvex-filter-input field="created_at" type="date" />
                   </th>
                 }
                 @default {
-                  <th><shipedge-filter-input [field]="col.field" /></th>
+                  <th><nuvex-filter-input [field]="col.field" /></th>
                 }
               }
             }

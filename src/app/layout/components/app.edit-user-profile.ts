@@ -39,6 +39,7 @@ import { UserAccountService } from '../../features/preferences/user-account/user
 import { AuthUser } from '../../features/preferences/user-account/user-account.types'
 import { AuthService } from '../../core/services/auth.service'
 import { AuthResponse } from '../../core/types/auth.types'
+import { revealInvalid } from '@/app/shared/utils/form.util'
 
 
 // ── Country list — one entry per calling code ─────────────────────────────────
@@ -320,6 +321,7 @@ interface UserProfileDto {
         </div>
       </div>
 
+      <!-- Temporarily hidden: Choose image
       <div class="avatar-actions">
         <p-fileUpload
           #fileUpload
@@ -342,6 +344,7 @@ interface UserProfileDto {
           />
         }
       </div>
+      -->
 
       @if (userEmail()) {
         <span class="avatar-email">
@@ -428,7 +431,7 @@ interface UserProfileDto {
         <p-button
           [label]="'buttons.save' | translate"
           type="submit"
-          [disabled]="form.invalid || isLoading()"
+          [disabled]="isLoading()"
           [loading]="isLoading()"
         />
       </div>
@@ -608,10 +611,7 @@ export class AppEditUserProfile implements OnInit {
 
   // ── Save ──────────────────────────────────────────────────────────────────
   save(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched()
-      return
-    }
+    if (revealInvalid(this.form)) return
 
     this.isLoading.set(true)
     const raw = this.form.value

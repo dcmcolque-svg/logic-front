@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing'
 import { of, Subject, throwError } from 'rxjs'
 import { FilterPreset } from '@/app/shared/types/filter-preset.types'
 import { FilterPresetApiStorage } from './filter-preset-api.storage'
-import { FilterPresetService } from './filter-preset.service'
+import { FILTER_PRESETS_ENABLED, FilterPresetService } from './filter-preset.service'
 
 /**
  * Covers FilterPresetService: loading and ordering a page's presets, the
@@ -11,7 +11,7 @@ import { FilterPresetService } from './filter-preset.service'
  * mutation.
  */
 
-const STORAGE_KEY = 'binlogic:preset:lastApplied'
+const STORAGE_KEY = 'logic:preset:lastApplied'
 
 function preset(id: string, position: number, updatedAt = '2026-09-01T00:00:00Z', extra: Partial<FilterPreset> = {}): FilterPreset {
   return {
@@ -56,7 +56,11 @@ describe('FilterPresetService', () => {
     storage.delete.and.returnValue(of(undefined))
 
     TestBed.configureTestingModule({
-      providers: [provideZonelessChangeDetection(), { provide: FilterPresetApiStorage, useValue: storage }],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: FilterPresetApiStorage, useValue: storage },
+        { provide: FILTER_PRESETS_ENABLED, useValue: true },
+      ],
     })
     service = TestBed.inject(FilterPresetService)
   })

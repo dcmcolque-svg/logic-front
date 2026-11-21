@@ -23,14 +23,14 @@
   @if (currentView() === 'tree') {
     <!-- Location header card -->
     @if (selectedLocation) {
-      <div class="mb-4 p-4 surface-card border-round border-1 surface-border">
+      <div class="mb-4 p-4 bg-surface-0 dark:bg-surface-900 rounded border border-surface">
         <div class="flex items-center gap-2 mb-3">
           <i class="pi pi-map-marker text-primary"></i>
           <span class="font-semibold">{{
             selectedLocation.location_code
           }}</span>
-          <span class="text-color-secondary">—</span>
-          <span class="text-color-secondary">{{
+          <span class="text-muted-color">—</span>
+          <span class="text-muted-color">{{
             selectedLocation.facility_name
           }}</span>
         </div>
@@ -102,7 +102,7 @@
             <div class="flex-grow-1 flex items-center gap-2 flex-wrap">
               <span class="font-semibold">{{ node.label }}</span>
               <span
-                class="text-xs text-color-secondary surface-200 px-2 py-1 border-round"
+                class="text-xs text-muted-color bg-surface-200 dark:bg-surface-700 px-2 py-1 rounded"
               >
                 {{ node.data.type }}
               </span>
@@ -164,8 +164,8 @@
     <!-- Empty state -->
     @if (!loading() && treeData().length === 0) {
       <div class="text-center p-6">
-        <i class="pi pi-inbox text-4xl text-color-secondary mb-3"></i>
-        <p class="text-color-secondary m-0">
+        <i class="pi pi-inbox text-4xl text-muted-color mb-3"></i>
+        <p class="text-muted-color m-0">
           {{ 'labels.no_tree_data_found' | translate }}
         </p>
       </div>
@@ -174,7 +174,7 @@
 
   <!-- ========== FORM VIEW ========== -->
   @if (currentView() === 'form') {
-    <div class="p-4 surface-card border-round border-1 surface-border">
+    <div class="p-4 bg-surface-0 dark:bg-surface-900 rounded border border-surface">
       <h4 class="mt-0 mb-4">
         @if (editingContainerId) {
           {{ 'preferences.bin.title_edit' | translate }}

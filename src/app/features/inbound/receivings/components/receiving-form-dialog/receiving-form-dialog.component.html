@@ -41,6 +41,20 @@
         <sh-field-error [ctrl]="form.controls.company_id" />
       }
     </div>
+    <div>
+      <base-form-field
+        type="dropdown"
+        label="labels.supplier"
+        placeholder="suppliers.select_placeholder"
+        [control]="form.controls.supplier_id"
+        [options]="supplierOptions()"
+        optionLabel="name"
+        optionValue="id"
+      />
+      @if (form.controls.supplier_id.errors?.['serverError']) {
+        <sh-field-error [ctrl]="form.controls.supplier_id" />
+      }
+    </div>
     <base-form-field
       type="dropdown"
       label="labels.doc_type"
@@ -138,6 +152,16 @@
           <th class="text-left p-2">{{ 'labels.sku' | translate }}</th>
           <th class="text-left p-2">{{ 'labels.name' | translate }}</th>
           <th class="text-left p-2 w-48">{{ 'labels.expected_qty' | translate }}</th>
+          @if (showCost()) {
+            <th class="text-left p-2 w-56">
+              {{ 'inbound.unit_cost' | translate }}
+              <i
+                class="pi pi-info-circle text-surface-400 cursor-help ml-1"
+                [pTooltip]="'inbound.unit_cost_hint' | translate"
+                tooltipPosition="top"
+              ></i>
+            </th>
+          }
           <th class="p-2 w-12"></th>
         </tr>
       </thead>
@@ -179,6 +203,41 @@
                 [errors]="{ min: 'forms_validation.min_value', max: 'forms_validation.max_value' }"
               />
             </td>
+            @if (showCost()) {
+              <td class="p-2">
+                <p-inputnumber
+                  formControlName="unit_cost"
+                  [min]="0"
+                  [minFractionDigits]="0"
+                  [maxFractionDigits]="6"
+                  [prefix]="costPrefix() + ' '"
+                  size="small"
+                  inputStyleClass="w-32"
+                  [placeholder]="costPlaceholder(row.controls.sku_cost.value)"
+                  [class.ng-invalid]="isInvalidCtrl(row.controls.unit_cost)"
+                  [class.ng-dirty]="isInvalidCtrl(row.controls.unit_cost)"
+                />
+                @let pct = variancePct(row);
+                @if (pct !== null && pct !== 0) {
+                  <small
+                    class="block mt-1"
+                    [class.text-red-500]="pct > 0"
+                    [class.text-green-600]="pct < 0"
+                    [pTooltip]="('inbound.catalog_cost' | translate) + ': ' + formatCost(row.controls.sku_cost.value)"
+                    tooltipPosition="top"
+                  >
+                    {{ pct > 0 ? '▲' : '▼' }} {{ (pct > 0 ? pct : -pct) | number: '1.0-1' }}%
+                    {{ 'inbound.vs_catalog' | translate }}
+                  </small>
+                } @else if (row.controls.unit_cost.value === null) {
+                  <small class="block mt-1 text-surface-400">{{ 'inbound.cost_from_catalog' | translate }}</small>
+                }
+                <sh-field-error
+                  [ctrl]="row.controls.unit_cost"
+                  [errors]="{ min: 'forms_validation.min_value', max: 'forms_validation.max_value' }"
+                />
+              </td>
+            }
             <td class="p-2 text-center">
               <p-button
                 icon="pi pi-trash"
@@ -193,7 +252,7 @@
           </tr>
         } @empty {
           <tr>
-            <td colspan="5" class="p-6 text-center text-surface-400">
+            <td [attr.colspan]="showCost() ? 6 : 5" class="p-6 text-center text-surface-400">
               <i class="pi pi-box text-2xl block mb-2"></i>
               {{ 'inbound.no_items' | translate }}
             </td>
@@ -206,7 +265,11 @@
             <td class="p-2" colspan="3">
               {{ rows().length }} {{ 'inbound.lines' | translate }}
             </td>
-            <td class="p-2" colspan="2">{{ totalQty() }}</td>
+            <td class="p-2">{{ totalQty() }}</td>
+            @if (showCost()) {
+              <td class="p-2">{{ formatCost(totalCost()) }}</td>
+            }
+            <td class="p-2"></td>
           </tr>
         </tfoot>
       }

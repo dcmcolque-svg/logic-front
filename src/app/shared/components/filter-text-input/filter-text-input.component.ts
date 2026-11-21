@@ -36,7 +36,7 @@ import { filterConfigMatchModes } from '@/app/shared/config/filter-column.config
  *
  * @example
  * ```html
- * <shipedge-filter-text-input
+ * <nuvex-filter-text-input
  *   [value]="getActiveFilterValue(col.field)"
  *   [matchMode]="getActiveFilterMatchMode(col.field)"
  *   [placeholder]="col.header | translate"
@@ -46,7 +46,7 @@ import { filterConfigMatchModes } from '@/app/shared/config/filter-column.config
  * ```
  */
 @Component({
-  selector: 'shipedge-filter-text-input',
+  selector: 'nuvex-filter-text-input',
   standalone: true,
   imports: [
     CommonModule,

@@ -1,3 +1,4 @@
+import { FacilityDatePipe } from '@/app/shared/pipes/facility-date.pipe'
 import {
   ChangeDetectionStrategy,
   Component,
@@ -54,6 +55,7 @@ const STATUS_SEVERITY: Record<ImportLogStatus, 'success' | 'warn' | 'danger'> = 
   selector: 'base-upload-logs',
   standalone: true,
   imports: [
+    FacilityDatePipe,
     CommonModule,
     DatePipe,
     TranslateModule,

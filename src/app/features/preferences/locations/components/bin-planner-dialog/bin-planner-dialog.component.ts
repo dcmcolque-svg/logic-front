@@ -15,6 +15,7 @@ import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { TranslateModule, TranslateService } from '@ngx-translate/core'
 import { DialogModule } from 'primeng/dialog'
+import { BaseDialog } from '@/app/shared/components'
 import { ButtonModule } from 'primeng/button'
 import { InputNumberModule } from 'primeng/inputnumber'
 import { InputTextModule } from 'primeng/inputtext'
@@ -112,6 +113,7 @@ function buildUniformWalls(rows: number, cols: number): PlannerWall[] {
     FormsModule,
     TranslateModule,
     DialogModule,
+    BaseDialog,
     ButtonModule,
     InputNumberModule,
     InputTextModule,
@@ -164,12 +166,9 @@ export class BinPlannerDialogComponent {
   horizontalOrder = signal<HorizontalOrder>('ttb')
 
   // ── Bin Type ────────────────────────────────────────────────────
-  binTypeOptions = [
-    { label: 'Box', value: 'BOX' },
-    { label: 'Pallet', value: 'PALLET' },
-    { label: 'Tote', value: 'TOTE' },
-  ]
-  binType = signal<BinType>('BOX')
+  // For now new bins can only be of type BIN
+  binTypeOptions = [{ label: 'Bin', value: 'BIN' }]
+  binType = signal<BinType>('BIN')
 
   // ── Tags ───────────────────────────────────────────────────────
   tags = signal<string[]>([])
@@ -239,7 +238,7 @@ export class BinPlannerDialogComponent {
   private contextMenuCell: { row: number; col: number } | null = null
   // Edit dialog for per-bin type/tags
   editBinDialogVisible = signal(false)
-  editBinType = signal<BinType>('BOX')
+  editBinType = signal<BinType>('BIN')
   editBinTags = signal<string[]>([])
   editBinTagInput = signal('')
 
@@ -1158,7 +1157,7 @@ export class BinPlannerDialogComponent {
     if (bins.length === 0) return
 
     // Pre-populate with first selected bin's values
-    this.editBinType.set(bins[0].type || 'BOX')
+    this.editBinType.set('BIN')
     const tags = bins[0].tag ? bins[0].tag.split(',').map(t => t.trim()).filter(Boolean) : []
     this.editBinTags.set(tags)
     this.editBinTagInput.set('')
@@ -1382,7 +1381,7 @@ export class BinPlannerDialogComponent {
         return {
           ...bin,
           label: container.lpn_code || bin.label,
-          type: (container.type || 'BOX') as BinType,
+          type: (container.type || 'BIN') as BinType,
           tag: (container.tags || []).join(','),
         }
       }
@@ -1416,7 +1415,7 @@ export class BinPlannerDialogComponent {
     this.nameFormat.set(state.nameFormat || '{loc}/{bin}')
     const savedTag = state.tag || ''
     this.tags.set(savedTag ? savedTag.split(',') : [])
-    this.binType.set(state.type || 'BOX')
+    this.binType.set('BIN')
     this._walls = state.walls
     this.colWidths = state.colWidths?.length === state.cols
       ? [...state.colWidths]

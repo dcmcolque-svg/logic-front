@@ -3,7 +3,8 @@
  */
 
 /** Bin type classification */
-export type BinType = 'BOX' | 'PALLET' | 'TOTE'
+// New bins are always BIN; BOX/PALLET/TOTE remain for bins created before that rule.
+export type BinType = 'BIN' | 'BOX' | 'PALLET' | 'TOTE'
 
 /** A single cell in the planner grid */
 export interface PlannerCell {

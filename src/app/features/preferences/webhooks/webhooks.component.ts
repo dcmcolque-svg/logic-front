@@ -134,11 +134,8 @@ const ALL_COLUMNS: Column[] = [
 
     <!-- ── Page Header ── -->
     @if (!embedded()) {
-      <div class="flex align-items-center w-full mb-4">
-        <h5 class="text-2xl font-bold m-0 text-color">
-          {{ 'pages.webhooks' | translate }}
-        </h5>
-        <div class="flex gap-2 align-items-center ml-auto">
+      <div class="flex items-center w-full mb-4">
+        <div class="flex gap-2 items-center ml-auto">
           <p-button
             icon="pi pi-plus"
             [label]="'preferences.webhook.new_webhook' | translate"
@@ -175,7 +172,7 @@ const ALL_COLUMNS: Column[] = [
     }
 
     <!-- ── Table ── -->
-    <div class="card surface-card border-round-xl shadow-1 p-0">
+    <div class="card bg-surface-0 dark:bg-surface-900 border-round-xl shadow-1 p-0">
 
       <p-table
         #dt
@@ -205,14 +202,14 @@ const ALL_COLUMNS: Column[] = [
           <!-- Header row -->
           <tr>
             @if (columnsSelect.length > 0) {
-              <th style="width: 3.5rem; text-align: center" class="surface-ground"></th>
+              <th style="width: 3.5rem; text-align: center" class="bg-surface-50 dark:bg-surface-950"></th>
             }
             @for (col of columns; track col.field) {
               <th
                 [pSortableColumn]="col.sortable ? (col.sortField ?? col.field) : null"
-                class="surface-ground font-semibold text-color-secondary"
+                class="bg-surface-50 dark:bg-surface-950 font-semibold text-muted-color"
               >
-                <div class="flex justify-content-between align-items-center gap-1">
+                <div class="flex justify-between items-center gap-1">
                   <span>{{ col.header | translate }}</span>
                   @if (col.sortable) { <p-sortIcon [field]="col.sortField ?? col.field" /> }
                 </div>
@@ -223,10 +220,10 @@ const ALL_COLUMNS: Column[] = [
           <!-- Filter row -->
           <tr>
             @if (columnsSelect.length > 0) {
-              <th class="surface-ground"></th>
+              <th class="bg-surface-50 dark:bg-surface-950"></th>
             }
             @for (col of columns; track col.field) {
-              <th class="surface-ground p-1">
+              <th class="bg-surface-50 dark:bg-surface-950 p-1">
                 @switch (col.field) {
                   @case ('scope') {
                     <p-select
@@ -242,7 +239,7 @@ const ALL_COLUMNS: Column[] = [
                     />
                   }
                   @case ('facility') {
-                    <shipedge-filter-multiselect-panel
+                    <nuvex-filter-multiselect-panel
                       [options]="facilityFilterOptions()"
                       optionLabel="name"
                       optionValue="id"
@@ -254,21 +251,21 @@ const ALL_COLUMNS: Column[] = [
                     />
                   }
                   @case ('endpoint_url') {
-                    <shipedge-filter-text-input
+                    <nuvex-filter-text-input
                       [value]="filterEndpointUrl"
                       [placeholder]="'labels.endpoint_url' | translate"
                       (applyWithMode)="onWebhookTextApply('filterEndpointUrl', $event)"
                     />
                   }
                   @case ('description') {
-                    <shipedge-filter-text-input
+                    <nuvex-filter-text-input
                       [value]="filterDescription"
                       [placeholder]="'labels.description' | translate"
                       (applyWithMode)="onWebhookTextApply('filterDescription', $event)"
                     />
                   }
                   @case ('api_version') {
-                    <shipedge-filter-text-input
+                    <nuvex-filter-text-input
                       [value]="filterApiVersion"
                       [placeholder]="'labels.api_version' | translate"
                       (applyWithMode)="onWebhookTextApply('filterApiVersion', $event)"
@@ -441,7 +438,7 @@ export default class WebhooksComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef)
   private readonly filterservice = inject(FilterApplyService)
   private readonly tableState = inject(TableStateService)
-  private readonly STATE_KEY = 'binlogic:webhooks'
+  private readonly STATE_KEY = 'logic:webhooks'
 
   dialogRef: DynamicDialogRef | null = null
   selectedWebhook: Webhook | undefined
@@ -711,20 +708,20 @@ export default class WebhooksComponent implements OnInit {
     this.saveState()
   }
 
-  /** Called by shipedge-filter-multiselect-panel (apply) for the facility column filter. */
+  /** Called by nuvex-filter-multiselect-panel (apply) for the facility column filter. */
   onWebhookFacilityApply(ids: string[]): void {
     this.filterFacilityIds = ids ?? []
     this.applyWebhookFilters()
   }
 
-  /** Called by shipedge-filter-multiselect-panel (clear) for the facility column filter. */
+  /** Called by nuvex-filter-multiselect-panel (clear) for the facility column filter. */
   onWebhookFacilityClear(): void {
     this.filterFacilityIds = []
     this.applyWebhookFilters()
   }
 
   /**
-   * Called by shipedge-filter-text-input (applyWithMode) for text column filters.
+   * Called by nuvex-filter-text-input (applyWithMode) for text column filters.
    * Updates the corresponding local filter property and re-applies all filters.
    */
   onWebhookTextApply(

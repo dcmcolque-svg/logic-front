@@ -75,7 +75,7 @@ export default class RotationsComponent implements OnInit {
   private readonly translateService = inject(TranslateService)
   private readonly tableState = inject(TableStateService)
 
-  private readonly STATE_KEY = 'binlogic:rotations'
+  private readonly STATE_KEY = 'logic:rotations'
 
   /** Resets the sort icon on Clear — same pattern as FacilitiesComponent */
   @ViewChild(BaseDataTable) private readonly baseTable!: BaseDataTable

@@ -15,7 +15,7 @@ import { FormsModule } from '@angular/forms'
 import { TranslateModule, TranslateService } from '@ngx-translate/core'
 import { MessageService } from 'primeng/api'
 import { ButtonModule } from 'primeng/button'
-import { DialogModule } from 'primeng/dialog'
+import { BaseConfirmDialog } from '@/app/shared/components'
 import { InputTextModule } from 'primeng/inputtext'
 
 import { CatalogService } from '../../catalog.service'
@@ -35,7 +35,7 @@ import { CategoryListItem } from '../../types/catalog.types'
   selector: 'app-category-manager',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, TranslateModule, ButtonModule, DialogModule, InputTextModule],
+  imports: [FormsModule, TranslateModule, ButtonModule, BaseConfirmDialog, InputTextModule],
   templateUrl: './category-manager.component.html',
   styleUrl: './category-manager.component.scss',
 })

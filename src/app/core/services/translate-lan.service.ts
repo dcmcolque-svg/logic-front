@@ -1,6 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core'
 import { PrimeNG } from 'primeng/config'
 import { environment } from '../../../environments/environment'
+import { DATEPICKER_FORMAT } from '@/app/shared/utils/display-format'
 
 
 /** PrimeNG locale translations keyed by language code */
@@ -14,7 +15,7 @@ const PRIMENG_LOCALES: Record<string, Record<string, unknown>> = {
     today: 'Today',
     weekHeader: 'Wk',
     firstDayOfWeek: 0,
-    dateFormat: 'mm/dd/yy',
+    dateFormat: DATEPICKER_FORMAT,
     chooseYear: 'Choose Year',
     chooseMonth: 'Choose Month',
     chooseDate: 'Choose Date',
@@ -46,7 +47,7 @@ const PRIMENG_LOCALES: Record<string, Record<string, unknown>> = {
     today: 'Hoy',
     weekHeader: 'Sm',
     firstDayOfWeek: 1,
-    dateFormat: 'dd/mm/yy',
+    dateFormat: DATEPICKER_FORMAT,
     chooseYear: 'Elegir Año',
     chooseMonth: 'Elegir Mes',
     chooseDate: 'Elegir Fecha',

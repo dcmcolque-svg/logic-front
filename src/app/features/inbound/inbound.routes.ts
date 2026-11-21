@@ -1,10 +1,16 @@
+import { unsavedChangesGuard } from '@/app/core/guards/unsaved-changes.guard'
 import { Routes } from '@angular/router'
 
 export default [
   {
     path: 'receivings',
-    data: { breadcrumb: 'Receivings' },
+    data: { breadcrumb: 'pages.receivings' },
     loadComponent: () => import('./receivings/receivings.component').then(m => m.Receivings),
+  },
+  {
+    path: 'suppliers',
+    data: { breadcrumb: 'pages.suppliers' },
+    loadComponent: () => import('./suppliers/suppliers.component'),
   },
   {
     path: 'receivings/upload-logs',
@@ -18,13 +24,14 @@ export default [
   },
   {
     path: 'details/:id',
-    data: { breadcrumb: 'Details' },
+    data: { breadcrumb: 'pages.receivings_details' },
     loadComponent: () =>
       import('./receivings/components/details/details').then(m => m.default),
   },
   {
     path: 'processing/:id',
-    data: { breadcrumb: 'Processing' },
+    data: { breadcrumb: 'pages.processing' },
+    canDeactivate: [unsavedChangesGuard],
     loadComponent: () =>
       import('./receivings/components/processing/processing').then(m => m.default),
   },

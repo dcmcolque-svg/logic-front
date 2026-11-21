@@ -119,8 +119,6 @@
                     formControlName="qty"
                     [showButtons]="true"
                     [min]="1"
-                    [max]="MAX_QTY"
-                    [maxlength]="10"
                     variant="filled"
                     class="w-full"
                     [invalid]="isInvalid('qty')"
@@ -270,7 +268,7 @@
         <p-button
             [label]="'packaging.form.save' | translate"
             type="submit"
-            [disabled]="form.invalid || saving()"
+            [disabled]="saving()"
             [loading]="saving()"
         />
     </div>

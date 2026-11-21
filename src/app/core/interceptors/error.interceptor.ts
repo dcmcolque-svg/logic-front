@@ -96,6 +96,8 @@ function shouldSuppressErrorMessage(request: any): boolean {
   const suppressedEndpoints = [
     // login: errors are shown inline by the login page (it has no toast host)
     { pattern: /\/login$/, methods: ['POST'] },
+    // private sign-up: errors shown inline by the register page (no toast host)
+    { pattern: /\/register(\/check)?$/, methods: ['POST'] },
     {
       pattern: /^\/eng\/v1\/bin\/delete(\/.*)?$/,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
@@ -121,6 +123,12 @@ function shouldSuppressErrorMessage(request: any): boolean {
     // xenvio facility connections: the facilities page handles these errors (a missing provider is not one)
     { pattern: /^\/v2\/integration\/providers\/xenvio\/fulfillment-locations$/, methods: ['GET'] },
     { pattern: /^\/v2\/integration\/providers\/xenvio\/facilities\/[^/]+$/, methods: ['PUT'] },
+    // inbound/supplier: duplicate / validation errors are shown inline by the suppliers dialog
+    { pattern: /^\/v2\/inbound\/supplier\/create$/, methods: ['POST'] },
+    { pattern: /^\/v2\/inbound\/supplier\/[0-9a-f-]{36}$/, methods: ['PUT'] },
+    // core/company: duplicate / validation / in-use errors are shown by the companies page
+    { pattern: /^\/v2\/company$/, methods: ['POST'] },
+    { pattern: /^\/v2\/company\/[0-9a-f-]{36}$/, methods: ['PUT', 'DELETE'] },
     // wms/location: delete errors are handled in the confirm dialog with user-friendly messages
     { pattern: /^\/v2\/wms\/location\/[^/]+$/, methods: ['DELETE'] },
     // bin-layout: 404 is expected when no layout has been saved yet

@@ -1,11 +1,11 @@
+import pkg from '../../package.json'
+
 export const environment = {
-  URL_API: 'https://apibl7.binlogic.io/',
+  URL_API: 'https://apilogic.nuvex.uk/',
   defaultLanguage: 'en',
-  ionflowCdnUrl: 'https://cdn.shipedge.com/altacrest/ion/ionqa.js',
-  ionflowAppUrl: 'https://app.ionflow.io',
+  // Version shown at the foot of the sidebar — bump it in package.json
+  appVersion: pkg.version,
   stripe: {
-    publicKey:
-      'pk_test_51QPpnkR3zHW9PyFSaqiiINiN9bMoWOj4QI79KhY2u0OceiDIk1yvf4vLLVQ8NNDvc5P4LTDeGRRbnC6xbotd4B38005ibWBUvh',
-    apiVersion: 'v1.1.2' as const,
+    apiVersion: 'v1.0.0' as const,
   },
 }

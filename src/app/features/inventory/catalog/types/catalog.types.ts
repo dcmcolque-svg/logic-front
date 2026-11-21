@@ -89,6 +89,9 @@ export interface CatalogFilter {
   reserved?: MatchModel
   in_transit?: MatchModel
   back_order?: MatchModel
+  cost?: MatchModel
+  retail_price?: MatchModel
+  wholesale_price?: MatchModel
 }
 
 // ============================================================

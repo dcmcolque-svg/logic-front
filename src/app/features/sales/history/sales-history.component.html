@@ -1,0 +1,512 @@
+<div class="card">
+  <div class="flex flex-wrap items-center gap-2 mb-4">
+    <p class="m-0 text-sm text-surface-500">{{ 'sales.history.subtitle' | translate }}<i class="pi pi-info-circle text-surface-500 cursor-help ml-1 align-middle" [pTooltip]="'sales.history.hint' | translate" tooltipPosition="bottom"></i></p>
+    <div class="ml-auto flex items-center gap-2">
+      @if (activeTab() === 'sales') {
+        <p-menu #exportMenu [model]="exportItems" [popup]="true" appendTo="body" />
+        <p-button [label]="'buttons.export' | translate" icon="pi pi-download" size="small" severity="secondary" [outlined]="true"
+          [loading]="exporting()" [disabled]="count() === 0" (onClick)="exportMenu.toggle($event)" />
+      }
+      <p-button [label]="'pages.point of sale' | translate" icon="pi pi-shop" size="small" [outlined]="true"
+        routerLink="/app/sales/pos" />
+    </div>
+  </div>
+
+  <!-- ═══════════════ Shared filters ═══════════════ -->
+  <div class="flex flex-wrap items-center gap-2 mb-4">
+    @if (sessionFilter(); as sf) {
+      <p-tag severity="info" styleClass="!py-2 !px-3">
+        <span class="flex items-center gap-2">
+          <i class="pi pi-wallet"></i>{{ 'sales.history.of_register' | translate }} {{ sf.session_number }} · {{ sf.user_name }}
+          <button type="button" class="pi pi-times cursor-pointer" [attr.aria-label]="'buttons.clear' | translate"
+            (click)="clearSessionFilter()"></button>
+        </span>
+      </p-tag>
+    } @else {
+      <p-select
+        [options]="presetOptions"
+        [ngModel]="preset"
+        (ngModelChange)="onPreset($event)"
+        optionValue="value"
+        optionLabel="label"
+        styleClass="w-full sm:w-44"
+        appendTo="body"
+      >
+        <ng-template #selectedItem let-opt>{{ opt.label | translate }}</ng-template>
+        <ng-template #item let-opt>{{ opt.label | translate }}</ng-template>
+      </p-select>
+      <p-datepicker
+        [(ngModel)]="range"
+        selectionMode="range"
+        [readonlyInput]="true"
+        [showIcon]="true"
+        [showButtonBar]="true"
+        [placeholder]="'sales.history.date_range' | translate"
+        styleClass="w-full sm:w-64"
+        appendTo="body"
+        (onSelect)="onRange()"
+        (onClearClick)="clearRange()"
+      />
+    }
+    <p-iconfield class="w-full sm:w-64">
+      <p-inputicon styleClass="pi pi-search" />
+      <input
+        pInputText
+        class="w-full"
+        [(ngModel)]="search"
+        (ngModelChange)="onSearchInput($event)"
+        (keydown.enter)="reload()"
+        [placeholder]="(activeTab() === 'sales' ? 'sales.history.search_sales' : 'sales.history.search_registers') | translate"
+      />
+    </p-iconfield>
+    @if (activeTab() === 'sales') {
+      <p-select
+        [options]="kindOptions"
+        [(ngModel)]="kind"
+        optionValue="value"
+        optionLabel="label"
+        [showClear]="true"
+        [placeholder]="'sales.history.payment' | translate"
+        styleClass="w-full sm:w-44"
+        appendTo="body"
+        (onChange)="reload()"
+      >
+        <ng-template #selectedItem let-opt><i [class]="icon(opt.value)" class="mr-2"></i>{{ opt.label | translate }}</ng-template>
+        <ng-template #item let-opt><i [class]="icon(opt.value)" class="mr-2"></i>{{ opt.label | translate }}</ng-template>
+      </p-select>
+      <p-select
+        [options]="priceListOptions"
+        [(ngModel)]="priceList"
+        optionValue="value"
+        optionLabel="label"
+        [showClear]="true"
+        [placeholder]="'sales.history.price_list' | translate"
+        styleClass="w-full sm:w-40"
+        appendTo="body"
+        (onChange)="reload()"
+      >
+        <ng-template #selectedItem let-opt>{{ opt.label | translate }}</ng-template>
+        <ng-template #item let-opt>{{ opt.label | translate }}</ng-template>
+      </p-select>
+      <p-select
+        [options]="scopeOptions"
+        [(ngModel)]="sessionScope"
+        optionValue="value"
+        optionLabel="label"
+        [showClear]="true"
+        [placeholder]="'sales.register.scope' | translate"
+        styleClass="w-full sm:w-52"
+        appendTo="body"
+        (onChange)="reload()"
+      >
+        <ng-template #selectedItem let-opt>{{ opt.label | translate }}</ng-template>
+        <ng-template #item let-opt>{{ opt.label | translate }}</ng-template>
+      </p-select>
+    } @else {
+      <p-select
+        [options]="statusOptions"
+        [(ngModel)]="sessionStatus"
+        optionValue="value"
+        optionLabel="label"
+        [showClear]="true"
+        [placeholder]="'labels.status' | translate"
+        styleClass="w-full sm:w-40"
+        appendTo="body"
+        (onChange)="reload()"
+      >
+        <ng-template #selectedItem let-opt>{{ opt.label | translate }}</ng-template>
+        <ng-template #item let-opt>{{ opt.label | translate }}</ng-template>
+      </p-select>
+    }
+    <p-button icon="pi pi-refresh" [outlined]="true" [ariaLabel]="'buttons.refresh' | translate" (onClick)="reload()" />
+  </div>
+
+  <p-tabs [value]="activeTab()" (valueChange)="onTab($event)">
+    <p-tablist>
+      <p-tab value="sales"><i class="pi pi-shopping-bag mr-2"></i>{{ 'sales.history.tab_sales' | translate }}</p-tab>
+      <p-tab value="registers"><i class="pi pi-wallet mr-2"></i>{{ 'sales.history.tab_registers' | translate }}</p-tab>
+    </p-tablist>
+
+    <p-tabpanels>
+      <!-- ═══════════════ Sales ═══════════════ -->
+      <p-tabpanel value="sales">
+        @for (t of totals(); track t.currency) {
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4" [class]="isOwner && t.margin !== null && t.margin !== undefined ? 'lg:grid-cols-6' : ''">
+            <div class="border border-surface-200 dark:border-surface-700 rounded-md p-3">
+              <div class="text-xs text-surface-500 uppercase">{{ 'sales.history.revenue' | translate }} · {{ t.currency }}</div>
+              <div class="text-2xl font-semibold mt-1">{{ m(t.total, t.currency) }}</div>
+            </div>
+            <div class="border border-surface-200 dark:border-surface-700 rounded-md p-3">
+              <div class="text-xs text-surface-500 uppercase">{{ 'sales.history.sales_count' | translate }}</div>
+              <div class="text-2xl font-semibold mt-1">{{ t.sales }}</div>
+              <div class="text-xs text-surface-500">{{ t.units | number: '1.0-2' }} {{ 'sales.pos.units' | translate }}</div>
+            </div>
+            <div class="border border-surface-200 dark:border-surface-700 rounded-md p-3">
+              <div class="text-xs text-surface-500 uppercase">{{ 'sales.history.avg_ticket' | translate }}</div>
+              <div class="text-2xl font-semibold mt-1">{{ m(avgTicket(t), t.currency) }}</div>
+            </div>
+            <div class="border border-surface-200 dark:border-surface-700 rounded-md p-3">
+              <div class="text-xs text-surface-500 uppercase">{{ 'sales.history.discounts' | translate }}</div>
+              <div class="text-2xl font-semibold mt-1">{{ m(t.discounts, t.currency) }}</div>
+            </div>
+            @if (isOwner && t.margin !== null && t.margin !== undefined) {
+              <div class="border border-surface-200 dark:border-surface-700 rounded-md p-3">
+                <div class="text-xs text-surface-500 uppercase">{{ 'sales.history.cost_of_sales' | translate }}</div>
+                <div class="text-2xl font-semibold mt-1">{{ m(t.cost_total, t.currency) }}</div>
+              </div>
+              <div class="border border-surface-200 dark:border-surface-700 rounded-md p-3">
+                <div class="text-xs text-surface-500 uppercase">{{ 'sales.history.gross_margin' | translate }}</div>
+                <div class="text-2xl font-semibold mt-1" [class]="marginClass(t.margin)">{{ m(t.margin, t.currency) }}</div>
+                @if (marginPct(t); as pct) {
+                  <div class="text-xs text-surface-500">{{ pct | number: '1.0-1' }}%
+                    @if (t.costed_total !== t.total) {
+                      <i class="pi pi-info-circle ml-1" [pTooltip]="'sales.history.margin_partial' | translate"></i>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        <p-table
+          [value]="sales()"
+          [lazy]="true"
+          (onLazyLoad)="onSalesLazy($event)"
+          [paginator]="true"
+          [rows]="pageSize"
+          [rowsPerPageOptions]="[25, 50, 100]"
+          [totalRecords]="count()"
+          [loading]="loading()"
+          [scrollable]="true"
+          styleClass="p-datatable-sm"
+          [rowHover]="true"
+          dataKey="id"
+        >
+          <ng-template #header>
+            <tr>
+              <th pSortableColumn="created_at">{{ 'labels.timestamp' | translate }} <p-sortIcon field="created_at" /></th>
+              <th pSortableColumn="sale_number">{{ 'sales.history.sale' | translate }} <p-sortIcon field="sale_number" /></th>
+              @if (showFacility()) {
+                <th pSortableColumn="facility_name">{{ 'labels.facility' | translate }} <p-sortIcon field="facility_name" /></th>
+              }
+              <th pSortableColumn="user_name">{{ 'sales.history.cashier' | translate }} <p-sortIcon field="user_name" /></th>
+              <th pSortableColumn="customer_name">{{ 'sales.pos.customer' | translate }} <p-sortIcon field="customer_name" /></th>
+              <th class="text-right" pSortableColumn="units">{{ 'sales.pos.units' | translate }} <p-sortIcon field="units" /></th>
+              <th>{{ 'sales.history.payment' | translate }}</th>
+              <th class="text-right" pSortableColumn="discount_total">{{ 'sales.history.discounts' | translate }} <p-sortIcon field="discount_total" /></th>
+              <th class="text-right" pSortableColumn="total">{{ 'sales.pos.total' | translate }} <p-sortIcon field="total" /></th>
+              @if (isOwner) {
+                <th class="text-right" pSortableColumn="cost_total">{{ 'sales.history.cost' | translate }} <p-sortIcon field="cost_total" /></th>
+                <th class="text-right" pSortableColumn="margin">{{ 'sales.history.margin' | translate }} <p-sortIcon field="margin" /></th>
+              }
+            </tr>
+          </ng-template>
+          <ng-template #body let-row>
+            <tr class="cursor-pointer" (click)="openSale(row)">
+              <td class="text-sm whitespace-nowrap">{{ row.created_at | facilityDate: 'dateTime' : row.facility_id }}</td>
+              <td>
+                <span class="font-medium">{{ row.sale_number }}</span>
+                @if (row.price_list === 'WHOLESALE') {
+                  <p-tag [value]="'sales.pos.wholesale' | translate" severity="warn" styleClass="ml-1 !text-[10px]" />
+                }
+              </td>
+              @if (showFacility()) {
+                <td>{{ row.facility_name }}</td>
+              }
+              <td>{{ row.user_name || '—' }}</td>
+              <td>
+                {{ row.customer_name || ('sales.pos.walk_in' | translate) }}
+                @if (row.customer_doc) { <small class="block text-surface-500">{{ row.customer_doc }}</small> }
+              </td>
+              <td class="text-right font-mono">{{ row.units | number: '1.0-2' }}</td>
+              <td class="text-sm">
+                {{ row.payment_kinds || '—' }}
+                @if (row.paid_credit > 0) {
+                  <p-tag [value]="'sales.kinds.CREDIT' | translate" severity="danger" styleClass="ml-1 !text-[10px]" />
+                }
+              </td>
+              <td class="text-right font-mono text-green-600">{{ row.discount_total > 0 ? m(row.discount_total, row.currency) : '—' }}</td>
+              <td class="text-right font-mono font-semibold">{{ m(row.total, row.currency) }}</td>
+              @if (isOwner) {
+                <td class="text-right font-mono">{{ m(row.cost_total, row.currency) }}</td>
+                <td class="text-right font-mono" [class]="marginClass(row.margin)">
+                  {{ m(row.margin, row.currency) }}
+                  @if (row.margin_pct !== null && row.margin_pct !== undefined) {
+                    <small class="block">{{ row.margin_pct | number: '1.0-1' }}%</small>
+                  }
+                </td>
+              }
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage>
+            <tr>
+              <td [attr.colspan]="12" class="p-8 text-center text-surface-400">
+                <i class="pi pi-shopping-bag text-3xl block mb-2"></i>{{ 'sales.history.empty_sales' | translate }}
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </p-tabpanel>
+
+      <!-- ═══════════════ Registers ═══════════════ -->
+      <p-tabpanel value="registers">
+        <p-table
+          [value]="sessions()"
+          [lazy]="true"
+          (onLazyLoad)="onSessionsLazy($event)"
+          [paginator]="true"
+          [rows]="pageSize"
+          [rowsPerPageOptions]="[25, 50, 100]"
+          [totalRecords]="sessionCount()"
+          [loading]="sessionLoading()"
+          [scrollable]="true"
+          styleClass="p-datatable-sm"
+          [rowHover]="true"
+          dataKey="id"
+        >
+          <ng-template #header>
+            <tr>
+              <th pSortableColumn="session_number">{{ 'sales.history.register' | translate }} <p-sortIcon field="session_number" /></th>
+              @if (showFacility()) {
+                <th pSortableColumn="facility_name">{{ 'labels.facility' | translate }} <p-sortIcon field="facility_name" /></th>
+              }
+              <th pSortableColumn="user_name">{{ 'sales.history.cashier' | translate }} <p-sortIcon field="user_name" /></th>
+              <th pSortableColumn="scope">{{ 'sales.register.scope' | translate }} <p-sortIcon field="scope" /></th>
+              <th pSortableColumn="status">{{ 'labels.status' | translate }} <p-sortIcon field="status" /></th>
+              <th pSortableColumn="opened_at">{{ 'sales.history.opened' | translate }} <p-sortIcon field="opened_at" /></th>
+              <th class="text-right" pSortableColumn="sales_count">{{ 'sales.history.sales_count' | translate }} <p-sortIcon field="sales_count" /></th>
+              <th class="text-right" pSortableColumn="sales_total">{{ 'sales.register.sales_total' | translate }} <p-sortIcon field="sales_total" /></th>
+              <th class="text-right" pSortableColumn="expected_amount">{{ 'sales.register.expected_cash' | translate }} <p-sortIcon field="expected_amount" /></th>
+              <th class="text-right" pSortableColumn="counted_amount">{{ 'sales.register.counted' | translate }} <p-sortIcon field="counted_amount" /></th>
+              <th class="text-right" pSortableColumn="difference">{{ 'sales.register.difference' | translate }} <p-sortIcon field="difference" /></th>
+            </tr>
+          </ng-template>
+          <ng-template #body let-row>
+            <tr class="cursor-pointer" (click)="openSession(row)">
+              <td class="font-medium">{{ row.session_number }}</td>
+              @if (showFacility()) {
+                <td>{{ row.facility_name }}</td>
+              }
+              <td>{{ row.user_name || '—' }}</td>
+              <td>
+                <p-tag
+                  [value]="(row.scope === 'FACILITY' ? 'sales.register.scope_facility' : 'sales.register.scope_user') | translate"
+                  [severity]="row.scope === 'FACILITY' ? 'info' : 'secondary'"
+                />
+              </td>
+              <td>
+                <p-tag
+                  [value]="('sales.register.status_' + row.status.toLowerCase()) | translate"
+                  [severity]="row.status === 'OPEN' ? 'success' : 'secondary'"
+                />
+              </td>
+              <td class="text-sm whitespace-nowrap">
+                {{ row.opened_at | facilityDate: 'dateTime' : row.facility_id }}
+                @if (row.closed_at) { <small class="block text-surface-500">→ {{ row.closed_at | facilityDate: 'dateTime' : row.facility_id }}</small> }
+              </td>
+              <td class="text-right font-mono">{{ row.sales_count }}</td>
+              <td class="text-right font-mono">{{ m(row.sales_total, row.currency) }}</td>
+              <td class="text-right font-mono">{{ row.expected_amount !== null ? m(row.expected_amount, row.currency) : '—' }}</td>
+              <td class="text-right font-mono">{{ row.counted_amount !== null ? m(row.counted_amount, row.currency) : '—' }}</td>
+              <td class="text-right font-mono font-semibold" [class]="diffClass(row.difference)">
+                {{ row.difference !== null ? m(row.difference, row.currency) : '—' }}
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage>
+            <tr>
+              <td [attr.colspan]="11" class="p-8 text-center text-surface-400">
+                <i class="pi pi-wallet text-3xl block mb-2"></i>{{ 'sales.history.empty_registers' | translate }}
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </p-tabpanel>
+    </p-tabpanels>
+  </p-tabs>
+</div>
+
+<!-- ═══════════════ Sale detail ═══════════════ -->
+<p-drawer
+  [visible]="!!detail()"
+  (visibleChange)="!$event && closeSale()"
+  position="right"
+  styleClass="!w-full md:!w-[46rem]"
+  [header]="detail()?.sale_number ?? ''"
+>
+  @if (detail(); as d) {
+    <div class="flex flex-wrap items-center gap-2 mb-4 text-sm text-surface-500">
+      <span><i class="pi pi-calendar mr-1"></i>{{ d.created_at | facilityDate: 'dateTimeSec' : d.facility_id }}</span>
+      <span>· <i class="pi pi-user mr-1"></i>{{ d.user_name }}</span>
+      <span>· <i class="pi pi-wallet mr-1"></i>{{ d.session_number }}</span>
+      <span>· {{ d.facility_name }}</span>
+      @if (d.order_status) {
+        <p-tag [value]="d.order_status" [severity]="d.order_status === 'SHIPPED' ? 'success' : 'info'" />
+      }
+      @if (d.price_list === 'WHOLESALE') {
+        <p-tag [value]="'sales.pos.wholesale' | translate" severity="warn" />
+      }
+    </div>
+
+    @if (d.customer_name || d.customer_doc) {
+      <div class="rounded-lg bg-surface-50 dark:bg-surface-800 p-3 mb-4 text-sm">
+        <div class="font-semibold"><i class="pi pi-user mr-2"></i>{{ d.customer_name }}</div>
+        @if (d.customer_business_name && d.customer_business_name !== d.customer_name) {
+          <div class="text-surface-600 dark:text-surface-300">{{ d.customer_business_name }}</div>
+        }
+        <div class="text-surface-500">
+          {{ d.customer_doc }}@if (d.customer_phone) { · {{ d.customer_phone }} }@if (d.customer_email) { · {{ d.customer_email }} }
+        </div>
+      </div>
+    }
+
+    @if (detailLoading()) {
+      <div class="p-6 text-center text-surface-500"><i class="pi pi-spin pi-spinner text-2xl"></i></div>
+    }
+    @for (e of detailError(); track e) {
+      <div class="text-red-600 text-sm mb-2">{{ e }}</div>
+    }
+
+    @if (d.items.length > 0) {
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm mb-4">
+          <thead class="text-surface-500 border-b border-surface-200 dark:border-surface-700">
+            <tr>
+              <th class="text-left py-2">{{ 'labels.sku' | translate }}</th>
+              <th class="text-right py-2">{{ 'labels.quantity' | translate }}</th>
+              <th class="text-right py-2">{{ 'sales.pos.price' | translate }}</th>
+              <th class="text-right py-2">{{ 'sales.pos.discount' | translate }}</th>
+              <th class="text-right py-2">{{ 'sales.pos.amount' | translate }}</th>
+              @if (isOwner) {
+                <th class="text-right py-2">{{ 'sales.history.cost' | translate }}</th>
+                <th class="text-right py-2">{{ 'sales.history.margin' | translate }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of d.items; track l.id) {
+              <tr class="border-b border-surface-100 dark:border-surface-800">
+                <td class="py-2">
+                  <div class="font-medium">{{ l.sku_name || l.sku_code }}</div>
+                  <small class="text-surface-500">{{ l.sku_code }}</small>
+                </td>
+                <td class="text-right font-mono">{{ l.qty | number: '1.0-4' }}</td>
+                <td class="text-right font-mono">
+                  {{ m(l.unit_price, d.currency) }}
+                  @if (l.price_edited) {
+                    <small class="block text-orange-500" [pTooltip]="'sales.history.price_edited' | translate">
+                      <s>{{ m(l.list_price, d.currency) }}</s>
+                    </small>
+                  }
+                </td>
+                <td class="text-right font-mono text-green-600">{{ l.discount > 0 ? m(l.discount, d.currency) : '—' }}</td>
+                <td class="text-right font-mono font-semibold">{{ m(l.line_total, d.currency) }}</td>
+                @if (isOwner) {
+                  <td class="text-right font-mono">
+                    {{ m(l.cost_total, d.currency) }}
+                    @if (l.unit_cost !== null && l.unit_cost !== undefined) {
+                      <small class="block text-surface-500">{{ m(l.unit_cost, d.currency) }} c/u</small>
+                    }
+                  </td>
+                  <td class="text-right font-mono" [class]="marginClass(l.margin)">{{ m(l.margin, d.currency) }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <div class="text-sm font-semibold mb-2">{{ 'sales.history.payments' | translate }}</div>
+          @for (p of d.payments; track p.id) {
+            <div class="flex items-center justify-between py-1.5 border-b border-surface-100 dark:border-surface-800 text-sm">
+              <span>
+                <i [class]="icon(p.kind)" class="mr-2 text-surface-500"></i>{{ p.method_name }}
+                @if (p.reference) { <small class="text-surface-500"> #{{ p.reference }}</small> }
+                @if (p.change_amount > 0) {
+                  <small class="block text-surface-500 ml-6">
+                    {{ 'sales.pos.received' | translate }} {{ m(p.received, d.currency) }} · {{ 'sales.pos.change' | translate }} {{ m(p.change_amount, d.currency) }}
+                  </small>
+                }
+              </span>
+              <span class="font-mono">{{ m(p.amount, d.currency) }}</span>
+            </div>
+          }
+        </div>
+        <div class="text-sm">
+          <div class="flex justify-between py-1"><span>{{ 'sales.print.subtotal' | translate }}</span><span class="font-mono">{{ m(d.subtotal, d.currency) }}</span></div>
+          @if (d.discount_total > 0) {
+            <div class="flex justify-between py-1 text-green-600"><span>{{ 'sales.history.discounts' | translate }}</span><span class="font-mono">− {{ m(d.discount_total, d.currency) }}</span></div>
+          }
+          <div class="flex justify-between py-2 mt-1 border-t border-surface-200 dark:border-surface-700 text-lg font-bold">
+            <span>{{ 'sales.pos.total' | translate }}</span><span class="font-mono">{{ m(d.total, d.currency) }}</span>
+          </div>
+          @if (isOwner && d.cost_total !== null && d.cost_total !== undefined) {
+            <div class="flex justify-between py-1"><span>{{ 'sales.history.cost_of_sales' | translate }}</span><span class="font-mono">{{ m(d.cost_total, d.currency) }}</span></div>
+            <div class="flex justify-between py-1 font-semibold" [class]="marginClass(d.margin)">
+              <span>{{ 'sales.history.gross_margin' | translate }}</span>
+              <span class="font-mono">{{ m(d.margin, d.currency) }}@if (d.margin_pct !== null && d.margin_pct !== undefined) { · {{ d.margin_pct | number: '1.0-1' }}% }</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      @if (d.note) {
+        <div class="mt-4 text-sm text-surface-600 dark:text-surface-300"><i class="pi pi-comment mr-2"></i>{{ d.note }}</div>
+      }
+    }
+  }
+  <ng-template #footer>
+    <div class="flex justify-end gap-2">
+      <p-button [label]="'sales.pos.print' | translate" icon="pi pi-print" [outlined]="true" [disabled]="detailLoading()" (onClick)="printSale()" />
+      <p-button [label]="'buttons.close' | translate" (onClick)="closeSale()" />
+    </div>
+  </ng-template>
+</p-drawer>
+
+<!-- ═══════════════ Register detail ═══════════════ -->
+<p-drawer
+  [visible]="!!sessionDetail() || sessionDetailLoading()"
+  (visibleChange)="!$event && closeSessionDrawer()"
+  position="right"
+  styleClass="!w-full md:!w-[46rem]"
+  [header]="sessionDetail()?.session?.session_number ?? ''"
+>
+  @if (sessionDetail(); as s) {
+    <div class="flex flex-wrap items-center gap-2 mb-4 text-sm text-surface-500">
+      <p-tag
+        [value]="('sales.register.status_' + s.session.status.toLowerCase()) | translate"
+        [severity]="s.session.status === 'OPEN' ? 'success' : 'secondary'"
+      />
+      <span><i class="pi pi-user mr-1"></i>{{ s.session.user_name }}</span>
+      <span>· {{ s.session.facility_name }}</span>
+      <span>· {{ s.session.opened_at | facilityDate: 'dateTime' : s.session.facility_id }}@if (s.session.closed_at) { → {{ s.session.closed_at | facilityDate: 'dateTime' : s.session.facility_id }} }</span>
+      @if (s.session.closed_by_name && s.session.closed_by_name !== s.session.user_name) {
+        <span>· {{ 'sales.history.closed_by' | translate }} {{ s.session.closed_by_name }}</span>
+      }
+    </div>
+    <app-session-summary-view [summary]="s" />
+    @if (s.session.closing_note) {
+      <div class="mt-4 text-sm"><i class="pi pi-comment mr-2"></i>{{ s.session.closing_note }}</div>
+    }
+  } @else {
+    <div class="p-6 text-center text-surface-500"><i class="pi pi-spin pi-spinner text-2xl"></i></div>
+  }
+  <ng-template #footer>
+    @if (sessionDetail(); as s) {
+      <div class="flex flex-wrap justify-end gap-2">
+        <p-button [label]="'sales.history.view_sales' | translate" icon="pi pi-list" [text]="true" (onClick)="sessionSales(s.session)" />
+        <p-button [label]="'sales.register.print_report' | translate" icon="pi pi-print" [outlined]="true" (onClick)="printSession()" />
+        @if (s.session.status === 'OPEN' && isOwner) {
+          <p-button [label]="'sales.register.close' | translate" icon="pi pi-lock" severity="danger" (onClick)="closeVisible.set(true)" />
+        }
+      </div>
+    }
+  </ng-template>
+</p-drawer>
+
+@if (sessionDetail(); as s) {
+  <app-close-register-dialog [(visible)]="closeVisible" [sessionId]="s.session.id" (closed)="onSessionClosed($event)" />
+}

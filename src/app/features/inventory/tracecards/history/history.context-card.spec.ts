@@ -7,7 +7,7 @@ const SOURCES: HistorySource[] = ['location', 'bin', 'tracecard', 'sku']
 
 // A tracecard row carries category; the card must ignore it.
 const item = {
-  facility_name: 'edge0202@shipedge.com',
+  facility_name: 'edge0202@nuvex.uk',
   location_code: 'A-01-01-01',
   container_lpn: 'LPN-0000001',
   zone_name: 'Z1',

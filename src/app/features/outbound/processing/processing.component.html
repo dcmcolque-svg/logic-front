@@ -11,6 +11,7 @@
       (bulkActions)="onBulkActionsClick($event)"
       (clearFilters)="clearFilters()"
     >
+      <!-- Temporarily hidden: Picking
       <p-button
         orderHeaderStart
         label="Picking"
@@ -18,6 +19,13 @@
         severity="warn"
         size="small"
         (onClick)="goToPicking()"
+      />
+      -->
+      <base-import-export-menu
+        filename="processing_orders"
+        [columns]="selectedColumns"
+        [fetchPage]="fetchExportPage"
+        [sheetName]="'pages.processing' | translate"
       />
     </app-order-list-header>
   </div>
@@ -36,6 +44,7 @@
         (stateChange)="onTableStateChange($event)"
         (selectionChange)="selectedOrders.set($event)"
         (chipRemoved)="removeFilterChip($event)"
+        (clearAllFilters)="clearFilters()"
       >
 
         <!-- Paginator left: column toggle -->

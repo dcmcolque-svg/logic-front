@@ -16,6 +16,12 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core'
 import { FacilityScopeService } from '@/app/core/services/facility-scope.service'
 import { NO_FACILITY_ID, ScopeFacility } from '@/app/core/types/facility.types'
 import { TranslateLanService } from '@/app/core/services/translate-lan.service'
+import { zoneLabel } from '@/app/shared/utils/time-zone.util'
+
+/** IANA zone of the browser. */
+function browserZone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone
+}
 
 /**
  * Global facility scope selector, rendered in the topbar.
@@ -26,7 +32,7 @@ import { TranslateLanService } from '@/app/core/services/translate-lan.service'
  *
  * Selection is buffered and committed on Apply, matching the Clear/Apply
  * footer every table column filter already uses
- * (`shipedge-filter-multiselect-panel`). Committing per checkbox would refetch
+ * (`nuvex-filter-multiselect-panel`). Committing per checkbox would refetch
  * every open table on each click, which is why the immediate-apply variant was
  * dropped.
  *
@@ -105,6 +111,17 @@ import { TranslateLanService } from '@/app/core/services/translate-lan.service'
           </div>
         </ng-template>
       </p-multiselect>
+      <!-- Dates follow the facilities' zone: say so when it is not the browser's. -->
+      @if (zoneHint(); as hint) {
+        <span class="zone-hint hidden md:inline-flex items-center gap-1 ml-2 text-xs text-surface-500 whitespace-nowrap" [title]="hint.zone">
+          <i class="pi pi-clock text-xs"></i>
+          @if (hint.mixed) {
+            {{ 'labels.zone_hint_mixed' | translate }}
+          } @else {
+            {{ 'labels.zone_hint' | translate: { city: hint.city } }}
+          }
+        </span>
+      }
     }
   `,
   styles: [
@@ -203,6 +220,17 @@ export class FacilityScopeSelectorComponent implements OnInit {
   protected readonly scope = inject(FacilityScopeService)
   private readonly translate = inject(TranslateService)
   private readonly translateLan = inject(TranslateLanService)
+
+  /**
+   * Shown when the times on screen are not the browser's: the facilities in
+   * scope are in another zone, or in several. Null when they match.
+   */
+  protected readonly zoneHint = computed(() => {
+    const zone = this.scope.zone()
+    const mixed = this.scope.mixedZones()
+    if (!mixed && zone === browserZone()) return null
+    return { zone, mixed, city: zoneLabel(zone) }
+  })
 
   /** Used to close the panel once a selection is committed. */
   @ViewChild('ms') private readonly ms?: MultiSelect

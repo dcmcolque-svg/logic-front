@@ -22,7 +22,7 @@
 
   <!-- Data table -->
   <div class="col-span-12">
-    <app-order-preset-card [hasActiveFilters]="false">
+    <app-order-preset-card [hasActiveFilters]="activeFilters().length > 0">
       <base-data-table
         [columns]="selectedColumns"
         [data]="orders()"
@@ -35,6 +35,7 @@
         (stateChange)="onTableStateChange($event)"
         (selectionChange)="selectedOrders.set($event)"
         (chipRemoved)="removeFilterChip($event)"
+        (clearAllFilters)="clearFilters()"
       >
 
         <!-- Paginator left: column toggle -->
@@ -74,7 +75,7 @@
 
         <!-- Row expansion: order lines sub-table -->
         <ng-template #rowExpansion let-order>
-          <div class="px-6 py-3 bg-surface-50">
+          <div class="px-6 py-3 bg-surface-50 dark:bg-surface-800">
             @if (isLoadingLines(order.id)) {
               <div class="flex flex-col gap-2">
                 @for (_ of [1, 2]; track $index) {

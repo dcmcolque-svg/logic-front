@@ -6,16 +6,13 @@ import {
     Facility,
     FacilityDTO,
     FacilityListResponse,
-    OptionSelect,
-    XenvioFacilitiesResponse,
-    XenvioFulfillmentLocationsResponse,
 } from './facilities.types';
+import { CostingInitializeResult, CostingSettings } from '../../../shared/utils/costing.util';
 
 @Injectable({ providedIn: 'root' })
 export class FacilitiesService {
     private readonly http = inject(HttpClient);
     private readonly facilityUrl = `${environment.URL_API}v2/facility`;
-    private readonly xenvioUrl = `${environment.URL_API}v2/integration/providers/xenvio`;
 
     /** Facility-scoped key (with facility_id) */
     getFacilities(dto: FacilityDTO): Observable<FacilityListResponse> {
@@ -30,24 +27,16 @@ export class FacilitiesService {
         return this.http.put<Facility>(`${this.facilityUrl}/${id}`, facility);
     }
 
+    /**
+     * Turns inventory costing on/off (OWNER only). From NONE it values the
+     * current stock at the catalog cost as the opening balance.
+     * POST /v2/facility/:id/costing/initialize
+     */
+    initializeCosting(id: string, costing: CostingSettings): Observable<CostingInitializeResult> {
+        return this.http.post<CostingInitializeResult>(`${this.facilityUrl}/${id}/costing/initialize`, costing);
+    }
+
     deleteFacility(id: string): Observable<void> {
         return this.http.delete<void>(`${this.facilityUrl}/${id}`);
-    }
-
-    // ── Xenvio Connection ───────────────────────────────────────────────────────
-
-    /** Fulfillment locations of the Xenvio account configured in Providers */
-    getXenvioFulfillmentLocations(): Observable<XenvioFulfillmentLocationsResponse> {
-        return this.http.get<XenvioFulfillmentLocationsResponse>(`${this.xenvioUrl}/fulfillment-locations`);
-    }
-
-    /** Fulfillment location assigned to each facility */
-    getXenvioFacilities(): Observable<XenvioFacilitiesResponse> {
-        return this.http.get<XenvioFacilitiesResponse>(`${this.xenvioUrl}/facilities`);
-    }
-
-    /** Assign (location) or remove (null) the Xenvio connection of a facility */
-    setXenvioFacility(facilityId: string, location: OptionSelect | null): Observable<void> {
-        return this.http.put<void>(`${this.xenvioUrl}/facilities/${facilityId}`, location);
     }
 }

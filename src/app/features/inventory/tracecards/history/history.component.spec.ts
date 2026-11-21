@@ -1,4 +1,5 @@
 import { provideZonelessChangeDetection } from '@angular/core'
+import { AuthService } from '@/app/core/services/auth.service'
 import { Location } from '@angular/common'
 import { ComponentFixture, TestBed } from '@angular/core/testing'
 import { By } from '@angular/platform-browser'
@@ -60,9 +61,10 @@ describe('HistoryComponent — Export across the table/timeline toggle', () => {
         },
         { provide: Location, useValue: { back: () => undefined } },
         { provide: FilterApplyService, useValue: {} },
+        { provide: AuthService, useValue: { getAuthUserInfo: () => ({ role: '' }) } },
         {
           provide: FacilityScopeService,
-          useValue: { all: () => [], selectedIds: () => [], isSingle: () => false, inScope: () => [] },
+          useValue: { all: () => [], selectedIds: () => [], isSingle: () => false, inScope: () => [], load: () => {}, zone: () => 'America/La_Paz', zoneOf: () => 'America/La_Paz', mixedZones: () => false },
         },
       ],
     })

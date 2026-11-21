@@ -1,13 +1,13 @@
 ---
 name: Edge-Frontend Migration Guide
-description: Rules and patterns for migrating components from edge-frontend (Angular 18 NgModule) to binlogic (Angular 21 Standalone)
+description: Rules and patterns for migrating components from edge-frontend (Angular 18 NgModule) to logic (Angular 21 Standalone)
 ---
 
-# Migration Guide: edge-frontend → binlogic
+# Migration Guide: edge-frontend → logic
 
 ## Path Mapping
 
-| edge-frontend (old) | binlogic (new) |
+| edge-frontend (old) | logic (new) |
 |---------------------|----------------|
 | `core/_services/<domain>/` | **Co-located**: `features/<feature>/<domain>/<domain>.service.ts` |
 | `core/_models/<domain>/` | **Co-located**: `features/<feature>/<domain>/<domain>.types.ts` |
@@ -36,7 +36,7 @@ description: Rules and patterns for migrating components from edge-frontend (Ang
 export class MyModule {}
 ```
 
-**After (binlogic):**
+**After (logic):**
 ```typescript
 @Component({
   selector: 'app-my',
@@ -55,7 +55,7 @@ export class MyComponent {}
 
 ### 2. Template Syntax
 
-| Old (edge-frontend) | New (binlogic) |
+| Old (edge-frontend) | New (logic) |
 |---------------------|----------------|
 | `*ngIf="condition"` | `@if (condition) { }` |
 | `*ngIf="x; else tmpl"` | `@if (x) { } @else { }` |
@@ -131,7 +131,7 @@ export const authGuard = async () => {
 export class FeatureRoutingModule {}
 ```
 
-**After (binlogic):**
+**After (logic):**
 ```typescript
 // feature.routes.ts
 import { Routes } from '@angular/router';
@@ -145,7 +145,7 @@ export default [
 
 ### 7. Types Naming Convention
 
-| Old (edge-frontend) | New (binlogic) |
+| Old (edge-frontend) | New (logic) |
 |---------------------|----------------|
 | `*.model.ts` | `*.types.ts` |
 | `export class FooModel` | `export interface Foo` |

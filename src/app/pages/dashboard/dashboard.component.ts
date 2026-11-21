@@ -10,11 +10,21 @@ import {
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { Router } from '@angular/router'
-import { TranslateModule } from '@ngx-translate/core'
-import { ProgressSpinnerModule } from 'primeng/progressspinner'
+import { TranslateModule, TranslateService } from '@ngx-translate/core'
 import { ToastModule } from 'primeng/toast'
 import { SelectModule } from 'primeng/select'
+import { SelectButton } from 'primeng/selectbutton'
 import { DatePickerModule } from 'primeng/datepicker'
+import { ButtonModule } from 'primeng/button'
+import { TooltipModule } from 'primeng/tooltip'
+import { Skeleton } from 'primeng/skeleton'
+import { TableModule } from 'primeng/table'
+import { Tag } from 'primeng/tag'
+import { ProgressBar } from 'primeng/progressbar'
+import { ChartModule } from 'primeng/chart'
+import { SalesService } from '@/app/features/sales/sales.service'
+import { SalesDashboardSummary } from '@/app/features/sales/sales.types'
+import { LayoutService } from '@/app/layout/service/layout.service'
 import { MessageService } from 'primeng/api'
 
 import { ParcelService } from '@/app/features/parcels/parcel.service'
@@ -28,10 +38,14 @@ import {
   InventoryDashboardSummary,
   LocationDashboardSummary,
   BestSellingItem,
+  CurrencyAmount,
 } from '@/app/features/parcels/types/parcel.types'
 import { FacilityScopeService } from '@/app/core/services/facility-scope.service'
 import { AuthService } from '@/app/core/services/auth.service'
+import { CostingCurrency, formatCost } from '@/app/shared/utils/costing.util'
 import { NO_FACILITY_ID, ScopeFacility } from '@/app/core/types/facility.types'
+import { todayInZone, toApiDay } from '@/app/shared/utils/time-zone.util'
+import { formatDisplayNumber } from '@/app/shared/utils/display-format'
 
 // Sentinel: "no local narrowing" — falls back to whatever the topbar has in scope.
 const ALL_FACILITIES: ScopeFacility = {
@@ -75,15 +89,16 @@ const EMPTY_LOCATIONS_SUMMARY: LocationDashboardSummary = {
 /** Date range preset option for the period selector */
 export interface DateRangeOption {
   labelKey: string  // i18n translation key
+  shortKey: string  // short i18n label for the period toggle
   icon: string      // PrimeIcons class
   days: number      // number of days to look back
 }
 
 /** Available period presets — only two options as per business requirement */
 export const DATE_RANGE_OPTIONS: DateRangeOption[] = [
-  { labelKey: 'dashboard.date_7d',  icon: 'pi pi-calendar', days: 7  },
-  { labelKey: 'dashboard.date_30d', icon: 'pi pi-calendar', days: 30 },
-  { labelKey: 'dashboard.date_custom', icon: 'pi pi-calendar-plus', days: -1 },
+  { labelKey: 'dashboard.date_7d',  shortKey: 'dashboard.date_7d_short',  icon: 'pi pi-calendar', days: 7  },
+  { labelKey: 'dashboard.date_30d', shortKey: 'dashboard.date_30d_short', icon: 'pi pi-calendar', days: 30 },
+  { labelKey: 'dashboard.date_custom', shortKey: 'dashboard.date_custom_short', icon: 'pi pi-calendar-plus', days: -1 },
 ]
 
 /**
@@ -92,6 +107,56 @@ export const DATE_RANGE_OPTIONS: DateRangeOption[] = [
  * does not come back on its own.
  */
 const FILTERS_STORAGE_KEY = 'dashboard-filters'
+
+/** Quick action shortcut; shown only when the user has the matching menu activity. */
+interface QuickAction {
+  /** Menu label (app.menu.config) — the same name activities are matched by. */
+  activity: string
+  labelKey: string
+  icon: string
+  route: string
+}
+
+/** Activities that can read the sales dashboard endpoint (seed 20261119000200). */
+const SALES_ACTIVITIES = ['point of sale', 'sales history']
+
+/** Change against the previous period. */
+export interface Delta {
+  /** Rounded percent; null when the previous period had nothing (no base to compare). */
+  pct: number | null
+  dir: 'up' | 'down' | 'flat'
+}
+
+/** Change of `cur` against `prev`; null when there is no previous period. */
+export function deltaOf(cur: number, prev: number | null | undefined): Delta | null {
+  if (prev === null || prev === undefined) return null
+  if (cur === prev) return { pct: 0, dir: 'flat' }
+  const dir = cur > prev ? 'up' : 'down'
+  if (prev === 0) return { pct: null, dir }
+  return { pct: Math.round(((cur - prev) / Math.abs(prev)) * 100), dir }
+}
+
+/** Every yyyy-mm-dd day from `from` to `to`, both inclusive (calendar days, no zone math). */
+export function daysBetween(from: string, to: string): string[] {
+  const out: string[] = []
+  const d = new Date(`${from}T00:00:00Z`)
+  const end = new Date(`${to}T00:00:00Z`)
+  while (d <= end && out.length < 400) {
+    out.push(d.toISOString().slice(0, 10))
+    d.setUTCDate(d.getUTCDate() + 1)
+  }
+  return out
+}
+
+/** Chart metric: orders shipped, or POS sales of one currency. */
+export type ChartMetric = 'orders' | `sales:${CostingCurrency}`
+
+const QUICK_ACTIONS: QuickAction[] = [
+  { activity: 'point of sale', labelKey: 'dashboard.qa_new_sale',   icon: 'pi pi-shopping-cart', route: '/app/sales/pos' },
+  { activity: 'receivings',    labelKey: 'dashboard.qa_receivings', icon: 'pi pi-download',      route: '/app/inbound/receivings' },
+  { activity: 'tracecards',    labelKey: 'dashboard.qa_inventory',  icon: 'pi pi-box',           route: '/app/inventory/tracecards' },
+  { activity: 'all orders',    labelKey: 'dashboard.qa_orders',     icon: 'pi pi-list',          route: '/app/outbound/allorders' },
+]
 
 interface PersistedFilters {
   days: number
@@ -108,10 +173,17 @@ interface PersistedFilters {
     CommonModule,
     FormsModule,
     TranslateModule,
-    ProgressSpinnerModule,
     ToastModule,
     SelectModule,
+    SelectButton,
     DatePickerModule,
+    ButtonModule,
+    TooltipModule,
+    Skeleton,
+    TableModule,
+    Tag,
+    ProgressBar,
+    ChartModule,
   ],
   providers: [MessageService],
   templateUrl: './dashboard.component.html',
@@ -123,6 +195,26 @@ export class DashboardComponent implements OnInit {
   private readonly messageService  = inject(MessageService)
   private readonly router = inject(Router)
   private readonly auth = inject(AuthService)
+  private readonly translate = inject(TranslateService)
+  private readonly salesService = inject(SalesService)
+  private readonly isDark = inject(LayoutService).isDarkTheme
+
+  private readonly activities = new Set(
+    (this.auth.getActivities() ?? []).map((a) => a.activity.toLowerCase())
+  )
+
+  /** The user can read sales: the dashboard requests and shows them only then. */
+  readonly canSeeSales = SALES_ACTIVITIES.some((a) => this.activities.has(a))
+
+  /** Name for the greeting; empty when unknown. */
+  readonly userName = this.auth.getAuthUserInfo()?.user_name ?? ''
+
+  /** Shortcuts the user can actually open (matched against their activities). */
+  /** "View all" on the warehouse card opens Locations: only for users with that activity (or no activity list). */
+  readonly canSeeLocations =
+    this.activities.size === 0 || this.activities.has('locations & bins')
+
+  readonly quickActions: QuickAction[] = QUICK_ACTIONS.filter((qa) => this.activities.has(qa.activity))
 
   // ── Facility selector ────────────────────────────────────────
   // Narrows to ONE of the facilities the topbar already has in scope; it never
@@ -167,6 +259,17 @@ export class DashboardComponent implements OnInit {
     return [ALL_FACILITIES, ...inScope]
   })
 
+  /**
+   * Zone in which the period's days start: the picked facility's, or the zone
+   * of the topbar scope when "all" is picked.
+   */
+  private facilityScopeZone(): string {
+    const picked = this.selectedFacility()
+    return picked.id && picked.id !== ALL_FACILITIES.id && picked.id !== NO_FACILITY_ID
+      ? this.facilityScope.zoneOf(picked.id)
+      : this.facilityScope.zone()
+  }
+
   /** Nothing to choose when the topbar already pinned a single facility, or none. */
   readonly facilitySelectDisabled = computed(
     () => this.noFacilityOnly() || this.facilityScope.inScope().length === 1
@@ -196,7 +299,145 @@ export class DashboardComponent implements OnInit {
   })()
 
   // ── Summary state ────────────────────────────────────────────
+  /** Orders summary (revenue, orders shipped, alerts) in flight. */
   loading = signal(true)
+  loadingInventory = signal(true)
+  loadingLocations = signal(true)
+  loadingBestSelling = signal(true)
+  loadingSales = signal(this.canSeeSales)
+
+  /** Per-card load failures: the card shows "Couldn't load · Retry" instead of zeros. */
+  readonly loadErrors = signal<Record<'sales' | 'orders' | 'inventory' | 'locations' | 'bestSelling', boolean>>({
+    sales: false, orders: false, inventory: false, locations: false, bestSelling: false,
+  })
+
+  private markError(key: 'sales' | 'orders' | 'inventory' | 'locations' | 'bestSelling', value = true): void {
+    this.loadErrors.update((e) => ({ ...e, [key]: value }))
+  }
+
+  /** Any block still loading: drives the refresh button spinner. */
+  readonly anyLoading = computed(
+    () => this.loading() || this.loadingInventory() || this.loadingLocations() ||
+      this.loadingBestSelling() || this.loadingSales()
+  )
+
+  // ── Sales (POS) ──────────────────────────────────────────────
+  salesSummary = signal<SalesDashboardSummary | null>(null)
+
+  /** Days of the period on screen, for the chart's x axis. */
+  readonly periodDays = signal<string[]>([])
+
+  // ── Chart ────────────────────────────────────────────────────
+  /** Metric picked by the user; null until they pick one (then the first option shows). */
+  readonly chartMetric = signal<ChartMetric | null>(null)
+
+  /** Sales of each currency with sales, then orders shipped. */
+  readonly chartMetricOptions = computed(() => {
+    const currencies = new Set<CostingCurrency>()
+    this.salesSummary()?.currencies.forEach((c) => c.sales > 0 && currencies.add(c.currency))
+    this.salesSummary()?.daily.forEach((p) => currencies.add(p.currency))
+    return [
+      ...[...currencies].sort().map((c) => ({
+        value: `sales:${c}` as ChartMetric,
+        labelKey: 'dashboard.chart_sales',
+        currency: c as CostingCurrency | null,
+      })),
+      { value: 'orders' as ChartMetric, labelKey: 'dashboard.chart_orders', currency: null as CostingCurrency | null },
+    ]
+  })
+
+  /** The picked metric while it is still offered, else the first option (sales first). */
+  readonly activeMetric = computed<ChartMetric>(() => {
+    const opts = this.chartMetricOptions()
+    const picked = this.chartMetric()
+    return picked && opts.some((o) => o.value === picked) ? picked : opts[0].value
+  })
+
+  /** One value per day of the period: a day without data is 0, not a gap. */
+  private readonly chartValues = computed(() => {
+    const metric = this.activeMetric()
+    const byDay = new Map<string, number>()
+    if (metric === 'orders') {
+      this.orderSummary().daily?.forEach((p) => byDay.set(p.day, p.orders))
+    } else {
+      const currency = metric.slice('sales:'.length)
+      this.salesSummary()?.daily
+        .filter((p) => p.currency === currency)
+        .forEach((p) => byDay.set(p.day, p.total))
+    }
+    return this.periodDays().map((day) => byDay.get(day) ?? 0)
+  })
+
+  readonly chartHasData = computed(() => this.chartValues().some((v) => v > 0))
+
+  readonly chartData = computed(() => {
+    this.isDark() // re-read the theme colors when it flips
+    const css = getComputedStyle(document.documentElement)
+    const primary = css.getPropertyValue('--p-primary-color').trim() || '#3B82F6'
+    return {
+      labels: this.periodDays().map((d) => `${d.slice(8, 10)}/${d.slice(5, 7)}`),
+      datasets: [{
+        data: this.chartValues(),
+        backgroundColor: primary,
+        hoverBackgroundColor: primary,
+        borderRadius: 4,
+        borderSkipped: 'bottom',
+        maxBarThickness: 28,
+      }],
+    }
+  })
+
+  readonly chartOptions = computed(() => {
+    this.isDark()
+    const css = getComputedStyle(document.documentElement)
+    const muted = css.getPropertyValue('--p-text-muted-color').trim() || '#64748b'
+    const grid = css.getPropertyValue('--p-content-border-color').trim() || '#e2e8f0'
+    const metric = this.activeMetric()
+    const currency = metric === 'orders' ? null : (metric.slice('sales:'.length) as CostingCurrency)
+    const fmt = (v: number) => (currency ? this.money(v, currency) : this.num(v))
+    const days = this.periodDays()
+    return {
+      maintainAspectRatio: false,
+      animation: { duration: 250 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          displayColors: false,
+          callbacks: {
+            title: (items: { dataIndex: number }[]) => days[items[0]?.dataIndex] ?? '',
+            label: (item: { parsed: { y: number } }) => fmt(item.parsed.y),
+          },
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, border: { display: false }, ticks: { color: muted, maxRotation: 0, autoSkipPadding: 12 } },
+        y: {
+          beginAtZero: true,
+          border: { display: false },
+          grid: { color: grid },
+          ticks: { color: muted, maxTicksLimit: 5, precision: 0, callback: (v: number) => this.num(v) },
+        },
+      },
+    }
+  })
+
+  /** "Bs 1.234,50" in the UI language. */
+  money(value: number | null | undefined, currency: CostingCurrency): string {
+    return formatCost(value, currency)
+  }
+
+  private num(v: number): string {
+    return formatDisplayNumber(v, 0, 0)
+  }
+
+  delta(cur: number, prev: number | null | undefined): Delta | null {
+    return deltaOf(cur, prev)
+  }
+
+  /** Revenue per currency; older backends only send the plain total. */
+  revenueRows(): CurrencyAmount[] {
+    return this.ordersShipped.revenue_by_currency ?? []
+  }
   summary = signal<ParcelDashboardSummary>(EMPTY_SUMMARY)
 
   get shipped(): ParcelShippedSummary {
@@ -228,6 +469,25 @@ export class DashboardComponent implements OnInit {
   // ── Best selling data (from API) ──────────────────────────────
   locations     = signal<LocationDashboardSummary>(EMPTY_LOCATIONS_SUMMARY)
   bestSelling   = signal<BestSellingItem[]>([])
+
+  /** Highest qty in the top list: the 100% of each row's bar. */
+  private readonly maxQtySold = computed(() =>
+    this.bestSelling().reduce((max, i) => Math.max(max, i.qty_sold ?? 0), 0)
+  )
+
+  /** Stats of the "Warehouse" card. */
+  readonly warehouseStats = computed(() => [
+    { id: 'card-locations-zones',     labelKey: 'dashboard.zones',       icon: 'pi pi-th-large',   value: this.locations().zones,                loading: this.loadingLocations() },
+    { id: 'card-locations-locations', labelKey: 'dashboard.locations',   icon: 'pi pi-map-marker', value: this.locations().locations,            loading: this.loadingLocations() },
+    { id: 'card-locations-bins',      labelKey: 'dashboard.bins',        icon: 'pi pi-inbox',      value: this.locations().bins,                 loading: this.loadingLocations() },
+    { id: 'card-inventory-trace',     labelKey: 'dashboard.trace_cards', icon: 'pi pi-id-card',    value: this.inventorySummary().trace_cards,   loading: this.loadingInventory() },
+  ])
+
+  /** Row's share of the top seller, 0–100, for its progress bar. */
+  qtyShare(qty: number): number {
+    const max = this.maxQtySold()
+    return max > 0 ? Math.round(((qty ?? 0) / max) * 100) : 0
+  }
 
   /** Last scope actually fetched for, so the effect cannot re-fetch for free. */
   private lastScopeKey: string | null = null
@@ -334,12 +594,10 @@ export class DashboardComponent implements OnInit {
    * Compute the [from, to] bounds from the selected period, or null when a
    * custom range has no day picked yet.
    *
-   * Both bounds are the local midnight of an inclusive day, sent as a UTC
-   * instant (backend adds a day to `to`). Plain yyyy-mm-dd was read by the
-   * backend as a UTC day, which shifted every count by the browser's offset
-   * and disagreed with the lists, whose date filters already send instants.
-   * toISOString(), not formatDateForBackend(): HttpParams leaves '+' unencoded,
-   * so a positive offset would reach the server as a space.
+   * Both bounds are inclusive days sent as yyyy-mm-dd. The backend counts
+   * each record in the day of its own facility's zone (DayRange.CondIn), the
+   * same rule the lists' date filters follow, so a dashboard and a list
+   * filtered by the same days agree.
    */
   private getDateParams(): { dateFrom: string; dateTo: string } | null {
     const { days } = this.selectedDateRange()
@@ -352,16 +610,16 @@ export class DashboardComponent implements OnInit {
     }
 
     // "Last N days" includes today, so it starts N-1 days back (it used to
-    // start N days back and cover N+1 days).
-    const today = new Date()
+    // start N days back and cover N+1 days). Today of the facilities' zone.
+    const today = todayInZone(this.facilityScopeZone())
     const from = new Date(today)
     from.setDate(from.getDate() - (days - 1))
     return { dateFrom: this.dayStart(from), dateTo: this.dayStart(today) }
   }
 
-  /** Local midnight of the given day, as a UTC instant. */
+  /** The given day as yyyy-mm-dd: the backend counts it in each facility's zone. */
   private dayStart(d: Date): string {
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString()
+    return toApiDay(d)
   }
 
   /** Format a Date to ISO-8601 date string (YYYY-MM-DD) */
@@ -394,10 +652,11 @@ export class DashboardComponent implements OnInit {
     const seq = ++this.requestSeq
     if (this.noFacilityOnly()) {
       // The bumped seq drops any reply still in flight.
-      this.loading.set(false)
+      this.setAllLoading(false)
       return
     }
-    this.loading.set(true)
+    this.setAllLoading(true)
+    this.periodDays.set(daysBetween(dateParams.dateFrom, dateParams.dateTo))
     const facilityIds = this.requestedFacilityIds()
     // A narrowed scope restored before the facility list arrives has no ids
     // yet. Sending none would answer for every facility, so wait: the scope
@@ -405,26 +664,29 @@ export class DashboardComponent implements OnInit {
     if (facilityIds?.length === 0) return
     const params: { facilityIds?: string[]; dateFrom?: string; dateTo?: string } = { ...dateParams, facilityIds }
 
-    // Load parcel summary (shipped parcels + ship prepared)
-    this.parcelService.getDashboardSummary(params).subscribe({
-      next: (data) => {
-        if (seq !== this.requestSeq) return
-        this.summary.set(data ?? EMPTY_SUMMARY)
-        this.loading.set(false)
-      },
-      error: () => {
-        if (seq !== this.requestSeq) return
-        this.summary.set(EMPTY_SUMMARY)
-        this.loading.set(false)
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Could not load dashboard summary',
-        })
-      },
-    })
+    // Parcel summary ("Paquetes Entregados" / "Paquetes en Red") is disabled:
+    // its panels are commented out in the template, so it is not requested.
+    // The orders summary now ends the loading state instead.
+    // this.parcelService.getDashboardSummary(params).subscribe({
+    //   next: (data) => {
+    //     if (seq !== this.requestSeq) return
+    //     this.summary.set(data ?? EMPTY_SUMMARY)
+    //     this.loading.set(false)
+    //   },
+    //   error: () => {
+    //     if (seq !== this.requestSeq) return
+    //     this.summary.set(EMPTY_SUMMARY)
+    //     this.loading.set(false)
+    //     this.messageService.add({
+    //       severity: 'error',
+    //       summary: 'Error',
+    //       detail: 'Could not load dashboard summary',
+    //     })
+    //   },
+    // })
 
-    // Load order dashboard (orders shipped + alerts)
+    // Load order dashboard (orders shipped + alerts); ends the loading state
+    // now that the parcel summary is disabled.
     this.loadOrderSummary(params, seq)
 
     // Load inventory dashboard (total value, SKUs, units, tracecards)
@@ -435,6 +697,29 @@ export class DashboardComponent implements OnInit {
 
     // Load best selling items (top 10 SKUs by qty shipped)
     this.loadBestSellingItems(params, seq)
+
+    // POS sales (only for users who can read sales)
+    if (this.canSeeSales) this.loadSalesSummary(params, seq)
+  }
+
+  /** Fetch POS sales per currency, previous period, open registers and per day. */
+  private loadSalesSummary(params: { facilityIds?: string[]; dateFrom?: string; dateTo?: string }, seq: number): void {
+    this.salesService.getDashboardSummary(params).subscribe({
+      next: (data) => {
+        if (seq !== this.requestSeq) return
+        this.salesSummary.set(data ?? null)
+        this.loadingSales.set(false)
+      },
+      error: () => {
+        if (seq !== this.requestSeq) return
+        this.salesSummary.set(null)
+        this.markError('sales')
+        this.loadingSales.set(false)
+      },
+      complete: () => {
+        if (seq === this.requestSeq) this.loadingSales.set(false)
+      },
+    })
   }
 
   /** Fetch order-level summary (orders shipped + alerts) */
@@ -443,12 +728,31 @@ export class DashboardComponent implements OnInit {
       next: (data) => {
         if (seq !== this.requestSeq) return
         this.orderSummary.set(data ?? EMPTY_ORDER_SUMMARY)
+        this.loading.set(false)
       },
       error: () => {
         if (seq !== this.requestSeq) return
         this.orderSummary.set(EMPTY_ORDER_SUMMARY)
+        this.markError('orders')
+        this.loading.set(false)
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: this.translate.instant('dashboard.load_error'),
+        })
       },
     })
+  }
+
+  private setAllLoading(value: boolean): void {
+    this.loading.set(value)
+    this.loadingInventory.set(value)
+    this.loadingLocations.set(value)
+    this.loadingBestSelling.set(value)
+    this.loadingSales.set(value && this.canSeeSales)
+    if (value) {
+      this.loadErrors.set({ sales: false, orders: false, inventory: false, locations: false, bestSelling: false })
+    }
   }
 
   /** Fetch inventory summary (current state, no date filter) */
@@ -459,10 +763,16 @@ export class DashboardComponent implements OnInit {
       next: (data) => {
         if (seq !== this.requestSeq) return
         this.inventorySummary.set(data ?? EMPTY_INVENTORY_SUMMARY)
+        this.loadingInventory.set(false)
       },
       error: () => {
         if (seq !== this.requestSeq) return
         this.inventorySummary.set(EMPTY_INVENTORY_SUMMARY)
+        this.markError('inventory')
+        this.loadingInventory.set(false)
+      },
+      complete: () => {
+        if (seq === this.requestSeq) this.loadingInventory.set(false)
       },
     })
   }
@@ -475,10 +785,16 @@ export class DashboardComponent implements OnInit {
       next: (data) => {
         if (seq !== this.requestSeq) return
         this.locations.set(data ?? EMPTY_LOCATIONS_SUMMARY)
+        this.loadingLocations.set(false)
       },
       error: () => {
         if (seq !== this.requestSeq) return
         this.locations.set(EMPTY_LOCATIONS_SUMMARY)
+        this.markError('locations')
+        this.loadingLocations.set(false)
+      },
+      complete: () => {
+        if (seq === this.requestSeq) this.loadingLocations.set(false)
       },
     })
   }
@@ -489,10 +805,16 @@ export class DashboardComponent implements OnInit {
       next: (data) => {
         if (seq !== this.requestSeq) return
         this.bestSelling.set(data ?? [])
+        this.loadingBestSelling.set(false)
       },
       error: () => {
         if (seq !== this.requestSeq) return
         this.bestSelling.set([])
+        this.markError('bestSelling')
+        this.loadingBestSelling.set(false)
+      },
+      complete: () => {
+        if (seq === this.requestSeq) this.loadingBestSelling.set(false)
       },
     })
   }
@@ -566,5 +888,10 @@ export class DashboardComponent implements OnInit {
   /** Navigate to a specific route from dashboard panel buttons */
   navigateTo(path: string): void {
     this.router.navigate([path])
+  }
+
+  /** "Bs 1,234.00" — inventory value at cost on the inventory card. */
+  costText(value: number, currency: CostingCurrency): string {
+    return formatCost(value, currency)
   }
 }

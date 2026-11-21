@@ -11,6 +11,7 @@ import { TooltipModule } from 'primeng/tooltip'
 import { SelectButtonModule } from 'primeng/selectbutton'
 import { DynamicDialogRef, DynamicDialogConfig, DialogService } from 'primeng/dynamicdialog'
 import { SendgridTestFormComponent } from './sendgrid-test-form.component'
+import { revealInvalid } from '@/app/shared/utils/form.util'
 
 export interface EmailTemplate {
   language: string
@@ -307,7 +308,7 @@ export class EmailTemplatePreviewComponent {
       </div>
       <div class="flex gap-2">
         <p-button [label]="'preferences.providers.email_template.cancel' | translate" severity="secondary" [outlined]="true" [text]="true" (click)="onCancel()"></p-button>
-        <p-button [label]="'buttons.confirm' | translate" icon="pi pi-check" [disabled]="form.invalid" (click)="onSave()"></p-button>
+        <p-button [label]="'buttons.confirm' | translate" icon="pi pi-check" (click)="onSave()"></p-button>
       </div>
     </div>
   `
@@ -469,9 +470,8 @@ export class EmailTemplateEditorComponent implements OnInit {
   }
 
   onSave() {
-    if (this.form.valid) {
-      this.ref.close(this.form.getRawValue()) // getRawValue includes disabled fields if we need to save them, otherwise value
-    }
+    if (revealInvalid(this.form)) return
+    this.ref.close(this.form.getRawValue()) // getRawValue includes disabled fields if we need to save them, otherwise value
   }
 
   onCancel() {

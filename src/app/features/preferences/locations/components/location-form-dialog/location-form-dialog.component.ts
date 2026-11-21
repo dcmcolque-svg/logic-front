@@ -38,6 +38,7 @@ import { LocationService } from '../../location.service'
 
 import { ToggleSwitchModule } from 'primeng/toggleswitch'
 import { InputNumberModule } from 'primeng/inputnumber'
+import { revealInvalid } from '@/app/shared/utils/form.util'
 
 @Component({
   selector: 'app-location-form-dialog',
@@ -257,7 +258,7 @@ export class LocationFormDialogComponent implements OnChanges {
   }
 
   onSave() {
-    if (!this.locationForm.valid) return
+    if (revealInvalid(this.locationForm)) return
 
     const formValue = this.locationForm.getRawValue()
     const editingLoc = this.location()

@@ -1,21 +1,5 @@
-import { Injectable, effect, signal, computed, inject, untracked } from '@angular/core'
-import { isActive, Router } from '@angular/router'
-
-export interface MenuItem {
-  label?: string
-  /** Original i18n key (e.g. 'dashboard') — used by the topbar translate pipe */
-  labelKey?: string
-  icon?: string
-  routerLink?: any[]
-  routerLinkActiveOptions?: any
-  fragment?: string
-  queryParamsHandling?: any
-  preserveFragment?: boolean
-  skipLocationChange?: boolean
-  replaceUrl?: boolean
-  state?: any
-  queryParams?: any
-}
+import { Injectable, effect, signal, computed, inject } from '@angular/core'
+import { Router } from '@angular/router'
 
 export interface LayoutConfig {
   preset: string
@@ -58,8 +42,6 @@ export class LayoutService {
     menuHoverActive: false,
     activePath: null,
   })
-
-  tabs = signal<MenuItem[]>([])
 
   router = inject(Router)
 
@@ -190,45 +172,6 @@ export class LayoutService {
         activePath: this.hasOverlaySubmenu() ? null : this.router.url,
       }))
     }
-  }
-
-  openTab(tab: MenuItem) {
-    const existingTab = this.tabs().find(
-      (t) => t.routerLink?.[0] === tab.routerLink?.[0]
-    )
-    if (!existingTab) {
-      this.tabs.update((prev) => [...prev, tab])
-    }
-    this.router.navigate(tab.routerLink || [])
-  }
-
-  closeTab(index: number) {
-    const currentTabs = this.tabs()
-    const closedTab = currentTabs[index]
-
-    if (
-      closedTab &&
-      untracked(
-        isActive(closedTab.routerLink?.[0], this.router, {
-          paths: 'subset',
-          queryParams: 'subset',
-          fragment: 'ignored',
-          matrixParams: 'ignored',
-        })
-      )
-    ) {
-      if (currentTabs.length > 1) {
-        if (index === currentTabs.length - 1) {
-          this.router.navigate(currentTabs[index - 1].routerLink || [])
-        } else {
-          this.router.navigate(currentTabs[index + 1].routerLink || [])
-        }
-      } else {
-        this.router.navigate(['/'])
-      }
-    }
-
-    this.tabs.update((prev) => prev.filter((_, i) => i !== index))
   }
 
   isDesktop() {

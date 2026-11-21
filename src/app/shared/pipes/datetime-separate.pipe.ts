@@ -1,19 +1,18 @@
-import { inject, LOCALE_ID, Pipe, PipeTransform } from '@angular/core'
-import { DatePipe } from '@angular/common'
+import { Pipe, PipeTransform } from '@angular/core'
+import { FacilityDatePipe } from './facility-date.pipe'
 
-@Pipe({
-  name: 'dateTimeSeparate',
-  standalone: true,
-})
-export class DateTimeSeparatePipe implements PipeTransform {
-  private readonly locale = inject(LOCALE_ID)
-
-  transform(value: string | Date, utc?: string): string {
-    const datePipe = new DatePipe(this.locale)
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-    const tz = utc === 'utc' || utc === 'UTC' ? 'UTC' : timezone
-    const formattedDate = datePipe.transform(value, 'yyyy-MM-dd', tz)
-    const formattedTime = datePipe.transform(value, 'HH:mm', tz)
-    return `${formattedDate}\n${formattedTime}`
+/**
+ * `yyyy-MM-dd\nHH:mm` of an instant in the scope's facility zone (see
+ * FacilityDatePipe); `'utc'` as argument keeps it in UTC.
+ */
+@Pipe({ name: 'dateTimeSeparate', standalone: true, pure: false })
+export class DateTimeSeparatePipe extends FacilityDatePipe implements PipeTransform {
+  override transform(value: string | Date | null | undefined, utc?: string): string {
+    if (!value) return ''
+    if (utc === 'utc' || utc === 'UTC') {
+      return `${this.formatIn(value, 'date', 'UTC')}\n${this.formatIn(value, 'time', 'UTC')}`
+    }
+    const zone = this.scopeZone()
+    return `${this.formatIn(value, 'date', zone)}\n${this.formatIn(value, 'time', zone)}`
   }
 }

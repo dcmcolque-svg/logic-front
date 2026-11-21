@@ -1,14 +1,11 @@
 <p-toast />
+<p-menu #rowMenu [popup]="true" appendTo="body" [model]="rowMenuItems" />
+<p-confirmDialog appendTo="body" [style]="{ width: '28rem' }" />
 
 <div class="grid grid-cols-12 gap-4">
   <!-- Page header -->
   <div class="col-span-12">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
-      <div>
-        <h2 class="text-2xl font-bold m-0">
-          {{ 'pages.tracecards' | translate | uppercase }}
-        </h2>
-      </div>
+    <div class="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4 mb-2">
       <div class="flex gap-2">
         @if (selectedItems().length > 0) {
           <p-button [label]="'labels.generate_labels' | translate" icon="pi pi-print" severity="secondary"
@@ -52,6 +49,7 @@
         [activeFilterChips]="activeFilters()"
         (stateChange)="onTableStateChange($event)"
         (chipRemoved)="removeFilterChip($event)"
+        (clearAllFilters)="clearFilters()"
         (selectionChange)="selectedItems.set($event)"
       >
         <!-- Toolbar slot -->
@@ -86,13 +84,14 @@
         </ng-template>
 
         <ng-template #filterRow let-columns="columns">
-          <!-- Empty cell for the checkbox column -->
-          <th style="width: 3rem"></th>
+          <!-- Empty cells for the row-actions and checkbox columns -->
+          <th class="col-actions p-1"></th>
+          <th class="p-1" style="width: 3rem"></th>
           @for (col of columns; track col.field) {
           @switch (col.field) {
           @case ('company_name') {
           <th class="p-1" [style.width]="col.width">
-            <shipedge-filter-multiselect-panel [options]="companies()" optionLabel="name" optionValue="id"
+            <nuvex-filter-multiselect-panel [options]="companies()" optionLabel="name" optionValue="id"
               [placeholder]="'labels.company' | translate" [showFilter]="companies().length > 5"
               [value]="companyFilter()" (apply)="onMultiselectApply('company_name', $event)"
               (clear)="onMultiselectClear('company_name')" />
@@ -100,7 +99,7 @@
           }
           @case ('facility_name') {
           <th class="p-1" [style.width]="col.width">
-            <shipedge-filter-multiselect-panel [options]="facilityFilterOptions()" optionLabel="name" optionValue="id"
+            <nuvex-filter-multiselect-panel [options]="facilityFilterOptions()" optionLabel="name" optionValue="id"
               [placeholder]="'labels.facility_name' | translate" [showFilter]="facilityFilterOptions().length > 5"
               [value]="facilityFilter()" (apply)="onMultiselectApply('facility_name', $event)"
               (clear)="onMultiselectClear('facility_name')" />
@@ -108,7 +107,7 @@
           }
           @case ('category') {
           <th class="p-1" [style.width]="col.width">
-            <shipedge-filter-multiselect-panel [options]="categories()" optionLabel="code" optionValue="code"
+            <nuvex-filter-multiselect-panel [options]="categories()" optionLabel="code" optionValue="code"
               [placeholder]="'labels.category' | translate" [showFilter]="categories().length > 5"
               [value]="categoryFilter()" (apply)="onMultiselectApply('category', $event)"
               (clear)="onMultiselectClear('category')" />
@@ -117,7 +116,7 @@
           @default {
           @if (col.filterable) {
           <th class="p-1" [style.width]="col.width">
-            <shipedge-filter-text-input [value]="getActiveFilterValue(col.field)"
+            <nuvex-filter-text-input [value]="getActiveFilterValue(col.field)"
               [matchMode]="getActiveFilterMatchMode(col.field)" [placeholder]="col.header | translate"
               [filterType]="col.filterType || 'text'" (applyWithMode)="onColumnFilterChange(col.field, $event)" />
           </th>
@@ -147,8 +146,8 @@
           <span>{{ row.category || '—' }}</span>
           }
           @case ('sku') {
-          <a class="font-semibold text-primary cursor-pointer" (click)="navigateToHistory(row, 'sku')">
-            <u>{{ row.sku }}</u>
+          <a class="font-semibold text-primary cursor-pointer hover:underline" (click)="navigateToHistory(row, 'sku')">
+            {{ row.sku }}
           </a>
           }
           @case ('barcode') {
@@ -158,14 +157,14 @@
           <span>{{ row.description }}</span>
           }
           @case ('location') {
-          <a class="font-semibold text-primary cursor-pointer" (click)="navigateToHistory(row, 'location')">
-            <u>{{ row.location_code || '—' }}</u>
+          <a class="font-semibold text-primary cursor-pointer hover:underline" (click)="navigateToHistory(row, 'location')">
+            {{ row.location_code || '—' }}
           </a>
           }
           @case ('container') {
           @if (row.container_id) {
-          <a class="font-semibold text-primary cursor-pointer" (click)="navigateToHistory(row, 'bin')">
-            <u>{{ row.container_lpn || '—' }}</u>
+          <a class="font-semibold text-primary cursor-pointer hover:underline" (click)="navigateToHistory(row, 'bin')">
+            {{ row.container_lpn || '—' }}
           </a>
           } @else {
           <!-- No container: a bin history would filter container_id by nothing -->
@@ -173,9 +172,13 @@
           }
           }
           @case ('tracecard') {
-          <a class="font-semibold text-primary cursor-pointer" (click)="navigateToHistory(row, 'tracecard')">
-            <u>{{ row.tracecard }}</u>
+          <a class="font-semibold text-primary cursor-pointer hover:underline" (click)="navigateToHistory(row, 'tracecard')">
+            {{ row.tracecard }}
           </a>
+          @if (row.status === 'BLOCKED') {
+          <i class="pi pi-lock text-red-500 ml-2 text-sm" [pTooltip]="'tracecard_ops.blocked_tooltip' | translate"
+            [attr.aria-label]="'tracecard_ops.blocked_tooltip' | translate"></i>
+          }
           }
           @case ('number') {
           <span class="font-mono w-full inline-block">{{
@@ -191,18 +194,39 @@
           <span>{{ row.lot || '—' }}</span>
           }
           @case ('expir') {
-          <span>{{ row.expir ? formatDate(row.expir) : '—' }}</span>
-          }
-          @case ('status') {
-          <span class="text-xs font-semibold px-2 py-1 rounded-full" [class.bg-green-100]="row.status === 'AVAILABLE'"
-            [class.text-green-700]="row.status === 'AVAILABLE'" [class.bg-red-100]="row.status === 'BLOCKED'"
-            [class.text-red-700]="row.status === 'BLOCKED'"
-            [class.bg-yellow-100]="row.status !== 'AVAILABLE' && row.status !== 'BLOCKED'"
-            [class.text-yellow-700]="row.status !== 'AVAILABLE' && row.status !== 'BLOCKED'">
-            {{ row.status }}
+          @let days = daysToExpiry(row.expir);
+          <span class="inline-flex items-center gap-1" [class]="expiryClass(days)">
+            {{ row.expir ? formatDate(row.expir) : '—' }}
+            @if (days !== null && days < 0) {
+              <i class="pi pi-exclamation-circle text-xs" [pTooltip]="'tracecard_ops.expired' | translate"
+                [attr.aria-label]="'tracecard_ops.expired' | translate"></i>
+            } @else if (days !== null && days <= EXPIRY_WARN_DAYS) {
+              <i class="pi pi-clock text-xs" [pTooltip]="'tracecard_ops.expires_soon' | translate: { days: days }"
+                [attr.aria-label]="'tracecard_ops.expires_soon' | translate: { days: days }"></i>
+            }
           </span>
           }
+          @case ('cost') {
+          <span class="font-mono w-full inline-block text-right">{{ costText(row[col.field], row.cost_currency) }}</span>
           }
+          @case ('status') {
+          <p-tag [value]="statusLabel(row.status)" [severity]="statusSeverity(row.status)" [rounded]="true" />
+          }
+          }
+        </ng-template>
+
+        <!-- Row actions: move / recount -->
+        <ng-template #actions let-row>
+          <p-button
+            icon="pi pi-ellipsis-v"
+            [text]="true"
+            [rounded]="true"
+            size="small"
+            severity="secondary"
+            [ariaLabel]="'labels.actions' | translate"
+            (click)="openRowMenu($event, row)"
+            (keydown.enter)="$event.preventDefault(); openRowMenu($event, row)"
+          />
         </ng-template>
       </base-data-table>
     </div>
@@ -232,7 +256,7 @@
         <label for="warehouse-mobile-filter-company" class="text-sm font-medium text-surface-600">
           {{ 'labels.company' | translate }}
         </label>
-        <shipedge-filter-multiselect-panel id="warehouse-mobile-filter-company" [options]="companies()" optionLabel="name" optionValue="id"
+        <nuvex-filter-multiselect-panel id="warehouse-mobile-filter-company" [options]="companies()" optionLabel="name" optionValue="id"
           [placeholder]="'labels.company' | translate" [showFilter]="companies().length > 5" [value]="companyFilter()"
           (apply)="
             onMultiselectApply('company_name', $event);
@@ -245,7 +269,7 @@
         <label for="warehouse-mobile-filter-sku" class="text-sm font-medium text-surface-600">
           {{ 'labels.sku' | translate }}
         </label>
-        <shipedge-filter-text-input id="warehouse-mobile-filter-sku" [value]="getActiveFilterValue('sku')" [placeholder]="'labels.sku' | translate"
+        <nuvex-filter-text-input id="warehouse-mobile-filter-sku" [value]="getActiveFilterValue('sku')" [placeholder]="'labels.sku' | translate"
           (apply)="
             onColumnFilterChange('sku', $event); showMobileFilters.set(false)
           " />
@@ -256,7 +280,7 @@
         <label for="warehouse-mobile-filter-location" class="text-sm font-medium text-surface-600">
           {{ 'labels.location' | translate }}
         </label>
-        <shipedge-filter-text-input id="warehouse-mobile-filter-location" [value]="getActiveFilterValue('location_code')"
+        <nuvex-filter-text-input id="warehouse-mobile-filter-location" [value]="getActiveFilterValue('location_code')"
           [placeholder]="'labels.location' | translate" (apply)="
             onColumnFilterChange('location_code', $event);
             showMobileFilters.set(false)
@@ -268,7 +292,7 @@
         <label for="warehouse-mobile-filter-description" class="text-sm font-medium text-surface-600">
           {{ 'labels.description' | translate }}
         </label>
-        <shipedge-filter-text-input id="warehouse-mobile-filter-description" [value]="getActiveFilterValue('description')"
+        <nuvex-filter-text-input id="warehouse-mobile-filter-description" [value]="getActiveFilterValue('description')"
           [placeholder]="'labels.description' | translate" (apply)="
             onColumnFilterChange('description', $event);
             showMobileFilters.set(false)
@@ -293,4 +317,24 @@
   [items]="selectedItems()"
   labelType="tracecard"
   (hide)="showLabelDialog.set(false)"
+/>
+
+<!-- Stock operations -->
+<app-tracecard-move-dialog
+  [visible]="showMoveDialog()"
+  [item]="opItem()"
+  (hide)="closeOperation()"
+  (done)="onMoved($event)"
+/>
+<app-tracecard-recount-dialog
+  [visible]="showRecountDialog()"
+  [item]="opItem()"
+  (hide)="closeOperation()"
+  (done)="onRecounted($event)"
+/>
+<app-tracecard-block-dialog
+  [visible]="showBlockDialog()"
+  [item]="opItem()"
+  (hide)="closeOperation()"
+  (done)="onBlocked($event)"
 />

@@ -1,3 +1,4 @@
+@if (presetsEnabled) {
 <p-confirmpopup />
 
 <!-- ═══════════ DESKTOP: Tabs Bar (hidden on mobile) ═══════════ -->
@@ -65,10 +66,13 @@
 
   <!-- Right: action buttons -->
   <div class="filter-tabs-bar__actions">
+    <!-- Botón "Filtros Avanzados" oculto temporalmente
     <button class="filter-tabs-bar__action-btn" (click)="openSaveDialog()">
       <i class="pi pi-plus"></i>
       <span>{{ 'filter_presets.save_preset' | translate }}</span>
     </button>
+    -->
+    <!-- Botón "Editar filtro" oculto temporalmente
     @if (lastAppliedPreset()) {
       <button
         class="filter-tabs-bar__action-btn"
@@ -80,6 +84,7 @@
         <span>{{ 'filter_presets.edit_preset' | translate }}</span>
       </button>
     }
+    -->
   </div>
 </div>
 
@@ -103,7 +108,7 @@
       <i class="pi pi-chevron-down filter-tabs-mobile__chevron"></i>
     </button>
 
-    <!-- Action icons -->
+    <!-- Action icons (crear / editar filtro) ocultos temporalmente
     <button class="filter-tabs-mobile__icon-btn" (click)="openSaveDialog()">
       <i class="pi pi-plus"></i>
     </button>
@@ -112,6 +117,7 @@
         <i class="pi pi-pencil"></i>
       </button>
     }
+    -->
   </div>
 
   <p-popover #mobilePanel styleClass="filter-preset-panel">
@@ -390,3 +396,5 @@
     </div>
   </ng-template>
 </p-dialog>
+
+}

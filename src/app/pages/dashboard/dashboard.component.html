@@ -1,481 +1,501 @@
 <p-toast />
 
-<div class="dashboard-page">
+<div class="flex flex-col gap-6 p-4 md:p-6">
 
-  <!-- ── Header ─────────────────────────────────────────── -->
-  <div class="dashboard-header">
-    <div class="dashboard-header__title">
-      <i class="pi pi-chart-bar"></i>
-      <h1>{{ 'pages.dashboard' | translate }}</h1>
+  <!-- ── Header: greeting + filters ─────────────────────────────── -->
+  <div class="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-bold text-color m-0">
+        @if (userName) {
+          {{ 'dashboard.greeting' | translate: { name: userName } }}
+        } @else {
+          {{ 'dashboard.greeting_anon' | translate }}
+        }
+      </h1>
+      <p class="text-muted-color mt-1 mb-0">{{ 'dashboard.subtitle' | translate }}</p>
     </div>
 
-    <div class="dashboard-header__controls">
-
+    <div class="flex flex-wrap items-center gap-2">
       <!-- Facility selector -->
-      <div class="selector-wrap">
-        <p-select
-          id="dashboard-facility-select"
-          [options]="facilitiesWithAll()"
-          optionLabel="name"
-          [loading]="loadingFacilities()"
-          [disabled]="loadingFacilities() || facilitySelectDisabled()"
-          [ngModel]="shownFacility()"
-          (ngModelChange)="selectedFacility.set($event); onFacilityChange()"
-          styleClass="selector-dropdown"
-          appendTo="body">
-          <!-- Sentinel item: "All facilities" with globe icon -->
-          <ng-template pTemplate="item" let-item>
-            @if (item.id === '') {
-              <span class="facility-all-item">
-                <i class="pi pi-globe"></i>
-                {{ 'dashboard.all_facilities' | translate }}
-              </span>
-            } @else if (item.id === noFacilityId) {
-              <span>{{ 'labels.no_facility_option' | translate }}</span>
-            } @else {
-              <span>{{ item.name }}</span>
-            }
-          </ng-template>
-          <!-- Selected value template -->
-          <ng-template pTemplate="selectedItem" let-item>
-            @if (item.id === '') {
-              <span class="facility-all-selected">
-                <i class="pi pi-globe"></i>
-                {{ 'dashboard.all_facilities' | translate }}
-              </span>
-            } @else if (item.id === noFacilityId) {
-              <span>{{ 'labels.no_facility_option' | translate }}</span>
-            } @else {
-              <span>{{ item.name }}</span>
-            }
-          </ng-template>
-        </p-select>
-      </div>
+      <p-select
+        id="dashboard-facility-select"
+        [options]="facilitiesWithAll()"
+        optionLabel="name"
+        [loading]="loadingFacilities()"
+        [disabled]="loadingFacilities() || facilitySelectDisabled()"
+        [ngModel]="shownFacility()"
+        (ngModelChange)="selectedFacility.set($event); onFacilityChange()"
+        styleClass="min-w-52"
+        appendTo="body">
+        <ng-template pTemplate="item" let-item>
+          <ng-container *ngTemplateOutlet="facilityLabel; context: { $implicit: item }" />
+        </ng-template>
+        <ng-template pTemplate="selectedItem" let-item>
+          <ng-container *ngTemplateOutlet="facilityLabel; context: { $implicit: item }" />
+        </ng-template>
+      </p-select>
 
-      <!-- Date range selector -->
-      <div class="selector-wrap">
-        <p-select
-          id="dashboard-date-range-select"
-          [options]="dateRangeOptions"
-          optionLabel="labelKey"
-          [ngModel]="selectedDateRange()"
-          (ngModelChange)="selectedDateRange.set($event); onDateRangeChange()"
-          [disabled]="loading()"
-          styleClass="selector-dropdown"
-          appendTo="body">
-          <!-- Dropdown item template -->
-          <ng-template pTemplate="item" let-item>
-            <span class="date-range-item" [class.date-range-item--custom]="item.days === -1">
-              <i [class]="item.icon"></i>
-              {{ item.labelKey | translate }}
-            </span>
-          </ng-template>
-          <!-- Selected value template -->
-          <ng-template pTemplate="selectedItem" let-item>
-            <span class="date-range-item">
-              <i [class]="item.icon"></i>
-              {{ item.labelKey | translate }}
-            </span>
-          </ng-template>
-        </p-select>
-      </div>
+      <!-- Period: 7d | 30d | custom -->
+      <p-selectbutton
+        id="dashboard-date-range-select"
+        [options]="dateRangeOptions"
+        [ngModel]="selectedDateRange()"
+        (ngModelChange)="selectedDateRange.set($event); onDateRangeChange()"
+        [allowEmpty]="false"
+        [disabled]="loading()">
+        <ng-template #item let-item>
+          <span class="flex items-center gap-2">
+            <i [class]="item.icon"></i>
+            <span>{{ item.shortKey | translate }}</span>
+          </span>
+        </ng-template>
+      </p-selectbutton>
 
-      <!-- Custom date range picker (shown when "Custom range" is selected) -->
       @if (isCustomRange()) {
-        <div class="custom-range-wrap">
-          <p-datepicker
-            id="dashboard-custom-range-picker"
-            selectionMode="range"
-            [ngModel]="customRangeDates()"
-            (ngModelChange)="onCustomRangeChange($event)"
-            (onClose)="onCustomRangeClose()"
-            [minDate]="minDate"
-            [maxDate]="maxDate"
-            [showIcon]="true"
-            iconDisplay="input"
-            dateFormat="yy-mm-dd"
-            [placeholder]="'dashboard.date_custom_placeholder' | translate"
-            [readonlyInput]="true"
-            appendTo="body"
-            styleClass="custom-range-picker"
-          />
-        </div>
+        <p-datepicker
+          id="dashboard-custom-range-picker"
+          selectionMode="range"
+          [ngModel]="customRangeDates()"
+          (ngModelChange)="onCustomRangeChange($event)"
+          (onClose)="onCustomRangeClose()"
+          [minDate]="minDate"
+          [maxDate]="maxDate"
+          [showIcon]="true"
+          iconDisplay="input"
+          [placeholder]="'dashboard.date_custom_placeholder' | translate"
+          [readonlyInput]="true"
+          appendTo="body"
+        />
       }
 
-
-      <!-- Refresh button -->
-      <button
+      <p-button
         id="dashboard-refresh-btn"
-        class="refresh-btn"
-        [class.spinning]="loading()"
-        (click)="loadSummary()"
+        icon="pi pi-refresh"
+        [rounded]="true"
+        [text]="true"
+        severity="secondary"
+        [loading]="anyLoading()"
         [disabled]="loading() || loadingFacilities() || customRangeEmpty() || noFacilityOnly()"
-        title="Refresh">
-        <i class="pi pi-refresh"></i>
-      </button>
-
+        [pTooltip]="'dashboard.refresh' | translate"
+        tooltipPosition="bottom"
+        [ariaLabel]="'dashboard.refresh' | translate"
+        (onClick)="loadSummary()"
+      />
     </div>
   </div>
 
+  <ng-template #facilityLabel let-item>
+    @if (item.id === '') {
+      <span class="flex items-center gap-2 font-semibold">
+        <i class="pi pi-globe"></i>{{ 'dashboard.all_facilities' | translate }}
+      </span>
+    } @else if (item.id === noFacilityId) {
+      <span>{{ 'labels.no_facility_option' | translate }}</span>
+    } @else {
+      <span>{{ item.name }}</span>
+    }
+  </ng-template>
 
-  <!-- ── Only "No facility" in the topbar: no metrics to show ── -->
   @if (noFacilityOnly()) {
-    <div class="empty-state" id="dashboard-no-facility">
-      <i class="pi pi-info-circle"></i>
+    <!-- Only "No facility" in the topbar: no metrics to show -->
+    <div id="dashboard-no-facility" class="card flex items-center gap-3 m-0 text-muted-color">
+      <i class="pi pi-info-circle text-xl text-primary"></i>
       <span>{{ 'dashboard.no_facility_scope' | translate }}</span>
-    </div>
-  <!-- ── Loading spinner ────────────────────────────────── -->
-  } @else if (loading()) {
-    <div class="dashboard-loading">
-      <p-progressSpinner strokeWidth="3" animationDuration="0.8s" />
     </div>
   } @else {
 
-    <!-- ── Parcels section ──────────────────────────────── -->
-    <section class="parcels-section">
+    <!-- ── KPI tiles ─────────────────────────────────────────────── -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
 
-      <!-- Panel: Parcels - Shipped -->
-      <div class="panel">
-        <div class="panel__head">
-          <div class="panel__head-left">
-            <span class="panel__label">{{ 'dashboard.parcels_shipped' | translate }}</span>
-            <span class="panel__total">
-              {{ 'dashboard.total' | translate }}: <strong>{{ shipped.total }}</strong>
+      @if (canSeeSales) {
+        <!-- POS sales, per currency -->
+        <button type="button" id="card-sales" class="kpi-tile" (click)="navigateTo('/app/sales/history')">
+          <div class="kpi-tile__head">
+            <span>{{ 'dashboard.sales' | translate }}</span>
+            <span class="kpi-tile__icon bg-green-100 text-green-700 dark:bg-green-400/10 dark:text-green-400">
+              <i class="pi pi-shopping-cart"></i>
             </span>
           </div>
-          <button class="panel__nav-btn" (click)="navigateTo('/app/parcels')">
-            <i class="pi pi-external-link"></i>
-          </button>
-        </div>
-
-        <div class="metric-cards">
-
-          <!-- Delivery (LAST_MILE) -->
-          <div class="metric-card" id="card-shipped-delivery">
-            <div class="metric-card__icon metric-card__icon--shipped">
-              <i class="pi pi-truck"></i>
-            </div>
-            <div class="metric-card__body">
-              <span class="metric-card__count">{{ shipped.deliveries }}</span>
-              <span class="metric-card__label">{{ 'dashboard.delivery' | translate }}</span>
-            </div>
-          </div>
-
-          <!-- Pickup Customer (COLLECTED) -->
-          <div class="metric-card" id="card-shipped-pickup">
-            <div class="metric-card__icon metric-card__icon--shipped">
-              <i class="pi pi-shopping-bag"></i>
-            </div>
-            <div class="metric-card__body">
-              <span class="metric-card__count">{{ shipped.customer_pickups }}</span>
-              <span class="metric-card__label">{{ 'dashboard.pickup_customer' | translate }}</span>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Panel: Parcels - Ship Prepared -->
-      <div class="panel">
-        <div class="panel__head">
-          <div class="panel__head-left">
-            <span class="panel__label">{{ 'dashboard.parcels_ship_prepared' | translate }}</span>
-            <span class="panel__total">
-              {{ 'dashboard.total' | translate }}: <strong>{{ shipPrepared.total }}</strong>
+          @if (loadingSales()) {
+            <p-skeleton width="8rem" height="2rem" />
+            <p-skeleton width="10rem" height="0.9rem" />
+          } @else if (loadErrors().sales) {
+            <ng-container *ngTemplateOutlet="loadError" />
+          } @else if (!salesSummary()?.currencies?.length) {
+            <span class="kpi-tile__value">0</span>
+            <span class="kpi-tile__hint">{{ 'dashboard.in_period' | translate }}</span>
+          } @else {
+            <!-- Main currency big; the others on one small line each (keeps tiles the same height) -->
+            @for (c of salesSummary()!.currencies; track c.currency; let first = $first) {
+              @if (first) {
+                <div class="flex flex-col gap-1">
+                  <div class="flex flex-wrap items-baseline gap-2">
+                    <span class="kpi-tile__value">{{ money(c.total, c.currency) }}</span>
+                    <ng-container *ngTemplateOutlet="deltaTag; context: { $implicit: delta(c.total, c.prev_total) }" />
+                  </div>
+                  <span class="kpi-tile__hint">
+                    {{ 'dashboard.sales_count' | translate: { count: c.sales } }} ·
+                    {{ 'dashboard.avg_ticket' | translate: { value: money(c.avg_ticket, c.currency) } }}
+                  </span>
+                </div>
+              } @else {
+                <span class="kpi-tile__secondary">
+                  {{ money(c.total, c.currency) }} · {{ 'dashboard.sales_count' | translate: { count: c.sales } }}
+                </span>
+              }
+            }
+          }
+          @if (!loadingSales() && salesSummary()?.open_registers) {
+            <p-tag severity="success" [rounded]="true">
+              <span class="flex items-center gap-1">
+                <i class="pi pi-lock-open text-xs"></i>
+                {{ 'dashboard.open_registers' | translate: { count: salesSummary()!.open_registers } }}
+              </span>
+            </p-tag>
+          }
+        </button>
+      } @else {
+        <!-- Orders revenue, per currency -->
+        <button type="button" id="card-orders-revenue" class="kpi-tile" (click)="navigateTo('/app/outbound/allorders')">
+          <div class="kpi-tile__head">
+            <span>{{ 'dashboard.total_revenue' | translate }}</span>
+            <span class="kpi-tile__icon bg-green-100 text-green-700 dark:bg-green-400/10 dark:text-green-400">
+              <i class="pi pi-wallet"></i>
             </span>
           </div>
-          <button class="panel__nav-btn" (click)="navigateTo('/app/parcels')">
-            <i class="pi pi-external-link"></i>
-          </button>
+          @if (loading()) {
+            <p-skeleton width="8rem" height="2rem" />
+          } @else if (loadErrors().orders) {
+            <ng-container *ngTemplateOutlet="loadError" />
+          } @else if (revenueRows().length) {
+            @for (r of revenueRows(); track r.currency; let first = $first) {
+              @if (first) {
+                <div class="flex flex-wrap items-baseline gap-2">
+                  <span class="kpi-tile__value">{{ money(r.total, r.currency) }}</span>
+                  <ng-container *ngTemplateOutlet="deltaTag; context: { $implicit: delta(r.total, r.prev_total) }" />
+                </div>
+              } @else {
+                <span class="kpi-tile__secondary">{{ money(r.total, r.currency) }}</span>
+              }
+            }
+          } @else {
+            <span class="kpi-tile__value">{{ ordersShipped.total_revenue | number: '1.2-2' }}</span>
+          }
+          <span class="kpi-tile__hint">{{ 'dashboard.in_period' | translate }}</span>
+        </button>
+      }
+
+      <!-- Orders shipped -->
+      <button type="button" id="card-orders-shipped" class="kpi-tile" (click)="navigateTo('/app/outbound/allorders')">
+        <div class="kpi-tile__head">
+          <span>{{ 'dashboard.orders_shipped' | translate }}</span>
+          <span class="kpi-tile__icon bg-blue-100 text-blue-700 dark:bg-blue-400/10 dark:text-blue-400">
+            <i class="pi pi-send"></i>
+          </span>
         </div>
-
-        <div class="metric-cards">
-
-          <!-- Ready (fulfilled = true) -->
-          <div class="metric-card" id="card-prepared-ready">
-            <div class="metric-card__icon metric-card__icon--ready">
-              <i class="pi pi-check-circle"></i>
-            </div>
-            <div class="metric-card__body">
-              <span class="metric-card__count">{{ shipPrepared.ready }}</span>
-              <span class="metric-card__label">{{ 'dashboard.ready' | translate }}</span>
-            </div>
+        @if (loading()) {
+          <p-skeleton width="5rem" height="2rem" />
+        } @else if (loadErrors().orders) {
+          <ng-container *ngTemplateOutlet="loadError" />
+        } @else {
+          <div class="flex flex-wrap items-baseline gap-2">
+            <span class="kpi-tile__value">{{ ordersShipped.orders_shipped | number: '1.0-0' }}</span>
+            <ng-container *ngTemplateOutlet="deltaTag; context: { $implicit: delta(ordersShipped.orders_shipped, ordersShipped.prev_orders_shipped) }" />
           </div>
+          @if (canSeeSales && revenueRows().length) {
+            <span class="kpi-tile__hint">
+              {{ 'dashboard.total_revenue' | translate }}:
+              @for (r of revenueRows(); track r.currency; let last = $last) {
+                {{ money(r.total, r.currency) }}{{ last ? '' : ' · ' }}
+              }
+            </span>
+          } @else {
+            <span class="kpi-tile__hint">{{ 'dashboard.in_period' | translate }}</span>
+          }
+        }
+      </button>
 
-          <!-- Missing Data (fulfilled ≠ true) -->
-          <div class="metric-card" id="card-prepared-missing">
-            <div class="metric-card__icon metric-card__icon--missing">
-              <i class="pi pi-exclamation-circle"></i>
-            </div>
-            <div class="metric-card__body">
-              <span class="metric-card__count">{{ shipPrepared.missing_data }}</span>
-              <span class="metric-card__label">{{ 'dashboard.missing_data' | translate }}</span>
-            </div>
-          </div>
-
+      <!-- Inventory value -->
+      <div id="card-inventory-value" class="kpi-tile kpi-tile--static">
+        <div class="kpi-tile__head">
+          <span>{{ 'dashboard.inventory_value' | translate }}</span>
+          <span class="kpi-tile__icon bg-primary-100 text-primary-700 dark:bg-primary-400/10 dark:text-primary-400">
+            <i class="pi pi-box"></i>
+          </span>
         </div>
+        @if (loadingInventory()) {
+          <p-skeleton width="8rem" height="2rem" />
+          <p-skeleton width="10rem" height="0.9rem" />
+        } @else if (loadErrors().inventory) {
+          <ng-container *ngTemplateOutlet="loadError" />
+        } @else {
+          @if (inventory.retail_values?.length) {
+            @for (rv of inventory.retail_values; track rv.currency; let first = $first) {
+              @if (first) {
+                <span class="kpi-tile__value">{{ money(rv.total_value, rv.currency) }}</span>
+              } @else {
+                <span class="kpi-tile__secondary">{{ money(rv.total_value, rv.currency) }}</span>
+              }
+            }
+          } @else {
+            <span class="kpi-tile__value">{{ inventory.total_value | number: '1.2-2' }}</span>
+          }
+          <span class="kpi-tile__hint">
+            {{ 'dashboard.at_retail' | translate }} ·
+            {{ 'dashboard.skus_units' | translate: { skus: (inventory.skus | number: '1.0-0'), units: (inventory.units | number: '1.0-0') } }}
+          </span>
+          <!-- Value at cost (OWNER only: the backend omits cost_values for other roles) -->
+          @for (cv of inventory.cost_values ?? []; track cv.currency) {
+            <a class="text-xs text-primary font-medium cursor-pointer hover:underline"
+               (click)="navigateTo('/app/inventory/valuation')">
+              {{ 'dashboard.cost_value' | translate }}: {{ costText(cv.total_value, cv.currency) }}
+            </a>
+          }
+        }
       </div>
 
-    </section>
-
-    <!-- ── Orders Shipped + Alerts section ─────────────── -->
-    <section class="parcels-section">
-
-      <!-- Panel: Orders Shipped -->
-      <div class="panel">
-        <div class="panel__head">
-          <div class="panel__head-left">
-            <span class="panel__label">{{ 'dashboard.orders_shipped' | translate }}</span>
+      <!-- Alerts -->
+      <div id="card-alerts" class="kpi-tile kpi-tile--static">
+        <div class="kpi-tile__head">
+          <span>{{ 'dashboard.alerts' | translate }}</span>
+          <span class="kpi-tile__icon bg-orange-100 text-orange-700 dark:bg-orange-400/10 dark:text-orange-400">
+            <i class="pi pi-exclamation-triangle"></i>
+          </span>
+        </div>
+        @if (loading()) {
+          <p-skeleton width="4rem" height="2rem" />
+          <div class="flex gap-2">
+            <p-skeleton width="7rem" height="1.5rem" borderRadius="1rem" />
+            <p-skeleton width="7rem" height="1.5rem" borderRadius="1rem" />
           </div>
-          <button class="panel__nav-btn" (click)="navigateTo('/app/outbound/allorders')">
-            <i class="pi pi-external-link"></i>
+        } @else if (loadErrors().orders) {
+          <ng-container *ngTemplateOutlet="loadError" />
+        } @else {
+          <span class="kpi-tile__value">{{ alerts.back_orders + alerts.low_inventory | number: '1.0-0' }}</span>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" id="card-alerts-backorders" class="alert-chip" (click)="navigateTo('/app/outbound/backorders')">
+            <p-tag [severity]="alerts.back_orders > 0 ? 'danger' : 'secondary'" [rounded]="true">
+              <span class="flex items-center gap-1">
+                <i class="pi pi-clock text-xs"></i>{{ alerts.back_orders }} {{ 'dashboard.back_orders' | translate }}
+              </span>
+            </p-tag>
+          </button>
+          <button type="button" id="card-alerts-low-inventory" class="alert-chip" (click)="navigateTo('/app/inventory/tracecards')">
+            <p-tag [severity]="alerts.low_inventory > 0 ? 'warn' : 'secondary'" [rounded]="true">
+              <span class="flex items-center gap-1">
+                <i class="pi pi-arrow-down text-xs"></i>{{ alerts.low_inventory }} {{ 'dashboard.low_inventory' | translate }}
+              </span>
+            </p-tag>
           </button>
         </div>
-
-        <div class="metric-cards">
-
-          <!-- Orders Shipped -->
-          <div class="metric-card" id="card-orders-shipped">
-            <div class="metric-card__icon metric-card__icon--orders">
-              <i class="pi pi-upload"></i>
-            </div>
-            <div class="metric-card__body">
-              <span class="metric-card__count">{{ ordersShipped.orders_shipped }}</span>
-              <span class="metric-card__label">{{ 'dashboard.orders_shipped' | translate }}</span>
-            </div>
-          </div>
-
-          <!-- Total Revenue -->
-          <div class="metric-card" id="card-orders-revenue">
-            <div class="metric-card__icon metric-card__icon--revenue">
-              <i class="pi pi-dollar"></i>
-            </div>
-            <div class="metric-card__body">
-              <span class="metric-card__count">{{ ordersShipped.total_revenue }}</span>
-              <span class="metric-card__label">{{ 'dashboard.total_revenue' | translate }}</span>
-            </div>
-          </div>
-
-        </div>
+        }
       </div>
+    </div>
 
-      <!-- Panel: Alerts -->
-      <div class="panel">
-        <div class="panel__head">
-          <div class="panel__head-left">
-            <span class="panel__label">{{ 'dashboard.alerts' | translate }}</span>
-          </div>
-          <button class="panel__nav-btn" (click)="navigateTo('/app/outbound/backorders')">
-            <i class="pi pi-external-link"></i>
-          </button>
+    <!-- ── Daily activity + side column ──────────────────────────── -->
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+
+      <!-- Daily chart: one metric at a time (never two scales on one axis) -->
+      <div id="card-daily-chart" class="card m-0 xl:col-span-2 flex flex-col gap-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 class="text-lg font-semibold m-0">{{ 'dashboard.chart_title' | translate }}</h2>
+          @if (chartMetricOptions().length > 1) {
+            <p-selectbutton
+              [options]="chartMetricOptions()"
+              optionValue="value"
+              [ngModel]="activeMetric()"
+              (ngModelChange)="chartMetric.set($event)"
+              [allowEmpty]="false"
+              size="small">
+              <ng-template #item let-item>
+                <span>{{ item.labelKey | translate: { currency: item.currency } }}</span>
+              </ng-template>
+            </p-selectbutton>
+          }
         </div>
-
-        <div class="metric-cards">
-
-          <!-- Back Orders -->
-          <div class="metric-card" id="card-alerts-backorders">
-            <div class="metric-card__icon metric-card__icon--alert">
-              <i class="pi pi-clock"></i>
-            </div>
-            <div class="metric-card__body">
-              <span class="metric-card__count metric-card__count--alert">{{ alerts.back_orders }}</span>
-              <span class="metric-card__label metric-card__label--alert">{{ 'dashboard.back_orders' | translate }}</span>
-            </div>
+        @if (loading() || (activeMetric() !== 'orders' && loadingSales())) {
+          <p-skeleton height="16rem" />
+        } @else if (activeMetric() === 'orders' ? loadErrors().orders : loadErrors().sales) {
+          <div class="h-64 flex items-center justify-center">
+            <ng-container *ngTemplateOutlet="loadError" />
           </div>
-
-          <!-- Low Inventory -->
-          <div class="metric-card" id="card-alerts-low-inventory">
-            <div class="metric-card__icon metric-card__icon--alert">
-              <i class="pi pi-arrow-down"></i>
-            </div>
-            <div class="metric-card__body">
-              <span class="metric-card__count metric-card__count--alert">{{ alerts.low_inventory }}</span>
-              <span class="metric-card__label metric-card__label--alert">{{ 'dashboard.low_inventory' | translate }}</span>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-    </section>
-
-    <!-- ── Inventory Summary section ───────────────────── -->
-    <section class="inventory-section">
-
-      <div class="panel panel--full">
-        <div class="panel__head">
-          <div class="panel__head-left">
-            <span class="panel__label">{{ 'dashboard.inventory_summary' | translate }}</span>
-          </div>
-          <button class="panel__nav-btn" (click)="navigateTo('/app/inventory/tracecards')">
-            <i class="pi pi-external-link"></i>
-          </button>
-        </div>
-
-        <div class="metric-cards metric-cards--4col">
-
-          <!-- Total Value -->
-          <div class="metric-card" id="card-inventory-value">
-            <div class="metric-card__icon metric-card__icon--inventory">
-              <i class="pi pi-dollar"></i>
-            </div>
-            <div class="metric-card__body">
-              <span class="metric-card__count">{{ inventory.total_value | number:'1.2-2' }}</span>
-              <span class="metric-card__label">{{ 'dashboard.total_value' | translate }}</span>
-            </div>
-          </div>
-
-          <!-- SKUs -->
-          <div class="metric-card" id="card-inventory-skus">
-            <div class="metric-card__icon metric-card__icon--inventory">
-              <i class="pi pi-box"></i>
-            </div>
-            <div class="metric-card__body">
-              <span class="metric-card__count">{{ inventory.skus }}</span>
-              <span class="metric-card__label">{{ 'dashboard.skus' | translate }}</span>
-            </div>
-          </div>
-
-          <!-- Units -->
-          <div class="metric-card" id="card-inventory-units">
-            <div class="metric-card__icon metric-card__icon--inventory">
-              <i class="pi pi-align-justify"></i>
-            </div>
-            <div class="metric-card__body">
-              <span class="metric-card__count">{{ inventory.units }}</span>
-              <span class="metric-card__label">{{ 'dashboard.units' | translate }}</span>
-            </div>
-          </div>
-
-          <!-- Trace Cards -->
-          <div class="metric-card" id="card-inventory-trace">
-            <div class="metric-card__icon metric-card__icon--inventory">
-              <i class="pi pi-id-card"></i>
-            </div>
-            <div class="metric-card__body">
-              <span class="metric-card__count">{{ inventory.trace_cards }}</span>
-              <span class="metric-card__label">{{ 'dashboard.trace_cards' | translate }}</span>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-    </section>
-
-    <!-- ── Locations Summary + Best Selling section ────── -->
-    <section class="bottom-section">
-
-      <!-- Panel: Locations Summary -->
-      <div class="panel">
-        <div class="panel__head">
-          <div class="panel__head-left">
-            <span class="panel__label">{{ 'dashboard.locations_summary' | translate }}</span>
-          </div>
-          <button class="panel__nav-btn" (click)="navigateTo('/app/preferences/locations')">
-            <i class="pi pi-external-link"></i>
-          </button>
-        </div>
-
-        <div class="metric-cards metric-cards--3col">
-
-          <!-- Zones -->
-          <div class="metric-card" id="card-locations-zones">
-            <div class="metric-card__icon metric-card__icon--location">
-              <i class="pi pi-stop"></i>
-            </div>
-            <div class="metric-card__body">
-              <span class="metric-card__count">{{ locations().zones }}</span>
-              <span class="metric-card__label">{{ 'dashboard.zones' | translate }}</span>
-            </div>
-          </div>
-
-          <!-- Locations -->
-          <div class="metric-card" id="card-locations-locations">
-            <div class="metric-card__icon metric-card__icon--location">
-              <i class="pi pi-map-marker"></i>
-            </div>
-            <div class="metric-card__body">
-              <span class="metric-card__count">{{ locations().locations }}</span>
-              <span class="metric-card__label">{{ 'dashboard.locations' | translate }}</span>
-            </div>
-          </div>
-
-          <!-- Bins -->
-          <div class="metric-card" id="card-locations-bins">
-            <div class="metric-card__icon metric-card__icon--location">
-              <i class="pi pi-box"></i>
-            </div>
-            <div class="metric-card__body">
-              <span class="metric-card__count">{{ locations().bins }}</span>
-              <span class="metric-card__label">{{ 'dashboard.bins' | translate }}</span>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Panel: Best Selling Items -->
-      <div class="panel">
-        <div class="panel__head">
-          <div class="panel__head-left">
-            <span class="panel__label">{{ 'dashboard.best_selling_items' | translate }}</span>
-          </div>
-        </div>
-
-        @if (bestSelling().length === 0) {
-          <!-- Empty state -->
-          <div class="empty-state" id="card-best-selling-empty">
-            <i class="pi pi-inbox"></i>
-            <span>{{ 'dashboard.no_products_sold' | translate }}</span>
+        } @else if (!chartHasData()) {
+          <div class="h-64 flex flex-col items-center justify-center gap-2 text-muted-color">
+            <i class="pi pi-chart-bar text-4xl"></i>
+            <span>{{ 'dashboard.chart_empty' | translate }}</span>
           </div>
         } @else {
-          <!-- Best selling list -->
-          <div class="best-selling-list">
-            @for (item of bestSelling(); track item.sku) {
-              <div class="best-selling-item">
-                <div class="best-selling-item__left">
-                  @if (item.image_url) {
-                    <img
-                      class="best-selling-item__img"
-                      [src]="item.image_url"
-                      [alt]="item.product_name"
-                      loading="lazy"
-                    />
-                  } @else {
-                    <div class="best-selling-item__img best-selling-item__img--placeholder">
-                      <i class="pi pi-box"></i>
-                    </div>
-                  }
-                  <div class="best-selling-item__info">
-                    <span class="best-selling-item__name">
-                      <small class="best-selling-item__label">{{ 'dashboard.product' | translate }}</small>
-                      {{ item.product_name }}
-                    </span>
-                    <span class="best-selling-item__sku">
-                      <small class="best-selling-item__label">SKU</small>
-                      {{ item.sku }}
-                    </span>
-                  </div>
-                </div>
-                <div class="best-selling-item__right">
-                  <span class="best-selling-item__qty">
-                    <small class="best-selling-item__label">{{ 'dashboard.qty_sold' | translate }}</small>
-                    {{ item.qty_sold | number:'1.0-0' }}
-                  </span>
-                  <span class="best-selling-item__amount">
-                    <small class="best-selling-item__label">{{ 'dashboard.total' | translate }}</small>
-                    ${{ item.total_amount | number:'1.2-2' }}
-                  </span>
-                </div>
-              </div>
-            }
+          <div class="h-64">
+            <p-chart type="bar" [data]="chartData()" [options]="chartOptions()" height="16rem" />
           </div>
         }
       </div>
 
-    </section>
+      <!-- Side column -->
+      <div class="flex flex-col gap-4">
 
+        <!-- Quick actions (only those the user has access to) -->
+        @if (quickActions.length) {
+          <div class="card m-0 flex flex-col gap-3">
+            <h2 class="text-lg font-semibold m-0">{{ 'dashboard.quick_actions' | translate }}</h2>
+            <div class="grid grid-cols-2 gap-2">
+              @for (qa of quickActions; track qa.route) {
+                <button type="button" class="quick-action" (click)="navigateTo(qa.route)">
+                  <i [class]="qa.icon"></i>
+                  <span>{{ qa.labelKey | translate }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Warehouse -->
+        <div class="card m-0 flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold m-0">{{ 'dashboard.warehouse' | translate }}</h2>
+            @if (canSeeLocations) {
+              <p-button [label]="'dashboard.view_all' | translate" [text]="true" size="small"
+                        icon="pi pi-arrow-right" iconPos="right"
+                        (onClick)="navigateTo('/app/preferences/locations')" />
+            }
+          </div>
+          @if (loadErrors().locations) {
+            <ng-container *ngTemplateOutlet="loadError" />
+          } @else {
+          <div class="grid grid-cols-2 gap-3">
+            @for (s of warehouseStats(); track s.labelKey) {
+              <div [id]="s.id" class="rounded-xl bg-surface-100 dark:bg-surface-800 p-3 flex items-center gap-3">
+                <i [class]="s.icon + ' text-primary text-lg'"></i>
+                <div class="flex flex-col">
+                  @if (s.loading) {
+                    <p-skeleton width="3rem" height="1.25rem" />
+                  } @else {
+                    <span class="text-lg font-bold text-color leading-tight">{{ s.value | number: '1.0-0' }}</span>
+                  }
+                  <span class="text-xs text-muted-color">{{ s.labelKey | translate }}</span>
+                </div>
+              </div>
+            }
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Best sellers ───────────────────────────────────────────── -->
+    <div class="card m-0 flex flex-col gap-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold m-0">{{ 'dashboard.best_selling_items' | translate }}</h2>
+        <p-tag [value]="selectedDateRange().shortKey | translate" severity="secondary" />
+      </div>
+
+      @if (loadingBestSelling()) {
+        <div class="flex flex-col gap-3">
+          @for (i of [1, 2, 3, 4, 5]; track i) {
+            <div class="flex items-center gap-3">
+              <p-skeleton shape="square" size="2.75rem" />
+              <div class="flex-1 flex flex-col gap-2">
+                <p-skeleton width="60%" />
+                <p-skeleton width="30%" height="0.75rem" />
+              </div>
+              <p-skeleton width="5rem" />
+            </div>
+          }
+        </div>
+      } @else if (loadErrors().bestSelling) {
+        <div class="py-10 flex justify-center">
+          <ng-container *ngTemplateOutlet="loadError" />
+        </div>
+      } @else if (bestSelling().length === 0) {
+        <div id="card-best-selling-empty" class="flex flex-col items-center gap-2 py-10 text-muted-color">
+          <i class="pi pi-inbox text-4xl"></i>
+          <span>{{ 'dashboard.no_products_sold' | translate }}</span>
+        </div>
+      } @else {
+        <p-table [value]="bestSelling()" size="small" styleClass="best-selling-table" [tableStyle]="{ 'min-width': '34rem' }">
+          <ng-template #header>
+            <tr>
+              <th class="w-10">#</th>
+              <th>{{ 'dashboard.product' | translate }}</th>
+              <th class="w-48">{{ 'dashboard.qty_sold' | translate }}</th>
+              <th class="text-right">{{ 'dashboard.total' | translate }}</th>
+            </tr>
+          </ng-template>
+          <ng-template #body let-item let-i="rowIndex">
+            <tr>
+              <td class="text-muted-color font-semibold">{{ i + 1 }}</td>
+              <td>
+                <div class="flex items-center gap-3">
+                  @if (item.image_url) {
+                    <img [src]="item.image_url" [alt]="item.product_name" loading="lazy"
+                         class="w-11 h-11 rounded-lg object-cover border border-surface shrink-0" />
+                  } @else {
+                    <span class="w-11 h-11 rounded-lg bg-surface-100 dark:bg-surface-800 flex items-center justify-center text-muted-color shrink-0">
+                      <i class="pi pi-image"></i>
+                    </span>
+                  }
+                  <div class="flex flex-col min-w-0">
+                    <span class="font-medium text-color truncate">{{ item.product_name }}</span>
+                    <span class="text-xs text-muted-color">SKU {{ item.sku }}</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="flex flex-col gap-1">
+                  <span class="font-semibold">{{ item.qty_sold | number: '1.0-0' }}</span>
+                  <p-progressbar [value]="qtyShare(item.qty_sold)" [showValue]="false"
+                                 [style]="{ height: '6px' }" [pTooltip]="'dashboard.share' | translate" />
+                </div>
+              </td>
+              <td class="text-right font-semibold whitespace-nowrap">
+                @if (item.currency) {
+                  {{ money(item.total_amount, item.currency) }}
+                } @else {
+                  {{ item.total_amount | number: '1.2-2' }}
+                }
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      }
+    </div>
   }
-
 </div>
+
+<!-- Change vs previous period -->
+<ng-template #deltaTag let-d>
+  @if (d) {
+    <p-tag
+      [severity]="d.dir === 'up' ? 'success' : d.dir === 'down' ? 'danger' : 'secondary'"
+      [rounded]="true"
+      [pTooltip]="'dashboard.vs_prev' | translate"
+      tooltipPosition="top">
+      <span class="flex items-center gap-1 text-xs">
+        <i [class]="d.dir === 'up' ? 'pi pi-arrow-up-right' : d.dir === 'down' ? 'pi pi-arrow-down-right' : 'pi pi-minus'" style="font-size: 0.7rem"></i>
+        @if (d.pct === null) {
+          {{ 'dashboard.new' | translate }}
+        } @else {
+          {{ d.pct > 0 ? '+' : '' }}{{ d.pct }}%
+        }
+      </span>
+    </p-tag>
+  }
+</ng-template>
+
+<!-- A card whose data failed to load: say so (never show zeros) and offer a retry -->
+<ng-template #loadError>
+  <span class="flex flex-wrap items-center gap-2 text-sm text-muted-color">
+    <i class="pi pi-exclamation-circle text-orange-500"></i>
+    {{ 'dashboard.load_failed' | translate }}
+    <!-- A link, not a button: some cards are buttons themselves -->
+    <a
+      role="button"
+      tabindex="0"
+      class="text-primary font-medium cursor-pointer hover:underline inline-flex items-center gap-1"
+      (click)="$event.stopPropagation(); loadSummary()"
+      (keydown.enter)="$event.stopPropagation(); loadSummary()"
+    >
+      <i class="pi pi-refresh text-xs"></i>{{ 'dashboard.retry' | translate }}
+    </a>
+  </span>
+</ng-template>

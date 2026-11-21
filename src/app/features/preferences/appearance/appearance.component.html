@@ -1,0 +1,144 @@
+@if (!isOwner) {
+  <div class="card p-8 text-center text-surface-500">
+    <i class="pi pi-lock text-3xl block mb-3"></i>
+    {{ 'appearance.owner_only' | translate }}
+  </div>
+} @else {
+  <div class="card">
+    <p class="mt-0 mb-6 text-sm text-surface-500">{{ 'appearance.subtitle' | translate }}</p>
+
+    <div class="flex flex-col gap-6 max-w-3xl">
+      <!-- Style (PrimeNG preset) -->
+      <section>
+        <h3 class="text-base font-semibold m-0 mb-2">{{ 'appearance.style' | translate }}</h3>
+        <p-selectbutton
+          [options]="presets"
+          [ngModel]="draft().preset"
+          (ngModelChange)="set('preset', $event)"
+          [allowEmpty]="false"
+          [ariaLabel]="'appearance.style' | translate"
+        />
+      </section>
+
+      <!-- Primary color -->
+      <section>
+        <h3 class="text-base font-semibold m-0 mb-2">{{ 'appearance.primary' | translate }}</h3>
+        <div class="flex flex-wrap gap-2" role="radiogroup" [attr.aria-label]="'appearance.primary' | translate">
+          @for (c of primaryColors(); track c.name) {
+            <button
+              type="button"
+              role="radio"
+              class="swatch"
+              [class.swatch-selected]="draft().primary === c.name"
+              [attr.aria-checked]="draft().primary === c.name"
+              [title]="c.name"
+              [attr.aria-label]="c.name"
+              [style.background-color]="c.color"
+              (click)="set('primary', c.name)"
+            >
+              @if (draft().primary === c.name) {
+                <i class="pi pi-check"></i>
+              }
+            </button>
+          }
+        </div>
+      </section>
+
+      <!-- Surface (neutral tones) -->
+      <section>
+        <h3 class="text-base font-semibold m-0 mb-2">{{ 'appearance.surface' | translate }}</h3>
+        <div class="flex flex-wrap items-center gap-2" role="radiogroup" [attr.aria-label]="'appearance.surface' | translate">
+          <button
+            type="button"
+            role="radio"
+            class="swatch swatch-default"
+            [class.swatch-selected]="draft().surface === null"
+            [attr.aria-checked]="draft().surface === null"
+            [title]="'appearance.surface_default' | translate"
+            [attr.aria-label]="'appearance.surface_default' | translate"
+            (click)="set('surface', null)"
+          >
+            <i class="pi pi-ban"></i>
+          </button>
+          @for (s of surfaces; track s.name) {
+            <button
+              type="button"
+              role="radio"
+              class="swatch"
+              [class.swatch-selected]="draft().surface === s.name"
+              [attr.aria-checked]="draft().surface === s.name"
+              [title]="s.name"
+              [attr.aria-label]="s.name"
+              [style.background-color]="s.palette['500']"
+              (click)="set('surface', s.name)"
+            >
+              @if (draft().surface === s.name) {
+                <i class="pi pi-check"></i>
+              }
+            </button>
+          }
+        </div>
+      </section>
+
+      <!-- Menu type -->
+      <section>
+        <h3 class="text-base font-semibold m-0 mb-2">{{ 'appearance.menu' | translate }}</h3>
+        <p-selectbutton
+          [options]="menuModes"
+          optionValue="value"
+          [ngModel]="draft().menuMode"
+          (ngModelChange)="set('menuMode', $event)"
+          [allowEmpty]="false"
+          [ariaLabel]="'appearance.menu' | translate"
+        >
+          <ng-template #item let-o>{{ o.key | translate }}</ng-template>
+        </p-selectbutton>
+      </section>
+
+      <!-- Sidebar style -->
+      <section>
+        <h3 class="text-base font-semibold m-0 mb-2">{{ 'appearance.sidebar' | translate }}</h3>
+        <p-selectbutton
+          [options]="layoutThemes"
+          optionValue="value"
+          [ngModel]="draft().layoutTheme"
+          (ngModelChange)="set('layoutTheme', $event)"
+          [allowEmpty]="false"
+          [ariaLabel]="'appearance.sidebar' | translate"
+        >
+          <ng-template #item let-o>{{ o.key | translate }}</ng-template>
+        </p-selectbutton>
+        <p class="mt-2 mb-0 text-xs text-surface-500">{{ 'appearance.sidebar_hint' | translate }}</p>
+      </section>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 mt-8 pt-4 border-t border-surface-200 dark:border-surface-700">
+      <span class="text-sm text-surface-500 flex items-center gap-2 mr-auto">
+        <i class="pi pi-info-circle"></i>
+        {{ 'appearance.preview_hint' | translate }}
+      </span>
+      <p-button
+        [label]="'appearance.reset_default' | translate"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [text]="true"
+        [disabled]="isDefault() || saving()"
+        (onClick)="resetToDefault()"
+      />
+      <p-button
+        [label]="'buttons.discard' | translate"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="!dirty() || saving()"
+        (onClick)="discard()"
+      />
+      <p-button
+        [label]="'buttons.save' | translate"
+        icon="pi pi-check"
+        [loading]="saving()"
+        [disabled]="!dirty()"
+        (onClick)="save()"
+      />
+    </div>
+  </div>
+}

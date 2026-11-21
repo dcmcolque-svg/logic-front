@@ -4,8 +4,7 @@ import { RouterModule } from '@angular/router'
 import { AppTopbar } from './app.topbar'
 import { AppFooter } from './app.footer'
 import { LayoutService } from '@/app/layout/service/layout.service'
-import { AppConfigurator } from './app.configurator'
-import { AppBreadcrumb } from './app.breadcrumb'
+import { BrandThemeService } from '@/app/layout/service/brand-theme.service'
 import { AppSidebar } from './app.sidebar'
 import { ToastModule } from 'primeng/toast'
 
@@ -18,8 +17,6 @@ import { ToastModule } from 'primeng/toast'
     AppSidebar,
     RouterModule,
     AppFooter,
-    AppConfigurator,
-    AppBreadcrumb,
     ToastModule,
   ],
   template: `
@@ -30,7 +27,6 @@ import { ToastModule } from 'primeng/toast'
       <div class="layout-content-wrapper">
         <div class="layout-content">
           <div class="layout-content-inner">
-            <nav app-breadcrumb></nav>
             <router-outlet></router-outlet>
             <div app-footer></div>
           </div>
@@ -38,13 +34,15 @@ import { ToastModule } from 'primeng/toast'
       </div>
       <div class="layout-mask"></div>
     </div>
-    <app-configurator />
   `,
 })
 export class AppLayout {
   layoutService = inject(LayoutService)
 
   constructor() {
+    // The company's look (preset, colors, menu type) for every user.
+    inject(BrandThemeService).init()
+
     effect(() => {
       const state = this.layoutService.layoutState()
       if (state.mobileMenuActive || state.overlayMenuActive) {

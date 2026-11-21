@@ -79,7 +79,7 @@ export default class PackagingComponent implements OnInit {
     private readonly messageService = inject(MessageService);
     private readonly tableState = inject(TableStateService);
     private readonly facilityScope = inject(FacilityScopeService);
-    private readonly STATE_KEY = 'binlogic:packaging';
+    private readonly STATE_KEY = 'logic:packaging';
 
     @ViewChild(BaseDataTable) private readonly baseTable!: BaseDataTable;
 

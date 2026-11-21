@@ -122,6 +122,18 @@ export interface AuthUserUpdateInput {
   user_img?: string
 }
 
+/** Create input — POST /v2/authuser (direct creation with email + password) */
+export interface AuthUserCreateInput {
+  email: string
+  username: string
+  password: string
+  role_id: number
+  facility_ids: string[]
+  is_active?: boolean
+  user_status?: string
+  full_name?: string
+}
+
 /** Invite payload sent to keyauth/users/invite */
 export interface InviteUsersDto {
   facility_ids: string[]

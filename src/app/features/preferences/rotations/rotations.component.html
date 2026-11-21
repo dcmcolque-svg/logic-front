@@ -6,11 +6,7 @@
     <div
       class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2"
     >
-      <div>
-        <h2 class="text-2xl font-bold m-0">
-          {{ 'pages.rotations' | translate }}
-        </h2>
-      </div>
+      <div></div>
       <div class="flex gap-2">
         <p-button
           [label]="'preferences.rotations.create' | translate"
@@ -48,6 +44,7 @@
         (stateChange)="onTableStateChange($event)"
         (selectionChange)="onSelectionChange($event)"
         (chipRemoved)="removeFilterChip($event)"
+        (clearAllFilters)="clearAllFilters()"
       >
         <!-- Toolbar slot -->
         <ng-template #toolbar>
@@ -166,7 +163,7 @@
           @for (col of columns; track col.field) {
             <th class="p-1">
               @if (col.field === 'company') {
-                <shipedge-filter-multiselect-panel
+                <nuvex-filter-multiselect-panel
                   [options]="companyFilterOptions"
                   optionLabel="label"
                   optionValue="value"
@@ -177,7 +174,7 @@
                   (clear)="onCompanyFilterChange([])"
                 />
               } @else if (col.field === 'facility_name') {
-                <shipedge-filter-multiselect-panel
+                <nuvex-filter-multiselect-panel
                   [options]="facilityFilterOptions"
                   optionLabel="label"
                   optionValue="value"
@@ -188,7 +185,7 @@
                   (clear)="onFacilityFilterChange([])"
                 />
               } @else if (col.field === 'zones') {
-                <shipedge-filter-multiselect-panel
+                <nuvex-filter-multiselect-panel
                   [options]="zoneFilterOptions"
                   optionLabel="label"
                   optionValue="value"
@@ -201,7 +198,7 @@
               } @else if (col.filterable) {
                 @switch (col.filterType) {
                   @case ('multiselect') {
-                    <shipedge-filter-multiselect-panel
+                    <nuvex-filter-multiselect-panel
                       [options]="col.filterOptions || []"
                       optionLabel="label"
                       optionValue="value"
@@ -212,7 +209,7 @@
                     />
                   }
                   @default {
-                    <shipedge-filter-text-input
+                    <nuvex-filter-text-input
                       [value]="getActiveFilterValue(col.field)"
                       [placeholder]="col.header | translate"
                       [filterType]="col.filterType"

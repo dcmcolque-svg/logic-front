@@ -1,3 +1,5 @@
+import { facilityDayFilters } from '@/app/shared/utils/time-zone.util'
+import { FacilityDatePipe } from '@/app/shared/pipes/facility-date.pipe'
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -13,7 +15,8 @@ import {
 } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { map } from 'rxjs'
-import { CommonModule, DatePipe } from '@angular/common'
+import { CommonModule } from '@angular/common'
+import { DisplayDatePipe } from '@/app/shared/pipes/display-date.pipe'
 import { Router } from '@angular/router'
 import { TranslateModule, TranslateService } from '@ngx-translate/core'
 import { ConfirmationService, MessageService, MenuItem } from 'primeng/api'
@@ -44,6 +47,7 @@ import {
 import { ShActionItem } from '../../../shared/types/api.types'
 import { toApiFilter, toListConfig } from './receivings-filter.util'
 import { ReceivingService } from './receivings.service'
+import { SupplierService } from '../suppliers/suppliers.service'
 import {
   ArchiveReceivingResult,
   FacilityItem,
@@ -94,6 +98,7 @@ const RECEIVING_STATUS_MAP: Record<
   selector: 'app-receivings',
   standalone: true,
   imports: [
+    FacilityDatePipe,
     CommonModule,
     FormsModule,
     TranslateModule,
@@ -107,7 +112,7 @@ const RECEIVING_STATUS_MAP: Record<
     ProgressBarModule,
     DateTimeSeparatePipe,
     CapitalizePipe,
-    DatePipe,
+    DisplayDatePipe,
     BaseDataTable,
     BaseStatusBadge,
     BaseImportExportMenu,
@@ -123,6 +128,24 @@ const RECEIVING_STATUS_MAP: Record<
   templateUrl: './receivings.component.html',
 })
 export class Receivings implements OnInit {
+  /** Expected date already passed while the goods have not arrived (still in transit). */
+  isOverdue(row: { expected_arrival?: string | null; status?: string | null }): boolean {
+    if (!row.expected_arrival || String(row.status ?? '').toLowerCase() !== 'in-transit') return false
+    const d = new Date(row.expected_arrival)
+    if (Number.isNaN(d.getTime())) return false
+    // expected_arrival is date-only: compare calendar days in UTC, like it is displayed
+    const now = new Date()
+    const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) < today
+  }
+
+  /** Received share of the expected quantity, 0–100. */
+  receivedPct(row: { qty_expected_sum?: number | null; qty_received_sum?: number | null }): number {
+    const expected = Number(row.qty_expected_sum ?? 0)
+    if (expected <= 0) return 0
+    return Math.min(100, Math.round((Number(row.qty_received_sum ?? 0) / expected) * 100))
+  }
+
   /** Global facility scope from the topbar selector. */
   private readonly facilityScope = inject(FacilityScopeService)
   private readonly svc               = inject(ReceivingService)
@@ -135,7 +158,7 @@ export class Receivings implements OnInit {
   private readonly tableState        = inject(TableStateService)
   private readonly filterPresetService = inject(FilterPresetService)
   private readonly destroyRef        = inject(DestroyRef)
-  private readonly STATE_KEY         = 'binlogic:receivings'
+  private readonly STATE_KEY         = 'logic:receivings'
   readonly PRESET_PAGE_KEY           = 'receivings'
 
   activePresetColor = signal<string | null>(null)
@@ -194,6 +217,12 @@ export class Receivings implements OnInit {
     for (const f of this.facilities()) map.set(f.id, f.name)
     return map
   })
+  // ── Supplier lookup (column filter + chips) ─────────────────────────────────
+  private readonly supplierSvc = inject(SupplierService)
+  /** Every supplier of the operator (active or not) — options of the supplier column filter. */
+  supplierFilterOptions = signal<Array<{ id: string; name: string }>>([])
+  private supplierMap = computed(() => new Map(this.supplierFilterOptions().map(s => [s.id, s.name])))
+
   /** Committed selected facility IDs for the multiselect panel */
   facilityFilter = signal<string[]>([])
 
@@ -203,6 +232,7 @@ export class Receivings implements OnInit {
   private readonly fieldLabelMap: Record<string, string> = {
     status:           'labels.status',
     facility_id:      'labels.facility',
+    supplier_id:      'labels.supplier',
     doc_number:       'labels.doc_number',
     doc_type:         'labels.doc_type',
     created_at:       'labels.created_at',
@@ -233,6 +263,8 @@ export class Receivings implements OnInit {
     },
     // API filter: facility_id (text) | API sort: facility_id
     { field: 'facility_id',     header: 'labels.facility',          width: '12rem', sortable: true, filterable: true, filterType: 'text', template: 'facility', exportValue: (row: ReceivingListItem) => this.facilityName(row.facility_id) },
+    // API filter: supplier_id (multiselect "in") | not sortable (the API sorts by uuid)
+    { field: 'supplier_id',     header: 'labels.supplier',          width: '14rem', sortable: false, filterable: true, filterType: 'multiselect', template: 'supplier', exportValue: (row: ReceivingListItem) => row.supplier_name ?? '' },
     // API filter: doc_number (text) | API sort: doc_number
     { field: 'doc_number',      header: 'labels.doc_number',        width: '14rem', sortable: true, filterable: true, filterType: 'text', template: 'doc_number' },
     // tracking / expected arrival / delivery / qty
@@ -428,6 +460,23 @@ export class Receivings implements OnInit {
       this.buildFilterChips(this.activeRawFilters)
     }
     this.filterPresetService.loadPresets(this.PRESET_PAGE_KEY)
+    this.loadSupplierOptions()
+  }
+
+  /** Suppliers for the column filter. A user without access to suppliers just gets no options. */
+  private loadSupplierOptions(): void {
+    this.supplierSvc
+      .list({ filter: {}, config: { page: 1, rows: 200, sort_field: [{ field: 'name', order: 1 }] } })
+      .subscribe({
+        next: res => {
+          const many = new Set((res.data ?? []).map(s => s.company_id)).size > 1
+          this.supplierFilterOptions.set(
+            (res.data ?? []).map(s => ({ id: s.id, name: many && s.company_name ? `${s.name} · ${s.company_name}` : s.name }))
+          )
+          this.buildFilterChips(this.activeRawFilters)
+        },
+        error: () => this.supplierFilterOptions.set([]),
+      })
   }
 
   private saveState(): void {
@@ -450,7 +499,7 @@ export class Receivings implements OnInit {
     this.svc
       .listReceivings({
         ...this.dto(),
-        filter: scopeApiFilter(this.dto().filter ?? {}, this.facilityScope.apiValue(), { scopeField: FACILITY_SCOPE_FIELD }),
+        filter: scopeApiFilter(facilityDayFilters(this.dto().filter ?? {}), this.facilityScope.apiValue(), { scopeField: FACILITY_SCOPE_FIELD }),
       })
       .subscribe({
       next: (resp: ReceivingListResponse) => {
@@ -665,6 +714,10 @@ export class Receivings implements OnInit {
           // Resolve UUIDs to facility names — falls back to first-8 chars if not yet loaded
           displayValue = (raw as string[])
             .map(id => this.facilityMap().get(id) ?? id.substring(0, 8))
+            .join(', ')
+        } else if (field === 'supplier_id') {
+          displayValue = (raw as string[])
+            .map(id => this.supplierMap().get(id) ?? id.substring(0, 8))
             .join(', ')
         } else {
           const colDef = this.columnDefs.find(c => c.field === field)

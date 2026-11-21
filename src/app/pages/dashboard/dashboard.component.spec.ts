@@ -13,8 +13,10 @@ import { AuthService } from '@/app/core/services/auth.service'
 import { FacilityScopeService } from '@/app/core/services/facility-scope.service'
 import { NO_FACILITY_ID, ScopeFacility } from '@/app/core/types/facility.types'
 import { ParcelService } from '@/app/features/parcels/parcel.service'
-import { ParcelDashboardSummary } from '@/app/features/parcels/types/parcel.types'
-import { DashboardComponent } from './dashboard.component'
+import { OrderDashboardSummary } from '@/app/features/parcels/types/parcel.types'
+import { SalesService } from '@/app/features/sales/sales.service'
+import { SalesDashboardSummary } from '@/app/features/sales/sales.types'
+import { DashboardComponent, daysBetween, deltaOf } from './dashboard.component'
 
 /**
  * Covers how the dashboard follows the global facility scope. The facility
@@ -30,10 +32,31 @@ const ALL = [MIAMI, DALLAS, LA]
 
 const MY_FACILITIES_URL = environment.URL_API + 'v2/facility/my'
 
-const SUMMARY: ParcelDashboardSummary = {
-  shipped: { total: 7, deliveries: 5, customer_pickups: 2 },
-  ship_prepared: { total: 3, ready: 2, missing_data: 1 },
+const ORDER_SUMMARY: OrderDashboardSummary = {
+  orders_shipped: { orders_shipped: 7, total_revenue: 70 },
+  alerts: { back_orders: 1, low_inventory: 2 },
 }
+
+const SALES_SUMMARY: SalesDashboardSummary = {
+  currencies: [{ currency: 'BOB', sales: 2, total: 150, units: 3, avg_ticket: 75, prev_sales: 1, prev_total: 80 }],
+  open_registers: 1,
+  daily: [{ day: '2026-11-18', currency: 'BOB', sales: 2, total: 150 }],
+}
+
+describe('dashboard helpers', () => {
+  it('deltaOf: percent change, "new" without a base, null without a previous period', () => {
+    expect(deltaOf(150, 80)).toEqual({ pct: 88, dir: 'up' })
+    expect(deltaOf(40, 80)).toEqual({ pct: -50, dir: 'down' })
+    expect(deltaOf(5, 5)).toEqual({ pct: 0, dir: 'flat' })
+    expect(deltaOf(10, 0)).toEqual({ pct: null, dir: 'up' })
+    expect(deltaOf(10, undefined)).toBeNull()
+  })
+
+  it('daysBetween: every day, both ends included, across months', () => {
+    expect(daysBetween('2026-10-30', '2026-11-02')).toEqual(['2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02'])
+    expect(daysBetween('2026-11-19', '2026-11-19')).toEqual(['2026-11-19'])
+  })
+})
 
 describe('DashboardComponent — global facility scope', () => {
   let fixture: ComponentFixture<DashboardComponent>
@@ -41,8 +64,13 @@ describe('DashboardComponent — global facility scope', () => {
   let scope: FacilityScopeService
   let http: HttpTestingController
   let parcels: jasmine.SpyObj<ParcelService>
+  let sales: jasmine.SpyObj<SalesService>
+  let activities: { activity: string }[]
 
   beforeEach(() => {
+    activities = []
+    sales = jasmine.createSpyObj<SalesService>('SalesService', ['getDashboardSummary'])
+    sales.getDashboardSummary.and.returnValue(of(SALES_SUMMARY))
     localStorage.clear()
     sessionStorage.clear()
     parcels = jasmine.createSpyObj<ParcelService>('ParcelService', [
@@ -52,8 +80,7 @@ describe('DashboardComponent — global facility scope', () => {
       'getLocationDashboardSummary',
       'getBestSellingItems',
     ])
-    parcels.getDashboardSummary.and.returnValue(of(SUMMARY))
-    parcels.getOrderDashboardSummary.and.returnValue(EMPTY)
+    parcels.getOrderDashboardSummary.and.returnValue(of(ORDER_SUMMARY))
     parcels.getInventoryDashboardSummary.and.returnValue(EMPTY)
     parcels.getLocationDashboardSummary.and.returnValue(EMPTY)
     parcels.getBestSellingItems.and.returnValue(of([]))
@@ -66,8 +93,16 @@ describe('DashboardComponent — global facility scope', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         provideTranslateService(),
-        { provide: AuthService, useValue: { authInfo: signal({ uid: 'u-1' }) } },
+        {
+          provide: AuthService,
+          useValue: {
+            authInfo: signal({ uid: 'u-1' }),
+            getAuthUserInfo: () => ({ user_name: 'Ana' }),
+            getActivities: () => activities,
+          },
+        },
         { provide: ParcelService, useValue: parcels },
+        { provide: SalesService, useValue: sales },
       ],
     })
     scope = TestBed.inject(FacilityScopeService)
@@ -101,10 +136,22 @@ describe('DashboardComponent — global facility scope', () => {
   }
 
   const requestedFacilities = () =>
-    parcels.getDashboardSummary.calls.mostRecent().args[0]?.facilityIds
+    parcels.getOrderDashboardSummary.calls.mostRecent().args[0]?.facilityIds
 
   const emptyState = () =>
     (fixture.nativeElement as HTMLElement).querySelector('#dashboard-no-facility')
+
+  describe('parcel panels (Paquetes Entregados / Paquetes en Red)', () => {
+    it('are disabled: the parcel summary is never requested', async () => {
+      await create()
+
+      expect(parcels.getDashboardSummary).not.toHaveBeenCalled()
+      expect(component.loading()).toBeFalse()
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('#card-shipped-delivery'),
+      ).toBeNull()
+    })
+  })
 
   describe('only "No facility" in the topbar', () => {
     it('requests nothing and says why instead of showing every facility', async () => {
@@ -128,16 +175,16 @@ describe('DashboardComponent — global facility scope', () => {
     })
 
     it('stops on the way in, dropping a reply still in flight', async () => {
-      const pending = new Subject<ParcelDashboardSummary>()
-      parcels.getDashboardSummary.and.returnValue(pending)
+      const pending = new Subject<OrderDashboardSummary>()
+      parcels.getOrderDashboardSummary.and.returnValue(pending)
       await create()
       expect(component.loading()).toBeTrue()
 
       await moveScope([NO_FACILITY_ID])
-      pending.next(SUMMARY)
+      pending.next(ORDER_SUMMARY)
 
       expect(component.loading()).toBeFalse()
-      expect(component.summary().shipped.total).toBe(0)
+      expect(component.ordersShipped.orders_shipped).toBe(0)
       expect(emptyState()).not.toBeNull()
     })
 
@@ -157,7 +204,7 @@ describe('DashboardComponent — global facility scope', () => {
     it('is not the case once "All" is the scope', async () => {
       await create()
       expect(component.noFacilityOnly()).toBeFalse()
-      expect(parcels.getDashboardSummary).toHaveBeenCalledTimes(1)
+      expect(parcels.getOrderDashboardSummary).toHaveBeenCalledTimes(1)
       expect(requestedFacilities()).toBeUndefined()
     })
   })
@@ -223,12 +270,12 @@ describe('DashboardComponent — global facility scope', () => {
       fixture.detectChanges()
 
       // Without the list there are no ids to send, and sending none means everything.
-      expect(parcels.getDashboardSummary).not.toHaveBeenCalled()
+      expect(parcels.getOrderDashboardSummary).not.toHaveBeenCalled()
 
       http.expectOne(MY_FACILITIES_URL).flush({ data: ALL })
       await settle()
 
-      expect(parcels.getDashboardSummary).toHaveBeenCalledTimes(1)
+      expect(parcels.getOrderDashboardSummary).toHaveBeenCalledTimes(1)
       expect(requestedFacilities()).toEqual(['f1', 'f3'])
     })
 
@@ -240,6 +287,31 @@ describe('DashboardComponent — global facility scope', () => {
       component.loadSummary()
 
       expect(requestedFacilities()).toEqual(['f3'])
+    })
+  })
+
+  describe('POS sales', () => {
+    it('are not requested without a sales activity', async () => {
+      await create()
+
+      expect(component.canSeeSales).toBeFalse()
+      expect(sales.getDashboardSummary).not.toHaveBeenCalled()
+      expect(component.loadingSales()).toBeFalse()
+    })
+
+    it('are requested for the same facilities and days as the orders', async () => {
+      activities = [{ activity: 'Point of Sale' }]
+      await create()
+
+      expect(component.canSeeSales).toBeTrue()
+      const salesArgs = sales.getDashboardSummary.calls.mostRecent().args[0]
+      const orderArgs = parcels.getOrderDashboardSummary.calls.mostRecent().args[0]
+      expect(salesArgs).toEqual(orderArgs!)
+      expect(component.salesSummary()).toEqual(SALES_SUMMARY)
+      // the chart offers the currency with sales first, then orders
+      expect(component.chartMetricOptions().map((o) => o.value)).toEqual(['sales:BOB', 'orders'])
+      expect(component.activeMetric()).toBe('sales:BOB')
+      expect(component.periodDays().length).toBe(7)
     })
   })
 })

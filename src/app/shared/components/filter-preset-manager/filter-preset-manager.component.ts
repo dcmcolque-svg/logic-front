@@ -27,7 +27,7 @@ import { ConfirmPopup } from 'primeng/confirmpopup'
 import { BadgeModule } from 'primeng/badge'
 import { ConfirmationService } from 'primeng/api'
 
-import { FilterPresetService } from '@/app/shared/services/filter-preset.service'
+import { FILTER_PRESETS_ENABLED, FilterPresetService } from '@/app/shared/services/filter-preset.service'
 import { FilterPreset, FilterCondition } from '@/app/shared/types/filter-preset.types'
 import { ShColumnDef, ShSortConfig } from '@/app/shared/types/table.types'
 
@@ -149,6 +149,9 @@ const DAY_MS = 86_400_000
   styleUrl: './filter-preset-manager.component.scss',
 })
 export class FilterPresetManagerComponent implements OnInit {
+  /** Whole bar hidden while saved filters are off. */
+  readonly presetsEnabled = inject(FILTER_PRESETS_ENABLED)
+
   /** Per-instance counter so label/control ids stay unique when several managers render */
   private static nextInstanceId = 0
 

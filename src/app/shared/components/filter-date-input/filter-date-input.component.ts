@@ -15,6 +15,7 @@ import { DatePickerModule } from 'primeng/datepicker'
 import { MenuModule } from 'primeng/menu'
 import { MenuItem } from 'primeng/api'
 import { filterConfigMatchModes } from '@/app/shared/config/filter-column.config'
+import { DATEPICKER_FORMAT } from '@/app/shared/utils/display-format'
 
 /**
  * FilterDateInputComponent — Generic date filter with match mode menu.
@@ -24,7 +25,7 @@ import { filterConfigMatchModes } from '@/app/shared/config/filter-column.config
  *
  * @example
  * ```html
- * <shipedge-filter-date-input
+ * <nuvex-filter-date-input
  *   [value]="getActiveFilterValue('created_at')"
  *   [placeholder]="'labels.created_at' | translate"
  *   (applyWithMode)="onColumnFilterChange('created_at', $event)"
@@ -32,7 +33,7 @@ import { filterConfigMatchModes } from '@/app/shared/config/filter-column.config
  * ```
  */
 @Component({
-  selector: 'shipedge-filter-date-input',
+  selector: 'nuvex-filter-date-input',
   standalone: true,
   imports: [
     CommonModule,
@@ -64,7 +65,7 @@ export class FilterDateInputComponent {
   placeholder = input<string>('')
 
   /** Date format string for p-datepicker. Default: 'yy-mm-dd'. */
-  dateFormat = input<string>('yy-mm-dd')
+  dateFormat = input<string>(DATEPICKER_FORMAT)
 
   /** Whether to show the clear button. Default: true. */
   showClear = input<boolean>(true)

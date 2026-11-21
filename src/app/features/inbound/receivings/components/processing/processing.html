@@ -2,22 +2,19 @@
 <p-confirmDialog appendTo="body" [style]="{ width: '32rem' }" />
 
 <!-- ──────── Header ──────── -->
-<div class="flex flex-wrap justify-between items-start gap-3 mb-4">
-  <div class="flex items-center gap-2">
-    <p-button icon="pi pi-angle-left" [text]="true" (onClick)="back()" />
+<div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+  <div class="flex items-center gap-3">
+    <p-button icon="pi pi-arrow-left" [label]="'buttons.back' | translate" severity="secondary" [outlined]="true" size="small" (onClick)="back()" />
     <div>
-      <h5 class="text-2xl font-semibold m-0 flex items-center gap-3">
-        <span>
-          {{ 'inbound.receive_title' | translate }}:
-          <span class="text-primary">{{ receiving()?.doc_number || id }}</span>
-        </span>
+      <p class="text-surface-500 text-sm m-0 flex flex-wrap items-center gap-x-1 gap-y-1">
         @if (status(); as s) {
-          <base-status-badge [value]="s" [statusMap]="statusMap" />
+          <base-status-badge class="mr-2" [value]="s" [statusMap]="statusMap" />
         }
-      </h5>
-      <p class="text-surface-400 text-sm m-0 mt-1">
         @if (facilityName()) {
           <i class="pi pi-building mr-1"></i>{{ facilityName() }} ·
+        }
+        @if (receiving()?.supplier_name; as supplier) {
+          <i class="pi pi-truck mr-1"></i>{{ supplier }} ·
         }
         {{ 'inbound.receive_description' | translate }}
       </p>
@@ -121,19 +118,51 @@
           {{ 'labels.container' | translate }}
           <span class="text-surface-400 font-normal">({{ 'labels.optional' | translate }})</span>
         </label>
-        <input
-          id="rcv-container"
-          pInputText
-          class="w-full"
+        <p-autocomplete
+          inputId="rcv-container"
           [ngModel]="container()"
           (ngModelChange)="onContainerChange($event)"
+          (onSelect)="onContainerSelect($event)"
+          (completeMethod)="searchContainers($event)"
+          [suggestions]="containerSuggestions()"
+          optionLabel="lpn_code"
+          [dropdown]="true"
+          [forceSelection]="false"
+          [minLength]="0"
           [disabled]="!canReceive()"
           [placeholder]="'inbound.container_placeholder' | translate"
+          appendTo="body"
+          styleClass="w-full"
+          inputStyleClass="w-full"
           [class.ng-invalid]="!!containerError()"
           [class.ng-dirty]="!!containerError()"
-        />
+        >
+          <ng-template let-c #item>
+            <div class="flex flex-col" [style.padding-left.rem]="c.depth * 1">
+              <span class="font-medium font-mono">{{ c.lpn_code }}</span>
+              <small class="text-surface-500">
+                {{ c.type }} ·
+                @if (c.container_profile_code) { {{ c.container_profile_code }} · }
+                {{ c.content_skus ?? 0 }} SKU / {{ c.content_units ?? 0 | number }} u
+              </small>
+            </div>
+          </ng-template>
+          <ng-template #empty>
+            <span class="text-surface-500 text-sm">
+              {{ (locationContainers().length || containersLoading() ? 'inbound.container_no_match' : 'inbound.container_none') | translate }}
+            </span>
+          </ng-template>
+        </p-autocomplete>
         @if (containerError()) {
           <small class="text-red-500 text-xs mt-1">{{ containerError() }}</small>
+        } @else if (!locationContainers().length && !containersLoading()) {
+          <small class="text-surface-400 text-xs mt-1">{{ 'inbound.container_hint' | translate }}</small>
+        } @else if (containersLoading()) {
+          <small class="text-surface-400 text-xs mt-1">{{ 'labels.loading' | translate }}</small>
+        } @else {
+          <small class="text-surface-400 text-xs mt-1">
+            {{ 'inbound.container_count' | translate: { count: locationContainers().length } }}
+          </small>
         }
       </div>
 
@@ -166,6 +195,25 @@
   <div class="card">
     <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
       <h4 class="m-0 text-base font-semibold">{{ 'labels.items' | translate }}</h4>
+      <!-- Scanner: barcode or SKU + Enter adds 1 to that line -->
+      <div class="flex flex-col w-full sm:w-80 order-last sm:order-none">
+        <p-iconfield>
+          <p-inputicon styleClass="pi pi-barcode" />
+          <input
+            #scanInput
+            pInputText
+            type="search"
+            autocomplete="off"
+            class="w-full"
+            [(ngModel)]="scanCode"
+            (keydown.enter)="onScan(); $event.preventDefault()"
+            [disabled]="!canReceive()"
+            [placeholder]="'inbound.scan_placeholder' | translate"
+            [attr.aria-label]="'inbound.scan_placeholder' | translate"
+          />
+        </p-iconfield>
+        <small class="text-surface-400 text-xs mt-1">{{ 'inbound.scan_hint' | translate }}</small>
+      </div>
       <div class="flex flex-wrap gap-2">
         @if (completedCount() > 0) {
           <p-button
@@ -198,7 +246,90 @@
       </div>
     </div>
 
-    <div class="overflow-x-auto">
+    <!-- Phones / handhelds: one card per line -->
+    <div class="md:hidden flex flex-col divide-y divide-surface-200 dark:divide-surface-700">
+      @for (line of visibleLines(); track line.id) {
+        <div
+          class="py-3 flex flex-col gap-2 transition-colors duration-500"
+          [attr.data-line-id]="line.id"
+          [class.opacity-60]="line.qty_pending <= 0 && line.qty_to_receive === 0"
+          [ngClass]="{ 'bg-green-50 dark:bg-green-900/20': scannedLineId() === line.id }"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <div class="font-mono font-semibold">{{ line.sku_code }}</div>
+              <div class="text-xs text-surface-500 truncate">{{ line.description || line.product_description || '—' }}</div>
+              @if (line.barcode) {
+                <div class="text-xs text-surface-400"><i class="pi pi-qrcode mr-1"></i>{{ line.barcode }}</div>
+              }
+            </div>
+            <base-status-badge [value]="line.status" [statusMap]="lineStatusMap" />
+          </div>
+          <div class="flex justify-between text-xs text-surface-500">
+            <span>{{ 'labels.expected' | translate }} {{ line.qty_expected | number }}</span>
+            <span>{{ 'labels.received' | translate }} {{ line.qty_received | number }}</span>
+            <span class="font-semibold text-surface-700 dark:text-surface-200">{{ 'labels.pending' | translate }} {{ line.qty_pending | number }}</span>
+          </div>
+          <p-progressBar [value]="lineProgress(line)" [showValue]="false" [style]="{ height: '3px' }" />
+          <div class="grid grid-cols-2 gap-2">
+            <div class="flex flex-col gap-1 col-span-2">
+              <small class="text-surface-500">{{ 'inbound.qty_to_receive' | translate }}</small>
+              <p-inputnumber
+                [ngModel]="line.qty_to_receive"
+                (ngModelChange)="updateLine(line.id, { qty_to_receive: $event ?? 0 })"
+                [min]="0" [max]="maxQty" [showButtons]="true" buttonLayout="horizontal"
+                incrementButtonIcon="pi pi-plus" decrementButtonIcon="pi pi-minus"
+                inputStyleClass="w-full text-center" styleClass="w-full"
+                [disabled]="!canReceive() || requiresSerials(line)"
+              />
+              @if (isOver(line)) {
+                <small class="text-orange-500 text-xs"><i class="pi pi-exclamation-triangle mr-1"></i>{{ 'inbound.over_pending' | translate }}</small>
+              }
+            </div>
+            @if (showCost()) {
+              <div class="flex flex-col gap-1 col-span-2">
+                <small class="text-surface-500">{{ 'inbound.unit_cost' | translate }}</small>
+                <p-inputnumber
+                  [ngModel]="line.receive_cost" (ngModelChange)="updateLine(line.id, { receive_cost: $event })"
+                  [min]="0" [minFractionDigits]="0" [maxFractionDigits]="6" [prefix]="costPrefix() + ' '"
+                  inputStyleClass="w-full" styleClass="w-full"
+                  [disabled]="!canReceive() || line.qty_to_receive === 0"
+                />
+              </div>
+            }
+            <div class="flex flex-col gap-1">
+              <small class="text-surface-500">{{ 'labels.lot' | translate }}</small>
+              <input pInputText class="w-full p-inputtext-sm" [ngModel]="line.batch_lot"
+                (ngModelChange)="updateLine(line.id, { batch_lot: $event })"
+                [disabled]="!canReceive() || line.qty_to_receive === 0" [placeholder]="'labels.lot' | translate" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <small class="text-surface-500">{{ 'inbound.expiry_date' | translate }}</small>
+              <p-datepicker [ngModel]="line.expiry" (ngModelChange)="updateLine(line.id, { expiry: $event })"
+                [showButtonBar]="true" appendTo="body" size="small" inputStyleClass="w-full" styleClass="w-full"
+                [disabled]="!canReceive() || line.qty_to_receive === 0" />
+              <ng-container *ngTemplateOutlet="expiryNote; context: { $implicit: line.expiry }" />
+            </div>
+          </div>
+          @if (requiresSerials(line)) {
+            <p-button [label]="('inbound.serials' | translate) + ': ' + line.serials.length" icon="pi pi-list" size="small"
+              [outlined]="true" styleClass="w-full"
+              [severity]="submitted() && line.serials.length !== line.qty_to_receive ? 'danger' : 'secondary'"
+              [disabled]="!canReceive()" (onClick)="openSerials(line)" />
+          }
+          @if (line.error) {
+            <small class="text-red-500 text-xs">{{ line.error }}</small>
+          }
+        </div>
+      } @empty {
+        <div class="p-6 text-center text-surface-400">
+          <i class="pi pi-check-circle text-3xl text-green-400 block mb-2"></i>
+          {{ 'labels.all_lines_processed' | translate }}
+        </div>
+      }
+    </div>
+
+    <div class="hidden md:block overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="bg-surface-50 dark:bg-surface-800">
           <tr class="text-left">
@@ -208,6 +339,16 @@
             <th class="p-2 text-right w-20">{{ 'labels.received' | translate }}</th>
             <th class="p-2 text-right w-20">{{ 'labels.pending' | translate }}</th>
             <th class="p-2 w-44">{{ 'inbound.qty_to_receive' | translate }}</th>
+            @if (showCost()) {
+              <th class="p-2 w-44">
+                {{ 'inbound.unit_cost' | translate }}
+                <i
+                  class="pi pi-info-circle text-surface-400 cursor-help ml-1"
+                  [pTooltip]="'inbound.receive_cost_hint' | translate"
+                  tooltipPosition="top"
+                ></i>
+              </th>
+            }
             <th class="p-2 w-40">{{ 'labels.lot' | translate }}</th>
             <th class="p-2 w-44">{{ 'inbound.expiry_date' | translate }}</th>
             <th class="p-2 w-32">{{ 'inbound.serials' | translate }}</th>
@@ -216,8 +357,10 @@
         <tbody>
           @for (line of visibleLines(); track line.id) {
             <tr
-              class="border-t border-surface-200 dark:border-surface-700 align-top"
+              class="border-t border-surface-200 dark:border-surface-700 align-top transition-colors duration-500"
+              [attr.data-line-id]="line.id"
               [class.opacity-60]="line.qty_pending <= 0 && line.qty_to_receive === 0"
+              [ngClass]="{ 'bg-green-50 dark:bg-green-900/20': scannedLineId() === line.id }"
             >
               <td class="p-2">
                 <div class="font-mono font-semibold">{{ line.sku_code }}</div>
@@ -256,6 +399,28 @@
                   </small>
                 }
               </td>
+              @if (showCost()) {
+                <td class="p-2">
+                  <p-inputnumber
+                    [ngModel]="line.receive_cost"
+                    (ngModelChange)="updateLine(line.id, { receive_cost: $event })"
+                    [min]="0"
+                    [minFractionDigits]="0"
+                    [maxFractionDigits]="6"
+                    [prefix]="costPrefix() + ' '"
+                    size="small"
+                    inputStyleClass="w-28"
+                    [disabled]="!canReceive() || line.qty_to_receive === 0"
+                  />
+                  @let pct = variancePct(line);
+                  @if (pct !== null && pct !== 0) {
+                    <small class="block mt-1" [class.text-red-500]="pct > 0" [class.text-green-600]="pct < 0">
+                      {{ pct > 0 ? '▲' : '▼' }} {{ (pct > 0 ? pct : -pct) | number: '1.0-1' }}%
+                      {{ 'inbound.vs_catalog' | translate }}
+                    </small>
+                  }
+                </td>
+              }
               <td class="p-2">
                 <input
                   pInputText
@@ -270,7 +435,6 @@
                 <p-datepicker
                   [ngModel]="line.expiry"
                   (ngModelChange)="updateLine(line.id, { expiry: $event })"
-                  dateFormat="yy-mm-dd"
                   [showButtonBar]="true"
                   [showIcon]="true"
                   appendTo="body"
@@ -278,6 +442,7 @@
                   inputStyleClass="w-28"
                   [disabled]="!canReceive() || line.qty_to_receive === 0"
                 />
+                <ng-container *ngTemplateOutlet="expiryNote; context: { $implicit: line.expiry }" />
               </td>
               <td class="p-2">
                 @if (requiresSerials(line)) {
@@ -298,7 +463,7 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="9" class="p-6 text-center text-surface-400">
+              <td [attr.colspan]="showCost() ? 10 : 9" class="p-6 text-center text-surface-400">
                 <i class="pi pi-check-circle text-3xl text-green-400 block mb-2"></i>
                 {{ 'labels.all_lines_processed' | translate }}
               </td>
@@ -318,8 +483,8 @@
     }
   </div>
 
-  <!-- ──────── Footer ──────── -->
-  <div class="card mt-3">
+  <!-- ──────── Footer (stays in reach on long receivings) ──────── -->
+  <div class="card mt-3 !mb-0 sticky bottom-0 z-10 shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
     <div class="flex flex-wrap justify-between items-center gap-3">
       <div class="flex flex-wrap gap-5 text-sm">
         <div>
@@ -334,7 +499,7 @@
           <div>
             <span class="text-surface-400 mr-1">{{ 'labels.location' | translate }}:</span>
             <strong class="font-mono">{{ locationCode() }}</strong>
-            @if (container()) { <span class="text-surface-400"> / {{ container() }}</span> }
+            @if (containerCode()) { <span class="text-surface-400"> / {{ containerCode() }}</span> }
           </div>
         }
       </div>
@@ -351,15 +516,14 @@
 }
 
 <!-- ──────── Serials dialog ──────── -->
-<p-dialog
+<base-dialog
   [visible]="!!serialsLineId()"
-  (visibleChange)="!$event && closeSerials()"
-  [modal]="true"
-  [draggable]="false"
-  [style]="{ width: '30rem' }"
-  [breakpoints]="{ '768px': '100vw' }"
-  [header]="('inbound.serials' | translate) + ': ' + (serialsLine()?.sku_code ?? '')"
-  appendTo="body"
+  header="inbound.serials"
+  [subHeader]="serialsLine()?.sku_code ?? ''"
+  size="sm"
+  saveLabel="buttons.apply"
+  (save)="saveSerials()"
+  (hide)="closeSerials()"
 >
   <p class="text-sm text-surface-500 mt-0">{{ 'inbound.serials_hint' | translate }}</p>
   <textarea
@@ -382,10 +546,18 @@
       </span>
     }
   </div>
-  <ng-template #footer>
-    <div class="flex justify-end gap-2">
-      <p-button [label]="'buttons.cancel' | translate" severity="secondary" [outlined]="true" (onClick)="closeSerials()" />
-      <p-button [label]="'buttons.apply' | translate" icon="pi pi-check" (onClick)="saveSerials()" />
-    </div>
-  </ng-template>
-</p-dialog>
+</base-dialog>
+
+<!-- Expiry note under a picked date: expired (red) / expiring soon (orange) -->
+<ng-template #expiryNote let-expiry>
+  @let days = expiryDays(expiry);
+  @if (days !== null && days < 0) {
+    <small class="block mt-1 text-xs font-semibold text-red-600 dark:text-red-400">
+      <i class="pi pi-exclamation-circle mr-1"></i>{{ 'inbound.expired' | translate }}
+    </small>
+  } @else if (days !== null && days <= EXPIRY_WARN_DAYS) {
+    <small class="block mt-1 text-xs text-orange-600 dark:text-orange-400">
+      <i class="pi pi-clock mr-1"></i>{{ 'inbound.expires_soon' | translate: { days: days } }}
+    </small>
+  }
+</ng-template>

@@ -1,3 +1,5 @@
+import { FacilityScopeService } from '@/app/core/services/facility-scope.service'
+import { formatInZone } from '@/app/shared/utils/time-zone.util'
 import {
   Component,
   computed,
@@ -59,6 +61,7 @@ export class ParcelDetailDialogComponent {
   hide = output<void>()
 
   private readonly svc = inject(ParcelService)
+  private readonly facilityScope = inject(FacilityScopeService)
 
   /** Enriched packages/items from the v2 items endpoint */
   parcelItems = signal<ParcelItemsResponse | null>(null)
@@ -97,28 +100,21 @@ export class ParcelDetailDialogComponent {
     return id ? id.substring(0, 8).toUpperCase() : '—'
   }
 
-  formatDate(dateStr: string | undefined | null): string {
-    if (!dateStr) return '—'
-    try {
-      const d = new Date(dateStr)
-      return d.toISOString().split('T')[0] // YYYY-MM-DD
-    } catch {
-      return dateStr
-    }
+  /** The parcel's facility zone (default zone for parcels without one). */
+  private zone(): string {
+    return this.facilityScope.zoneOf(this.parcel()?.operator?.facility_id ?? null)
   }
 
+  /** yyyy-MM-dd of an instant in the parcel's facility zone. */
+  formatDate(dateStr: string | undefined | null): string {
+    if (!dateStr) return '—'
+    return formatInZone(dateStr, 'date', this.zone()) || dateStr
+  }
+
+  /** HH:mm of an instant in the parcel's facility zone. */
   formatTime(dateStr: string | undefined | null): string {
     if (!dateStr) return ''
-    try {
-      const d = new Date(dateStr)
-      return d.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      })
-    } catch {
-      return ''
-    }
+    return formatInZone(dateStr, 'time', this.zone())
   }
 
   handleMissingImage(event: Event) {

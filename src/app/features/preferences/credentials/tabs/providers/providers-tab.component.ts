@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from '@angular/core'
 import { CommonModule } from '@angular/common'
+import { DisplayDatePipe } from '@/app/shared/pipes/display-date.pipe'
 import { FormsModule } from '@angular/forms'
 import { TranslateModule, TranslateService } from '@ngx-translate/core'
 import { ButtonModule } from 'primeng/button'
@@ -44,6 +45,7 @@ interface ProviderCard {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
+    DisplayDatePipe,
     FormsModule,
     TranslateModule,
     ButtonModule,
@@ -89,7 +91,7 @@ interface ProviderCard {
               </span>
               @if (card.data?.updated_at) {
                 <span class="provider-card__date">
-                  {{ 'preferences.providers.updated' | translate }} {{ card.data?.updated_at | date: 'mediumDate' }}
+                  {{ 'preferences.providers.updated' | translate }} {{ card.data?.updated_at | displayDate: 'date' }}
                 </span>
               }
             } @else {

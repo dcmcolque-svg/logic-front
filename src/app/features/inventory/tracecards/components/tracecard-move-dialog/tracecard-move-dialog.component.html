@@ -1,0 +1,171 @@
+<base-dialog
+  [visible]="visible()"
+  header="tracecard_ops.move_title"
+  [subHeader]="item()?.tracecard ?? ''"
+  size="sm"
+  [loading]="saving()"
+  saveLabel="tracecard_ops.move_action"
+  saveIcon="pi pi-arrow-right-arrow-left"
+  [saveDisabled]="!canSave()"
+  (save)="save()"
+  (hide)="hide.emit()"
+>
+  @if (item(); as it) {
+    <div class="flex flex-col gap-4">
+      <!-- Source -->
+      <div class="rounded-border border border-surface-200 dark:border-surface-700 p-3 text-sm flex flex-col gap-1">
+        <div class="font-semibold">{{ it.sku }} <span class="font-normal text-surface-500">— {{ it.description }}</span></div>
+        <div class="flex flex-wrap gap-x-4 gap-y-1 text-surface-600 dark:text-surface-300">
+          <span>{{ 'labels.from_location' | translate }}: <b class="font-mono">{{ it.location_code || '—' }}</b></span>
+          @if (it.container_lpn) {
+            <span>{{ 'labels.container' | translate }}: <b class="font-mono">{{ it.container_lpn }}</b></span>
+          }
+        </div>
+        <div class="flex flex-wrap gap-x-4 gap-y-1 text-surface-600 dark:text-surface-300">
+          <span>{{ 'labels.qty_on_hand' | translate }}: <b>{{ it.qty_on_hand | number: '1.0-4' }}</b></span>
+          @if (it.qty_reserved > 0) {
+            <span>{{ 'labels.qty_processing' | translate }}: <b>{{ it.qty_reserved | number: '1.0-4' }}</b></span>
+          }
+          <span>{{ 'tracecard_ops.movable' | translate }}: <b class="text-primary">{{ available() | number: '1.0-4' }}</b></span>
+        </div>
+      </div>
+
+      @if (available() <= 0) {
+        <p-message severity="warn" [text]="'tracecard_ops.nothing_to_move' | translate" />
+      }
+
+      <!-- Quantity -->
+      <div class="flex flex-col">
+        <label for="mv-qty" class="block font-semibold mb-1 text-sm">{{ 'labels.qty' | translate }}</label>
+        <p-inputNumber
+          inputId="mv-qty"
+          [ngModel]="qty()"
+          (ngModelChange)="qty.set($event); qtyError.set(null)"
+          [min]="0"
+          [max]="available()"
+          [maxFractionDigits]="4"
+          [showButtons]="true"
+          [disabled]="available() <= 0"
+          styleClass="w-full"
+          inputStyleClass="w-full"
+          [class.ng-invalid]="!!qtyError()"
+          [class.ng-dirty]="!!qtyError()"
+        />
+        @if (qtyError()) {
+          <small class="text-red-500 text-xs mt-1">{{ qtyError() }}</small>
+        } @else if (qty() && available() > 0) {
+          <small class="text-surface-400 text-xs mt-1">
+            {{ 'tracecard_ops.remaining_after' | translate: { qty: (it.qty_on_hand - (qty() ?? 0) | number: '1.0-4') } }}
+          </small>
+        }
+      </div>
+
+      <!-- Target location -->
+      <div class="flex flex-col">
+        <label for="mv-location" class="block font-semibold mb-1 text-sm">{{ 'labels.to_location' | translate }}</label>
+        <p-autocomplete
+          inputId="mv-location"
+          [ngModel]="destination()"
+          (ngModelChange)="onLocationChange($event)"
+          (onSelect)="onLocationSelect($event)"
+          (completeMethod)="searchLocations($event)"
+          [suggestions]="locationSuggestions()"
+          optionLabel="location_code"
+          [dropdown]="true"
+          [forceSelection]="false"
+          [delay]="250"
+          [minLength]="0"
+          [disabled]="available() <= 0"
+          [placeholder]="'tracecard_ops.search_location' | translate"
+          appendTo="body"
+          styleClass="w-full"
+          inputStyleClass="w-full"
+          [class.ng-invalid]="!!locationError()"
+          [class.ng-dirty]="!!locationError()"
+        >
+          <ng-template let-loc #item>
+            <div class="flex flex-col">
+              <span class="font-medium font-mono">{{ loc.location_code }}</span>
+              @if (loc.operational_category_code) {
+                <small class="text-surface-500">{{ loc.operational_category_code }}</small>
+              }
+            </div>
+          </ng-template>
+        </p-autocomplete>
+        @if (locationError()) {
+          <small class="text-red-500 text-xs mt-1">{{ locationError() }}</small>
+        } @else {
+          <small class="text-surface-400 text-xs mt-1">{{ 'tracecard_ops.location_hint' | translate }}</small>
+        }
+      </div>
+
+      <!-- Target container -->
+      <div class="flex flex-col">
+        <label for="mv-container" class="block font-semibold mb-1 text-sm">
+          {{ 'labels.container' | translate }}
+          <span class="text-surface-400 font-normal">({{ 'labels.optional' | translate }})</span>
+        </label>
+        <p-autocomplete
+          inputId="mv-container"
+          [ngModel]="container()"
+          (ngModelChange)="onContainerChange($event)"
+          (onSelect)="onContainerSelect($event)"
+          (completeMethod)="searchContainers($event)"
+          [suggestions]="containerSuggestions()"
+          optionLabel="lpn_code"
+          [dropdown]="true"
+          [forceSelection]="false"
+          [minLength]="0"
+          [disabled]="available() <= 0"
+          [placeholder]="'tracecard_ops.container_placeholder' | translate"
+          appendTo="body"
+          styleClass="w-full"
+          inputStyleClass="w-full"
+          [class.ng-invalid]="!!containerError()"
+          [class.ng-dirty]="!!containerError()"
+        >
+          <ng-template let-c #item>
+            <div class="flex flex-col" [style.padding-left.rem]="c.depth">
+              <span class="font-medium font-mono">{{ c.lpn_code }}</span>
+              <small class="text-surface-500">{{ c.type }} · {{ c.content_units | number: '1.0-0' }} u</small>
+            </div>
+          </ng-template>
+        </p-autocomplete>
+        @if (containerError()) {
+          <small class="text-red-500 text-xs mt-1">{{ containerError() }}</small>
+        } @else {
+          <small class="text-surface-400 text-xs mt-1">{{ 'tracecard_ops.container_hint' | translate }}</small>
+        }
+      </div>
+
+      <!-- Notes -->
+      <div class="flex flex-col">
+        <label for="mv-notes" class="block font-semibold mb-1 text-sm">
+          {{ 'labels.notes' | translate }}
+          <span class="text-surface-400 font-normal">({{ 'labels.optional' | translate }})</span>
+        </label>
+        <textarea
+          pTextarea
+          id="mv-notes"
+          rows="3"
+          class="w-full"
+          [maxlength]="maxNotes"
+          [ngModel]="notes()"
+          (ngModelChange)="notes.set($event); notesError.set(null)"
+          [placeholder]="'tracecard_ops.notes_placeholder' | translate"
+          [class.ng-invalid]="!!notesError()"
+          [class.ng-dirty]="!!notesError()"
+        ></textarea>
+        @if (notesError()) {
+          <small class="text-red-500 text-xs mt-1">{{ notesError() }}</small>
+        } @else {
+          <small class="text-surface-400 text-xs mt-1 text-right">{{ notes().length }} / {{ maxNotes }}</small>
+        }
+      </div>
+
+      @if (formError()) {
+        <p-message severity="error" [text]="formError()!" />
+      }
+    </div>
+  }
+</base-dialog>

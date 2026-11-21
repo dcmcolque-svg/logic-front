@@ -225,6 +225,8 @@ El problema es que cuando se sale de la pagina y se vuelve hay que volver a intr
   chipRemoved = output<string>()
   /** Emitted when a row's expand toggle is clicked — parent decides which rows are expanded */
   toggleRowExpansion = output<any>()
+  /** "Clear filters" in the empty state: the parent resets its own filters and reloads */
+  clearAllFilters = output<void>()
 
 
   // === Template refs ===
@@ -258,6 +260,16 @@ El problema es que cuando se sale de la pagina y se vuelve hay que volver a intr
    * Example: [A(and), B(or), C(and)] → [[A], [B, C]].
    * Without an effective OR every chip is shown in a single AND row.
    */
+  /** True when any chip or column filter narrows the rows (picks the empty-state message) */
+  hasActiveFilters = computed(
+    () =>
+      this.activeFilterChips().length > 0 ||
+      Object.values(this.columnFilters()).some((f) => {
+        const v = Array.isArray(f) ? f[0]?.value : f?.value ?? f
+        return v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0)
+      })
+  )
+
   chipGroups = computed(() => {
     const chips = this.activeFilterChips()
     const groups: ActiveFilterChip[][] = []
@@ -696,6 +708,16 @@ El problema es que cuando se sale de la pagina y se vuelve hay que volver a intr
     const showing = this.translate.instant('labels.showing')
     const of = this.translate.instant('labels.of')
     return `${showing} {first} – {last} ${of} {totalRecords}`
+  }
+
+  /**
+   * Cells cut their text with an ellipsis: on hover, a cut cell gets its full
+   * text as a native title so it can still be read.
+   */
+  showOverflowTitle(event: MouseEvent): void {
+    const el = event.currentTarget as HTMLElement
+    if (el.scrollWidth > el.clientWidth) el.title = el.textContent?.trim() ?? ''
+    else el.removeAttribute('title')
   }
 
   min(a: number, b: number): number {

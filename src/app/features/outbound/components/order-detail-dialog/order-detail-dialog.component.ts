@@ -1,3 +1,4 @@
+import { FacilityScopeService } from '@/app/core/services/facility-scope.service'
 import {
   Component,
   computed,
@@ -57,6 +58,7 @@ export class OrderDetailDialogComponent {
   private readonly orderService = inject(OrderService)
   private readonly messageService = inject(MessageService)
   private readonly translate = inject(TranslateService)
+  private readonly facilityScope = inject(FacilityScopeService)
 
   visible = input(false)
   order = input<Order | null>(null)
@@ -235,7 +237,7 @@ export class OrderDetailDialogComponent {
   }
 
   formatDate(dateStr: string | undefined | null): string {
-    return formatOrderDate(dateStr)
+    return formatOrderDate(dateStr, this.facilityScope.zoneOf(this.order()?.facility_id))
   }
 
   fullName(order: Order | null): string {

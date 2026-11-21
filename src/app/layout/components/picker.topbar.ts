@@ -14,7 +14,7 @@ import { TranslateModule } from '@ngx-translate/core';
   template: `
     <div class="layout-topbar picker-topbar">
       <a class="app-logo" routerLink="/">
-        <img alt="app logo" [src]="logo()" width="155" height="40" />
+        <img alt="app logo" [src]="logo()" width="52" height="52" />
       </a>
 
       <div class="topbar-actions ml-auto">

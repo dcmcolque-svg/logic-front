@@ -8,6 +8,7 @@ import { BaseDialog } from '@/app/shared/components/dialog/dialog/base-dialog.co
 import { BaseFormField } from '@/app/shared/components/form/form-field/base-form-field.component'
 import { BaseFormGroup } from '@/app/shared/components/form/form-group/base-form-group.component'
 import { Company, Facility, InventoryRotation } from '../../services/rotations.types'
+import { revealInvalid } from '@/app/shared/utils/form.util'
 
 @Component({
   selector: 'app-rotations-form-dialog',
@@ -157,8 +158,7 @@ export class RotationsFormDialogComponent implements OnChanges, OnInit {
   }
 
   onSave() {
-    if (this.rotationForm.valid) {
-      this.save.emit(this.rotationForm.value)
-    }
+    if (revealInvalid(this.rotationForm)) return
+    this.save.emit(this.rotationForm.value)
   }
 }

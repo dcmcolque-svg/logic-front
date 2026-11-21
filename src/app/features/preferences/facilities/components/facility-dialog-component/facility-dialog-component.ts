@@ -10,6 +10,7 @@ import {
 import {
     AfterViewInit,
     Component,
+    DestroyRef,
     effect,
     inject,
     OnDestroy,
@@ -17,6 +18,8 @@ import {
     signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DEFAULT_TIME_ZONE, supportedTimeZones } from '@/app/shared/utils/time-zone.util';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -31,6 +34,20 @@ import { TranslateLanService } from '../../../../../core/services/translate-lan.
 import { FacilitiesService } from '../../facilities.service';
 import { Facility } from '../../facilities.types';
 import * as L from 'leaflet';
+
+/** Zone a new facility gets when its country (ISO alpha-3) is picked. */
+const COUNTRY_TIME_ZONES: Record<string, string> = {
+    BOL: 'America/La_Paz',
+    CHL: 'America/Santiago',
+    PER: 'America/Lima',
+    ARG: 'America/Argentina/Buenos_Aires',
+    PRY: 'America/Asuncion',
+    URY: 'America/Montevideo',
+    COL: 'America/Bogota',
+    ECU: 'America/Guayaquil',
+    BRA: 'America/Sao_Paulo',
+    MEX: 'America/Mexico_City',
+};
 
 // ── Leaflet default icon fix ──────────────────────────────────────────────────
 const defaultIcon = L.icon({
@@ -127,6 +144,7 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
     private readonly translate      = inject(TranslateService);
     private readonly translateLan   = inject(TranslateLanService);
     private readonly messageService = inject(MessageService);
+    private readonly destroyRef     = inject(DestroyRef);
 
     facility: Facility | undefined;
     form!: FormGroup;
@@ -138,6 +156,8 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
     searchResults   = signal<NominatimResult[]>([]);
     showSuggestions = signal(false);
     countries: { label: string; value: string }[] = [];
+    /** IANA zones for the time zone select ('America/La_Paz' shown as 'America / La Paz'). */
+    readonly timeZones = supportedTimeZones().map((z) => ({ value: z, label: z.replace(/_/g, ' ').replace(/\//g, ' / ') }));
 
     // ── Leaflet ──────────────────────────────────────────────────────────
     private map!: L.Map;
@@ -192,6 +212,7 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
             name:            new FormControl(f?.name ?? '',            [Validators.required, Validators.minLength(2), Validators.maxLength(50), noWhitespace]),
             code:            new FormControl(f?.code ?? '',            [Validators.required, Validators.minLength(2), noWhitespace]),
             external_ref_id: new FormControl(f?.external_ref_id ?? ''),
+            time_zone:       new FormControl(f?.time_zone ?? DEFAULT_TIME_ZONE, [Validators.required]),
 
             // Address — controls start disabled when creating a new facility
             street:         new FormControl({ value: f?.address?.street        ?? '', disabled: !f }, [Validators.required, noWhitespace]),
@@ -203,6 +224,17 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
             lat:            new FormControl(initLat, [nonZeroRequired]),
             lng:            new FormControl(initLng, [nonZeroRequired]),
         });
+
+        // A new facility takes the zone of its country until the user picks one.
+        if (!f) {
+            this.form.get('country_code')!.valueChanges
+                .pipe(takeUntilDestroyed(this.destroyRef))
+                .subscribe((cc: string) => {
+                    const tz = this.form.get('time_zone')!;
+                    const suggested = COUNTRY_TIME_ZONES[cc];
+                    if (suggested && !tz.dirty) tz.setValue(suggested);
+                });
+        }
 
         // If editing an existing facility, address is enabled by default
         if (f) this.addressEnabled.set(true);
@@ -512,6 +544,7 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
             name:            clean(v.name),
             code:            clean(v.code),
             external_ref_id: v.external_ref_id ? clean(v.external_ref_id) : undefined,
+            time_zone:       v.time_zone,
             address: {
                 street:         clean(v.street),
                 city:           clean(v.city),

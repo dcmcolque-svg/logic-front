@@ -8,6 +8,7 @@ import {
   NO_FACILITY_ID,
   ScopeFacility,
 } from '../types/facility.types'
+import { DEFAULT_TIME_ZONE, zoneOrDefault } from '@/app/shared/utils/time-zone.util'
 
 /** localStorage key (scoped per user uid, same convention as TableStateService). */
 const STORAGE_KEY = 'facility-scope'
@@ -177,6 +178,43 @@ export class FacilityScopeService {
   readonly label = computed(() => {
     if (!this.isSingle()) return null
     return this.inScope()[0]?.name ?? null
+  })
+
+  /**
+   * IANA zone of a facility, for showing its rows' times. Unknown ids (or
+   * records without a facility) take the scope's zone.
+   */
+  zoneOf(id: string | null | undefined): string {
+    const tz = id ? this._all().find((f) => f.id === id)?.time_zone : undefined
+    return tz ? zoneOrDefault(tz) : this.zone()
+  }
+
+  /**
+   * Zone of the facilities in scope: the one that says which day "today" is
+   * for date presets, and the zone of times shown without a facility. When
+   * the scope mixes zones it is the zone most of them share (ties: the
+   * first). Day filters do not depend on it: they go out as yyyy-mm-dd and the
+   * backend resolves each row in its own facility's zone.
+   */
+  readonly zone = computed<string>(() => {
+    const facilities = this.inScope().length ? this.inScope() : this._all()
+    const counts = new Map<string, number>()
+    for (const f of facilities) {
+      const tz = zoneOrDefault(f.time_zone)
+      counts.set(tz, (counts.get(tz) ?? 0) + 1)
+    }
+    let best = DEFAULT_TIME_ZONE
+    let max = 0
+    for (const [tz, n] of counts) {
+      if (n > max) [best, max] = [tz, n]
+    }
+    return best
+  })
+
+  /** True when the facilities in scope do not all share one zone. */
+  readonly mixedZones = computed(() => {
+    const facilities = this.inScope().length ? this.inScope() : this._all()
+    return new Set(facilities.map((f) => zoneOrDefault(f.time_zone))).size > 1
   })
 
   /** Resolve an id to its facility name — used by table cell templates. */

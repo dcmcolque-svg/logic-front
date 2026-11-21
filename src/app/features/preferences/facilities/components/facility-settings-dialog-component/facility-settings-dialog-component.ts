@@ -22,6 +22,20 @@ import { FacilitiesService } from '../../facilities.service';
 import { Facility, ActivityPODSettings, DefaultLocationSetting } from '../../facilities.types';
 import { LocationService } from '../../../locations/location.service';
 import { Location as WmsLocation } from '../../../locations/types/location.types';
+import { AuthService } from '../../../../../core/services/auth.service';
+import {
+    COSTING_CURRENCIES,
+    COSTING_METHODS,
+    COSTING_METHODS_AVAILABLE,
+    CostingMethod,
+    CostingCurrency,
+    formatCost,
+    isCostingEnabled,
+    CostingSettings,
+    DEFAULT_CURRENCY,
+    currencyPrefix,
+    isOwnerRole,
+} from '../../../../../shared/utils/costing.util';
 
 export interface LocationOption {
     id: string;
@@ -57,10 +71,27 @@ export class FacilitySettingsDialogComponent implements OnInit {
     private readonly translate      = inject(TranslateService);
     private readonly translateLan   = inject(TranslateLanService);
     private readonly messageService = inject(MessageService);
+    private readonly auth           = inject(AuthService);
 
     facility: Facility | undefined;
     form!: FormGroup;
     isLoading = signal(false);
+
+    // ── Costing (OWNER only) ────────────────────────────────────────────
+    readonly isOwner = isOwnerRole(this.auth.getAuthUserInfo()?.role);
+    readonly costingMethodOptions = COSTING_METHODS.map(m => ({
+        value: m,
+        label: `preferences.facilities.costing_method_${m.toLowerCase()}`,
+        disabled: !COSTING_METHODS_AVAILABLE.includes(m),
+    }));
+    /** settings.costing as stored — method/currency only change through initialize. */
+    storedCosting = signal<CostingSettings>({ method: 'NONE', currency: DEFAULT_CURRENCY });
+    /** Two-step confirmation of the initialize button. */
+    confirmingCosting = signal(false);
+    applyingCosting = signal(false);
+    /** Facility with the costing just applied, handed back on close. */
+    private costingAppliedFacility: Facility | null = null;
+    readonly currencyOptions = COSTING_CURRENCIES.map(c => ({ value: c, label: `${c} (${currencyPrefix(c)})` }));
 
     // ── Default Location ────────────────────────────────────────────────
     selectedLocation = signal<LocationOption | null>(null);
@@ -83,8 +114,20 @@ export class FacilitySettingsDialogComponent implements OnInit {
         const dp = s?.delivery_pod_setting;
         const cp = s?.collect_pod_setting;
         const dl = s?.default_location;
+        const co = s?.costing;
+        this.storedCosting.set({
+            method: co?.method ?? 'NONE',
+            currency: co?.currency ?? DEFAULT_CURRENCY,
+            cost_required_on_receiving: co?.cost_required_on_receiving ?? false,
+        });
 
         this.form = new FormGroup({
+            costing: new FormGroup({
+                method:   new FormControl(co?.method   ?? 'NONE'),
+                currency: new FormControl(co?.currency ?? DEFAULT_CURRENCY),
+                cost_required_on_receiving: new FormControl(co?.cost_required_on_receiving ?? false),
+            }),
+
             auto_blocked_expired:  new FormControl(s?.auto_blocked_expired  ?? false),
             auto_processing:       new FormControl(s?.auto_processing       ?? false),
             include_batch_picking: new FormControl(s?.include_batch_picking ?? false),
@@ -107,6 +150,9 @@ export class FacilitySettingsDialogComponent implements OnInit {
                 is_location_required: new FormControl(cp?.is_location_required ?? false),
             }),
         });
+
+        // Only OWNER changes costing; the backend also rejects it (403) for other roles.
+        if (!this.isOwner) this.form.get('costing')?.disable();
 
         // Pre-populate selected location immediately with data we already have
         // (operational_category_code will be enriched when loadLocations completes)
@@ -159,6 +205,17 @@ export class FacilitySettingsDialogComponent implements OnInit {
                 delivery_pod_setting:       deliveryPod,
                 collect_pod_setting:        collectPod,
                 default_location:           defaultLocation,
+                // Omitted for non-owners: the backend then keeps the stored value.
+                // Method and currency travel as stored (they change through
+                // initializeCosting); only the required-cost flag is edited here.
+                ...(this.isOwner
+                    ? {
+                          costing: {
+                              ...this.storedCosting(),
+                              cost_required_on_receiving: !!v.costing?.cost_required_on_receiving,
+                          },
+                      }
+                    : {}),
             },
         };
 
@@ -174,7 +231,9 @@ export class FacilitySettingsDialogComponent implements OnInit {
             },
             error: (err: HttpErrorResponse) => {
                 this.isLoading.set(false);
-                const detail = err?.error?.message
+                const detail = err?.error?.code === 'FACILITY_COSTING_FORBIDDEN'
+                    ? this.translate.instant('preferences.facilities.costing_owner_only')
+                    : err?.error?.message
                     ? this.translate.instant('preferences.facilities.' + err.error.message)
                     : this.translate.instant('messages.save_error');
                 this.messageService.add({ severity: 'error', summary: 'Error', detail });
@@ -182,7 +241,96 @@ export class FacilitySettingsDialogComponent implements OnInit {
         });
     }
 
-    cancel(): void { this.ref.close(); }
+    cancel(): void { this.ref.close(this.costingAppliedFacility ?? undefined); }
+
+    // ── Costing initialize (OWNER) ──────────────────────────────────────
+
+    private formCosting(): CostingSettings {
+        const c = this.form.get('costing')?.getRawValue() ?? {};
+        return {
+            method: (c.method ?? 'NONE') as CostingMethod,
+            currency: (c.currency ?? DEFAULT_CURRENCY) as CostingCurrency,
+            cost_required_on_receiving: !!c.cost_required_on_receiving,
+        };
+    }
+
+    /** Method or currency in the form differ from what is stored. */
+    costingChanged(): boolean {
+        const f = this.formCosting();
+        const s = this.storedCosting();
+        return f.method !== s.method || f.currency !== s.currency;
+    }
+
+    /**
+     * What applying the form's method/currency would do:
+     * 'start' (from NONE: value current stock), 'stop' (to NONE),
+     * 'blocked' (another active valuation — turn it off first),
+     * 'currency' (no costing before or after: only the currency changes).
+     */
+    costingChangeKind(): 'start' | 'stop' | 'blocked' | 'currency' {
+        const f = this.formCosting();
+        const s = this.storedCosting();
+        if (!isCostingEnabled(f)) return isCostingEnabled(s) ? 'stop' : 'currency';
+        if (isCostingEnabled(s) && COSTING_METHODS_AVAILABLE.includes(s.method)) return 'blocked';
+        return 'start';
+    }
+
+    /** i18n key explaining what applying the change will do. */
+    costingChangeMessageKey(): string {
+        const kind = this.costingChangeKind();
+        // Turning a method on: each one explains what it does (AVERAGE uses the generic text).
+        const method = this.formCosting().method;
+        const suffix = kind === 'start' && method !== 'AVERAGE' ? `_${method.toLowerCase()}` : '';
+        return `preferences.facilities.costing_change_${kind}${suffix}`;
+    }
+
+    resetCostingForm(): void {
+        const s = this.storedCosting();
+        this.form.get('costing')?.patchValue({ method: s.method, currency: s.currency });
+        this.confirmingCosting.set(false);
+    }
+
+    applyCosting(): void {
+        if (!this.facility?.id || !this.isOwner || this.costingChangeKind() === 'blocked') return;
+        // A currency-only change values nothing, so it needs no confirmation.
+        if (!this.confirmingCosting() && this.costingChangeKind() !== 'currency') {
+            this.confirmingCosting.set(true);
+            return;
+        }
+        const target = this.formCosting();
+        this.applyingCosting.set(true);
+        this.svc.initializeCosting(this.facility.id, target).subscribe({
+            next: res => {
+                this.applyingCosting.set(false);
+                this.confirmingCosting.set(false);
+                this.storedCosting.set(res.costing);
+                if (this.facility) {
+                    this.facility = { ...this.facility, settings: { ...this.facility.settings, costing: res.costing } };
+                    this.costingAppliedFacility = this.facility;
+                }
+                const currency = res.costing.currency ?? DEFAULT_CURRENCY;
+                this.messageService.add({
+                    severity: 'success',
+                    summary: this.translate.instant('common.success'),
+                    detail: res.initialized
+                        ? this.translate.instant('preferences.facilities.costing_initialized', {
+                              skus: res.skus,
+                              value: formatCost(res.total_value, currency),
+                          })
+                        : this.translate.instant('preferences.facilities.costing_updated'),
+                });
+            },
+            error: (err: HttpErrorResponse) => {
+                this.applyingCosting.set(false);
+                const code = err?.error?.code;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: code ? this.translate.instant('errors.' + code) : this.translate.instant('messages.save_error'),
+                });
+            },
+        });
+    }
 
     // ── Location dropdown (p-select with filter) ────────────────────────
 

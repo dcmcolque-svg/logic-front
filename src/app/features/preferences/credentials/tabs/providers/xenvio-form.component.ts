@@ -37,7 +37,7 @@ const CONNECTION_ERROR_KEYS: Record<string, string> = {
         <input
           pInputText
           [(ngModel)]="form.url"
-          placeholder="https://your-environment.shipedge.com"
+          placeholder="https://your-environment.nuvex.uk"
           class="w-full font-mono text-sm"
         />
         <small class="text-surface-400">{{ 'preferences.providers.xenvio_url_hint' | translate }}</small>

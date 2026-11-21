@@ -90,8 +90,8 @@ export class AppSidebar implements OnInit, OnDestroy {
   /** True when the sidebar background uses the primary color (not the neutral color scheme) */
   isPrimaryColorMode = computed(() => this.layoutService.layoutConfig().layoutTheme === 'primaryColor')
 
-  /** API version read from environment — displayed at the bottom of the sidebar */
-  readonly apiVersion = environment.stripe.apiVersion
+  /** App version read from environment — displayed at the bottom of the sidebar */
+  readonly apiVersion = `v${environment.appVersion}`
 
   @ViewChild('menuContainer', { read: ElementRef }) menuContainer!: ElementRef
 

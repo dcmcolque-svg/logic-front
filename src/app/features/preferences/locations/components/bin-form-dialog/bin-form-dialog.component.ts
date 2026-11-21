@@ -30,6 +30,7 @@ import {
 } from '../../types/location.types'
 
 import { LocationService } from '../../location.service'
+import { revealInvalid } from '@/app/shared/utils/form.util'
 
 @Component({
   selector: 'app-bin-form-dialog',
@@ -68,11 +69,8 @@ export class BinFormDialogComponent implements OnChanges {
 
   binForm!: FormGroup
 
-  typeOptions = [
-    { label: 'BOX', value: 'BOX' },
-    { label: 'PALLET', value: 'PALLET' },
-    { label: 'TOTE', value: 'TOTE' },
-  ]
+  // For now bins can only be of type BIN
+  typeOptions = [{ label: 'BIN', value: 'BIN' }]
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['visible'] && this.visible()) {
@@ -89,7 +87,7 @@ export class BinFormDialogComponent implements OnChanges {
         { value: c?.lpn_code || '', disabled: this.editing() },
         [Validators.required, Validators.minLength(2)]
       ),
-      type: new FormControl(c?.type || 'BOX', [Validators.required]),
+      type: new FormControl('BIN', [Validators.required]),
       tags: new FormControl<string[]>(tags),
     })
     this.tagInput = ''
@@ -138,7 +136,7 @@ export class BinFormDialogComponent implements OnChanges {
   }
 
   onSave() {
-    if (!this.binForm?.valid) return
+    if (!this.binForm || revealInvalid(this.binForm)) return
 
     const loc = this.locationForDrawer()
     if (!loc) return

@@ -2,7 +2,6 @@
 
 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
     <div>
-        <h5 class="text-2xl font-semibold m-0 mb-1">{{ 'pages.facility' | translate }}</h5>
         <p class="text-surface-500 text-sm m-0">{{ 'preferences.facilities.subtitle' | translate }}</p>
     </div>
     <div class="flex gap-2">
@@ -46,6 +45,7 @@
         [activeFilterChips]="activeFilters()"
         (stateChange)="onTableStateChange($event)"
         (chipRemoved)="removeFilterChip($event)"
+        (clearAllFilters)="clearFilters()"
     >
 
 
@@ -74,77 +74,54 @@
                         <div class="text-gray-500 text-xs">{{ row.code }}</div>
                     </div>
                 }
-                @case ('address') {
-                    <div class="flex flex-col gap-1">
-                        @if (row.address?.street || row.address?.reference) {
-                            <div class="w-fit">
-                                <p-chip styleClass="!py-0 !pl-0 !pr-3">
-                                    <span class="bg-surface-300 dark:bg-surface-600 text-surface-700 dark:text-surface-100 rounded-full w-6 h-6 flex items-center justify-center">
-                                        <i class="pi pi-home text-xs"></i>
-                                    </span>
-                                    <span class="ml-2 text-xs font-medium">
-                                        {{ row.address?.reference && row.address?.street
-                                            ? row.address.street + ' · ' + row.address.reference
-                                            : (row.address?.street || row.address?.reference) }}
-                                    </span>
-                                </p-chip>
-                            </div>
-                        }
-                        @if (row.address?.city || row.address?.state_province) {
-                            <div class="w-fit">
-                                <p-chip styleClass="!py-0 !pl-0 !pr-3">
-                                    <span class="bg-surface-300 dark:bg-surface-600 text-surface-700 dark:text-surface-100 rounded-full w-6 h-6 flex items-center justify-center">
-                                        <i class="pi pi-map-marker text-xs"></i>
-                                    </span>
-                                    <span class="ml-2 text-xs font-medium">
-                                        {{ row.address?.city && row.address?.state_province
-                                            ? row.address.city + ' / ' + row.address.state_province
-                                            : (row.address?.city || row.address?.state_province) }}
-                                    </span>
-                                </p-chip>
-                            </div>
-                        }
-                        @if (row.address?.country_code) {
-                            <div class="w-fit">
-                                <p-chip styleClass="!py-0 !pl-0 !pr-3 mt-1">
-                                    <span class="bg-primary text-primary-contrast rounded-full w-6 h-6 flex items-center justify-center">
-                                        <i class="pi pi-globe text-xs"></i>
-                                    </span>
-                                    <span class="ml-2 text-xs font-medium">{{ row.address.country_code }}</span>
-                                </p-chip>
-                            </div>
-                        }
-                    </div>
+                @case ('time_zone') {
+                    @if (row.time_zone) {
+                        <span class="inline-flex items-center gap-1.5 text-sm" [pTooltip]="row.time_zone" tooltipPosition="top">
+                            <i class="pi pi-clock text-surface-400 text-xs"></i>{{ zoneLabel(row.time_zone) }}
+                        </span>
+                    } @else {
+                        <span class="text-surface-400">—</span>
+                    }
                 }
-                @case ('xenvio') {
-                    <p-select
-                        [options]="xenvioOptions()"
-                        optionLabel="name"
-                        optionValue="id"
-                        optionDisabled="disabled"
-                        [ngModel]="xenvioByFacility()[row.id] ?? null"
-                        (ngModelChange)="updateFulfillmentLocation(row, $event)"
-                        [placeholder]="'preferences.facilities.select_facility' | translate"
-                        [showClear]="true"
-                        [filter]="xenvioOptions().length > 5"
-                        filterPlaceholder="Search..."
-                        appendTo="body"
-                        class="w-full"
-                        [style]="{ 'min-width': '12rem' }"
-                        [loading]="xenvioLoading()"
-                    >
-                        <ng-template let-option pTemplate="item">
-                            <div class="flex flex-col">
-                                <span class="text-sm font-medium">{{ option.name }}</span>
-                                @if (option.company) {
-                                    <span class="text-xs text-surface-400">{{ option.company }}</span>
+                @case ('active') {
+                    <p-tag
+                        [value]="(row.is_active === false ? 'labels.inactive' : 'labels.active') | translate"
+                        [severity]="row.is_active === false ? 'secondary' : 'success'"
+                        [rounded]="true"
+                    />
+                }
+                @case ('address') {
+                    @if (row.address; as a) {
+                        <div class="flex flex-col gap-0.5" style="overflow: hidden">
+                            @if (a.street || a.reference) {
+                                <div class="flex items-center gap-2 text-sm">
+                                    <i class="pi pi-home text-surface-400 text-xs"></i>
+                                    <span class="font-medium truncate" [pTooltip]="a.street" tooltipPosition="top">{{ a.street }}</span>
+                                </div>
+                                @if (a.street && a.reference) {
+                                    <div class="text-xs text-surface-500 pl-5 truncate" [pTooltip]="a.reference" tooltipPosition="top">{{ a.reference }}</div>
                                 }
-                            </div>
-                        </ng-template>
-                        <ng-template let-option pTemplate="selectedItem">
-                            <span class="text-sm">{{ option.name }}</span>
-                        </ng-template>
-                    </p-select>
+                            }
+                            @if (a.city || a.state_province || a.country_code) {
+                                <div class="flex items-center gap-2 text-xs text-surface-500">
+                                    <i class="pi pi-map-marker text-surface-400 text-xs"></i>
+                                    <span class="truncate">
+                                        {{ a.city && a.state_province ? a.city + ', ' + a.state_province : (a.city || a.state_province) }}
+                                    </span>
+                                </div>
+                            }
+                            @if (a.country_code) {
+                                <div class="flex items-center gap-2 text-xs font-medium">
+                                    <span class="bg-primary text-primary-contrast rounded-full w-5 h-5 flex items-center justify-center">
+                                        <i class="pi pi-globe text-[10px]"></i>
+                                    </span>
+                                    <span>{{ a.country_code }}</span>
+                                </div>
+                            }
+                        </div>
+                    } @else {
+                        <span class="text-surface-400">—</span>
+                    }
                 }
                 <!-- TODO: add fulfillment_location, contact_name, contact_title, email, phone, fax cases when backend supports them -->
             }

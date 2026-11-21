@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing'
 import { provideTranslateService } from '@ngx-translate/core'
 import { of, Subject, throwError } from 'rxjs'
 import { Confirmation, ConfirmationService } from 'primeng/api'
-import { FilterPresetService } from '@/app/shared/services/filter-preset.service'
+import { FILTER_PRESETS_ENABLED, FilterPresetService } from '@/app/shared/services/filter-preset.service'
 import { buildFiltersFromConditions, FilterPreset } from '@/app/shared/types/filter-preset.types'
 import { ShColumnDef, ShSortConfig } from '@/app/shared/types/table.types'
 import { FilterPresetManagerComponent, TableFilterEntry } from './filter-preset-manager.component'
@@ -107,6 +107,7 @@ describe('FilterPresetManagerComponent', () => {
       providers: [
         provideZonelessChangeDetection(),
         provideTranslateService(),
+        { provide: FILTER_PRESETS_ENABLED, useValue: true },
         { provide: FilterPresetService, useValue: service },
       ],
     })
@@ -813,6 +814,7 @@ describe('FilterPresetManagerComponent — rendered', () => {
       providers: [
         provideZonelessChangeDetection(),
         provideTranslateService(),
+        { provide: FILTER_PRESETS_ENABLED, useValue: true },
         { provide: FilterPresetService, useValue: service },
       ],
     })

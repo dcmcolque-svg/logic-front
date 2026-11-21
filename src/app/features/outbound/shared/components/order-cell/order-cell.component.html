@@ -21,32 +21,36 @@
     </div>
   }
   @case ('priority') {
-    <span
-      class="font-mono text-sm px-2 py-1 border-round"
-      [class.bg-red-100]="row().priority >= 8"
-      [class.text-red-700]="row().priority >= 8"
-      [class.bg-yellow-100]="row().priority >= 5 && row().priority < 8"
-      [class.text-yellow-700]="row().priority >= 5 && row().priority < 8"
-      [class.bg-surface-100]="row().priority < 5"
-    >{{ row().priority }}</span>
+    <p-tag [severity]="priorityBand().severity" [rounded]="true">
+      <span class="text-xs">{{ priorityBand().key | translate }} · <span class="font-mono">{{ row().priority }}</span></span>
+    </p-tag>
   }
   @case ('required_delivery_date') {
-    <ng-container *ngTemplateOutlet="dateCell; context: { $implicit: row().required_delivery_date, options: deliveryDate() }" />
+    @if (deliveryOverdue()) {
+      <!-- Past the required date and not shipped yet -->
+      <div class="flex flex-col text-nowrap text-red-600 dark:text-red-400">
+        <span class="font-semibold">{{ deliveryDate().timezone ? (row().required_delivery_date | displayDate: 'date':deliveryDate().timezone!) : (row().required_delivery_date | facilityDate:'date':row().facility_id) }}</span>
+        <small><i class="pi pi-clock mr-1 text-xs"></i>{{ 'labels.delivery_overdue' | translate }}</small>
+      </div>
+    } @else {
+      <ng-container *ngTemplateOutlet="dateCell; context: { $implicit: row().required_delivery_date, options: deliveryDate() }" />
+    }
   }
   @case ('created_at') {
     <ng-container *ngTemplateOutlet="dateCell; context: { $implicit: row().created_at, options: createdAt() }" />
   }
 }
 
+<!-- options.timezone: a date-only value (UTC); otherwise an instant, shown in the order's facility zone. -->
 <ng-template #dateCell let-value let-options="options">
   @if (value) {
     @if (options.showTime) {
       <div class="flex flex-col text-nowrap">
-        <span class="text-surface-400">{{ value | date:'yyyy-MM-dd':options.timezone }}</span>
-        <span class="text-primary text-sm">{{ value | date:'HH:mm':options.timezone }}</span>
+        <span class="text-surface-400">{{ options.timezone ? (value | displayDate: 'date':options.timezone) : (value | facilityDate:'date':row().facility_id) }}</span>
+        <span class="text-primary text-sm">{{ options.timezone ? (value | displayDate: 'time':options.timezone) : (value | facilityDate:'time':row().facility_id) }}</span>
       </div>
     } @else {
-      <span class="text-nowrap text-surface-400">{{ value | date:'yyyy-MM-dd':options.timezone }}</span>
+      <span class="text-nowrap text-surface-400">{{ options.timezone ? (value | displayDate: 'date':options.timezone) : (value | facilityDate:'date':row().facility_id) }}</span>
     }
   } @else {
     <span class="text-surface-400">—</span>

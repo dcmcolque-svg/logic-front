@@ -1,4 +1,7 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core'
+import { facilityDayFilters } from '@/app/shared/utils/time-zone.util'
+import { formatDisplayDate } from '@/app/shared/utils/display-format'
+import { TagModule } from 'primeng/tag'
+import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core'
 import { Router } from '@angular/router'
 import { forkJoin, map } from 'rxjs'
 import { CommonModule, DecimalPipe } from '@angular/common'
@@ -11,7 +14,9 @@ import { ToastModule } from 'primeng/toast'
 import { TooltipModule } from 'primeng/tooltip'
 import { DrawerModule } from 'primeng/drawer'
 import { BadgeModule } from 'primeng/badge'
-import { MessageService } from 'primeng/api'
+import { Menu, MenuModule } from 'primeng/menu'
+import { ConfirmationService, MenuItem, MessageService } from 'primeng/api'
+import { ConfirmDialogModule } from 'primeng/confirmdialog'
 
 // Shared base components
 import { BaseDataTable } from '@/app/shared/components/datatable/data-table/base-data-table.component'
@@ -39,7 +44,18 @@ import {
 
 // Domain
 import { TracecardsService } from './warehouse.service'
-import { TracecardItem, TracecardFilter, Company } from './types/warehouse.types'
+import {
+  TracecardItem,
+  TracecardFilter,
+  Company,
+  MoveResult,
+  RecountResult,
+  BlockResult,
+  AppErrorBody,
+} from './types/warehouse.types'
+import { TracecardBlockDialogComponent } from './components/tracecard-block-dialog/tracecard-block-dialog.component'
+import { TracecardMoveDialogComponent } from './components/tracecard-move-dialog/tracecard-move-dialog.component'
+import { TracecardRecountDialogComponent } from './components/tracecard-recount-dialog/tracecard-recount-dialog.component'
 import {
   Facility,
   OperationalCategory,
@@ -57,6 +73,8 @@ import {
 } from './shared/tracecards-filters.util'
 import { ColumnFilterHost } from './shared/column-filter-host'
 import { provideTableColumns } from '@/app/shared/services/table-columns.bus'
+import { AuthService } from '@/app/core/services/auth.service'
+import { CostingCurrency, formatCost, isOwnerRole } from '@/app/shared/utils/costing.util'
 
 /**
  * TracecardsComponent — Inventory tracecards page.
@@ -73,6 +91,7 @@ import { provideTableColumns } from '@/app/shared/services/table-columns.bus'
   selector: 'app-tracecards',
   standalone: true,
   imports: [
+    TagModule,
     CommonModule,
     FormsModule,
     TranslateModule,
@@ -83,7 +102,12 @@ import { provideTableColumns } from '@/app/shared/services/table-columns.bus'
     TooltipModule,
     DrawerModule,
     BadgeModule,
+    MenuModule,
+    ConfirmDialogModule,
     DecimalPipe,
+    TracecardMoveDialogComponent,
+    TracecardRecountDialogComponent,
+    TracecardBlockDialogComponent,
     BaseDataTable,
     LabelGeneratorDialog,
     BaseImportExportMenu,
@@ -91,7 +115,7 @@ import { provideTableColumns } from '@/app/shared/services/table-columns.bus'
     FilterTextInputComponent,
     FilterPresetManagerComponent,
   ],
-  providers: [MessageService, provideTableColumns()],
+  providers: [MessageService, ConfirmationService, provideTableColumns()],
   templateUrl: './warehouse.component.html',
   styleUrl: './warehouse.component.scss',
 })
@@ -104,6 +128,11 @@ export default class TracecardsComponent extends ColumnFilterHost implements OnI
   private readonly filterService = inject(FilterApplyService)
   private readonly filterPresetService = inject(FilterPresetService)
   private readonly router = inject(Router)
+  private readonly auth = inject(AuthService)
+  private readonly confirmation = inject(ConfirmationService)
+
+  /** Costs are OWNER-only; the backend omits them for other roles too. */
+  readonly isOwner = isOwnerRole(this.auth.getAuthUserInfo()?.role)
 
   readonly PRESET_PAGE_KEY = 'tracecards'
   activePresetColor = signal<string | null>(null)
@@ -133,6 +162,15 @@ export default class TracecardsComponent extends ColumnFilterHost implements OnI
   loading = signal(false)
   selectedItems = signal<TracecardItem[]>([])
   showLabelDialog = signal(false)
+
+  // === Stock operations (move / recount) ===
+  readonly rowMenu = viewChild<Menu>('rowMenu')
+  rowMenuItems: MenuItem[] = []
+  /** Row the open move/recount dialog acts on. */
+  opItem = signal<TracecardItem | null>(null)
+  showMoveDialog = signal(false)
+  showRecountDialog = signal(false)
+  showBlockDialog = signal(false)
   pagination = signal<ShPaginationConfig>({
     page: 1,
     limit: 15,
@@ -289,6 +327,29 @@ export default class TracecardsComponent extends ColumnFilterHost implements OnI
         width: '10rem',
         template: 'number',
       },
+      ...(this.isOwner
+        ? [
+            {
+              // Average (AVERAGE) or the row's own cost (SPECIFIC)
+              field: 'avg_cost',
+              header: 'labels.unit_cost',
+              sortable: true,
+              width: '10rem',
+              align: 'right' as const,
+              template: 'cost',
+              exportValue: (row: TracecardItem) => row.avg_cost ?? null,
+            },
+            {
+              field: 'cost_value',
+              header: 'labels.cost_value',
+              sortable: true,
+              width: '11rem',
+              align: 'right' as const,
+              template: 'cost',
+              exportValue: (row: TracecardItem) => row.cost_value ?? null,
+            },
+          ]
+        : []),
       {
         field: 'weight',
         header: 'labels.weight',
@@ -385,7 +446,7 @@ export default class TracecardsComponent extends ColumnFilterHost implements OnI
    */
   private listRequest(page: number, rows: number) {
     return {
-      filter: scopeApiFilter(this.currentFilters(), this.facilityScope.apiValue(), { scopeField: FACILITY_SCOPE_FIELD }),
+      filter: scopeApiFilter(facilityDayFilters(this.currentFilters()), this.facilityScope.apiValue(), { scopeField: FACILITY_SCOPE_FIELD }),
       config: {
         page,
         rows,
@@ -596,19 +657,51 @@ export default class TracecardsComponent extends ColumnFilterHost implements OnI
     return facility?.name || id.substring(0, 8)
   }
 
+  /** Status label in the user's language; an unknown status shows as sent. */
+  statusLabel(status: string | null | undefined): string {
+    if (!status) return '—'
+    const key = `tracecard_ops.status.${status}`
+    const label = this.translate.instant(key)
+    return label === key ? status : label
+  }
+
+  statusSeverity(status: string | null | undefined): 'success' | 'danger' | 'warn' {
+    if (status === 'AVAILABLE') return 'success'
+    if (status === 'BLOCKED') return 'danger'
+    return 'warn'
+  }
+
+  /** Lots expiring within this many days are flagged. */
+  readonly EXPIRY_WARN_DAYS = 30
+
+  /**
+   * Days until a lot expires (negative once expired), counted on calendar days
+   * in UTC — expir is a date-only value, read in UTC like formatDate does.
+   */
+  daysToExpiry(expir: string | null | undefined): number | null {
+    if (!expir) return null
+    const d = new Date(expir)
+    if (Number.isNaN(d.getTime())) return null
+    const now = new Date()
+    const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+    const day = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+    return Math.round((day - today) / 86_400_000)
+  }
+
+  /** Red once expired, orange within EXPIRY_WARN_DAYS, plain otherwise. */
+  expiryClass(days: number | null): string {
+    if (days === null) return ''
+    if (days < 0) return 'font-semibold text-red-600 dark:text-red-400'
+    if (days <= this.EXPIRY_WARN_DAYS) return 'text-orange-600 dark:text-orange-400'
+    return ''
+  }
+
   /** Format date string for display */
   formatDate(dateStr: string | undefined | null): string {
     if (!dateStr) return '—'
-    try {
-      const d = new Date(dateStr)
-      return d.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-      })
-    } catch {
-      return dateStr
-    }
+    // Used for expir, a date-only value: read and shown in UTC, or a
+    // yyyy-mm-dd would show the previous day west of Greenwich.
+    return formatDisplayDate(dateStr, 'date', 'UTC') || dateStr
   }
 
   // === Image fallback ===
@@ -641,5 +734,150 @@ export default class TracecardsComponent extends ColumnFilterHost implements OnI
       // repeat across facilities.
       queryParams: { source, facility: row.facility_id },
     })
+  }
+
+  // === Stock operations ===
+
+  /**
+   * Opens the shared popup menu for a row. Items are built on open (not bound
+   * per row) so the menu DOM stays stable while it is open.
+   */
+  openRowMenu(event: Event, row: TracecardItem): void {
+    const blocked = row.status === 'BLOCKED'
+    this.rowMenuItems = [
+      {
+        label: this.translate.instant('tracecard_ops.move_action'),
+        icon: 'pi pi-arrow-right-arrow-left',
+        disabled: blocked || row.qty_on_hand - row.qty_reserved <= 0,
+        command: () => this.openOperation(row, 'move'),
+      },
+      {
+        label: this.translate.instant('tracecard_ops.recount_action'),
+        icon: 'pi pi-clipboard',
+        disabled: blocked,
+        command: () => this.openOperation(row, 'recount'),
+      },
+      blocked
+        ? {
+            label: this.translate.instant('tracecard_ops.unblock_action'),
+            icon: 'pi pi-lock-open',
+            command: () => this.confirmUnblock(row),
+          }
+        : {
+            label: this.translate.instant('tracecard_ops.block_action'),
+            icon: 'pi pi-lock',
+            // The backend rejects blocking empty or reserved stock; reserved
+            // rows still open the dialog so the user sees which orders hold it.
+            disabled: row.qty_on_hand <= 0,
+            command: () => this.openOperation(row, 'block'),
+          },
+      { separator: true },
+      {
+        label: this.translate.instant('labels.history'),
+        icon: 'pi pi-history',
+        command: () => this.navigateToHistory(row, 'tracecard'),
+      },
+    ]
+    this.rowMenu()?.toggle(event)
+  }
+
+  private openOperation(row: TracecardItem, op: 'move' | 'recount' | 'block'): void {
+    this.opItem.set(row)
+    this.showMoveDialog.set(op === 'move')
+    this.showRecountDialog.set(op === 'recount')
+    this.showBlockDialog.set(op === 'block')
+  }
+
+  closeOperation(): void {
+    this.showMoveDialog.set(false)
+    this.showRecountDialog.set(false)
+    this.showBlockDialog.set(false)
+    this.opItem.set(null)
+  }
+
+  onBlocked(res: BlockResult): void {
+    this.closeOperation()
+    this.messageService.add({
+      severity: 'success',
+      summary: this.translate.instant('tracecard_ops.block_success'),
+      detail: this.translate.instant('tracecard_ops.block_success_detail', { qty: res.qty_on_hand }),
+      life: 4000,
+    })
+    this.loadData()
+  }
+
+  private confirmUnblock(row: TracecardItem): void {
+    this.confirmation.confirm({
+      header: this.translate.instant('tracecard_ops.unblock_title'),
+      message: this.translate.instant('tracecard_ops.unblock_confirm', {
+        tracecard: row.tracecard,
+        qty: row.qty_on_hand,
+      }),
+      icon: 'pi pi-lock-open',
+      acceptLabel: this.translate.instant('tracecard_ops.unblock_action'),
+      rejectLabel: this.translate.instant('buttons.cancel'),
+      rejectButtonStyleClass: 'p-button-text',
+      accept: () => this.unblock(row),
+    })
+  }
+
+  private unblock(row: TracecardItem): void {
+    this.tracecardsService.unblock({ kardex_id: row.id }).subscribe({
+      next: (res) => {
+        this.messageService.add({
+          severity: res.expired ? 'warn' : 'success',
+          summary: this.translate.instant('tracecard_ops.unblock_success'),
+          detail: res.expired
+            ? this.translate.instant('tracecard_ops.unblock_expired', { expir: res.expir })
+            : this.translate.instant('tracecard_ops.unblock_success_detail', { qty: res.qty_on_hand }),
+          life: res.expired ? 8000 : 4000,
+        })
+        this.loadData()
+      },
+      error: (err) => {
+        const body = ((err as { error?: AppErrorBody })?.error ?? err) as AppErrorBody
+        // Non-422 v2 errors are already toasted by the error interceptor.
+        if (body?.http_status && body.http_status !== 422) return
+        const key = `errors.${body?.code}`
+        const t = body?.code ? this.translate.instant(key) : ''
+        this.messageService.add({
+          severity: 'error',
+          summary: this.translate.instant('messages.error'),
+          detail: t && t !== key ? t : body?.message,
+          life: 5000,
+        })
+      },
+    })
+  }
+
+  onMoved(res: MoveResult): void {
+    this.closeOperation()
+    this.messageService.add({
+      severity: 'success',
+      summary: this.translate.instant('tracecard_ops.move_success'),
+      detail: this.translate.instant('tracecard_ops.move_success_detail', { qty: res.qty }),
+      life: 4000,
+    })
+    this.loadData()
+  }
+
+  onRecounted(res: RecountResult): void {
+    this.closeOperation()
+    this.messageService.add({
+      severity: 'success',
+      summary: this.translate.instant('tracecard_ops.recount_success'),
+      detail: this.translate.instant('tracecard_ops.recount_success_detail', {
+        previous: res.qty_previous,
+        current: res.qty_new,
+      }),
+      life: 4000,
+    })
+    this.loadData()
+  }
+
+  /** "Bs 10.67" — "—" when the facility does not cost. */
+  costText(value: number | null | undefined, currency: CostingCurrency | null | undefined): string {
+    if (value === null || value === undefined || !currency) return '—'
+    return formatCost(value, currency)
   }
 }

@@ -25,7 +25,7 @@ import { Subscription } from 'rxjs'
 import { filterConfigMatchModes } from '../../config/filter-column.config'
 
 @Component({
-  selector: 'shipedge-filter-multiselect',
+  selector: 'nuvex-filter-multiselect',
   standalone: true,
   imports: [
     CommonModule,
