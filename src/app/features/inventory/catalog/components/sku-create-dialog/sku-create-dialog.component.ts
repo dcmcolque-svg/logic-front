@@ -104,7 +104,20 @@ export class SkuCreateDialogComponent extends SkuDialogBase implements OnChanges
         this.companyControl.setValue(pre.company_id)
         this.companyControl.disable()
         this.selectedProduct.set(pre)
+      } else {
+        this.preselectSingleCompany()
       }
+    } else if (changes['companies'] && this.visible()) {
+      // Companies may arrive after the dialog opened
+      this.preselectSingleCompany()
+    }
+  }
+
+  /** With only one company available there is nothing to choose — set it. */
+  private preselectSingleCompany() {
+    const companies = this.companies()
+    if (companies.length === 1 && !this.companyControl.value && this.companyControl.enabled) {
+      this.companyControl.setValue(companies[0].id)
     }
   }
 
