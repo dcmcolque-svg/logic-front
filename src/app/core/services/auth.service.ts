@@ -10,6 +10,7 @@ import {
   RegisterResponse,
 } from '../types/auth.types'
 import { catchError, of, tap } from 'rxjs'
+import { purgeOtherUsersStorage } from '@/app/shared/utils/user-storage.util'
 import {
   APP_MENU,
   APP_MENU_TOPBAR,
@@ -118,7 +119,10 @@ export class AuthService {
   }
 
   async loadAuthInfo(): Promise<void> {
-    this.authInfo.set(await this.getAuthInfo())
+    const info = await this.getAuthInfo()
+    // Saved tables, scope, POS drafts… of whoever used this browser before.
+    if (info?.uid) purgeOtherUsersStorage(info.uid)
+    this.authInfo.set(info)
   }
 
   private getCookie(name: string): string | null {

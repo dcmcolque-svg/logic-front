@@ -166,13 +166,13 @@ describe('PosComponent', () => {
 
   it('keeps the picked customer in the draft and drops free-text customers of old drafts', () => {
     localStorage.clear()
-    localStorage.setItem('pos-draft:u1:f1', JSON.stringify({ cart: [], discount: 0, priceList: 'RETAIL', customer: { name: 'Juan', doc: '1', email: '', phone: '' } }))
+    localStorage.setItem('u1:pos-draft:f1', JSON.stringify({ cart: [], discount: 0, priceList: 'RETAIL', customer: { name: 'Juan', doc: '1', email: '', phone: '' } }))
     let c = setup(true)
     expect(c.customer()).toBeNull()
 
     c.customer.set(CUSTOMER)
     TestBed.tick()
-    const saved = JSON.parse(localStorage.getItem('pos-draft:u1:f1') ?? 'null')
+    const saved = JSON.parse(localStorage.getItem('u1:pos-draft:f1') ?? 'null')
     expect(saved?.customer?.id).toBe('cu1')
     TestBed.resetTestingModule()
     c = setup(true)

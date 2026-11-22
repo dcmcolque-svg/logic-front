@@ -269,7 +269,7 @@ export default class PosComponent {
         const current = this.facilityId()
         if (current && list.some(f => f.id === current)) return
         if (list.length === 0) return
-        const saved = storageGet<string>(`pos-facility:${this.userKey}`)
+        const saved = storageGet<string>(`${this.userKey}:pos-facility`)
         const pick = list.find(f => f.id === saved) ?? list[0]
         this.selectFacility(pick.id)
       })
@@ -287,7 +287,7 @@ export default class PosComponent {
       }
       if (!fid) return
       const empty = draft.cart.length === 0 && !draft.customer && !draft.note
-      storageSet(`pos-draft:${this.userKey}:${fid}`, empty ? null : draft)
+      storageSet(`${this.userKey}:pos-draft:${fid}`, empty ? null : draft)
     })
 
     effect(() => {
@@ -332,7 +332,7 @@ export default class PosComponent {
   selectFacility(id: string): void {
     if (this.facilityId() === id) return
     this.facilityId.set(id)
-    storageSet(`pos-facility:${this.userKey}`, id)
+    storageSet(`${this.userKey}:pos-facility`, id)
     this.restoreDraft(id)
     this.results.set([])
     this.query.set('')
@@ -340,7 +340,7 @@ export default class PosComponent {
   }
 
   private restoreDraft(facilityId: string): void {
-    const d = storageGet<DraftSale>(`pos-draft:${this.userKey}:${facilityId}`)
+    const d = storageGet<DraftSale>(`${this.userKey}:pos-draft:${facilityId}`)
     this.cart.set(d?.cart ?? [])
     this.saleDiscount.set(d?.discount ?? 0)
     this.discountInput.set(d?.discount ? d.discount : null)

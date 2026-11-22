@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core'
 import { Observable, of, tap } from 'rxjs'
 import { FilterPresetApiService } from './filter-preset-api.service'
+import { AuthService } from '@/app/core/services/auth.service'
 import {
   FilterPreset,
   FilterPresetStorage,
@@ -23,18 +24,28 @@ export class FilterPresetApiStorage extends FilterPresetStorage {
 
   /** In-memory cache keyed by pageKey for instant re-reads after mutations */
   private readonly cache = new Map<string, FilterPreset[]>()
+  private readonly auth = inject(AuthService)
+  /** uid the cache belongs to: logout does not reload the page, so it must not leak to the next user. */
+  private cacheUid: string | null = null
 
   /**
    * List all presets for a page. Returns cached data if available,
    * otherwise fetches from the API and caches the result.
    */
   list(pageKey: string): Observable<FilterPreset[]> {
+    const uid = this.auth.authInfo()?.uid ?? null
+    if (uid !== this.cacheUid) {
+      this.cache.clear()
+      this.cacheUid = uid
+    }
     const cached = this.cache.get(pageKey)
     if (cached) {
       return of(cached)
     }
     return this.api.list(pageKey).pipe(
-      tap(presets => this.cache.set(pageKey, presets))
+      tap(presets => {
+        if (uid === this.cacheUid) this.cache.set(pageKey, presets)
+      })
     )
   }
 

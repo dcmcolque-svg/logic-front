@@ -8,6 +8,8 @@ import {
   buildFiltersFromConditions,
 } from '@/app/shared/types/filter-preset.types'
 import { FilterPresetApiStorage } from './filter-preset-api.storage'
+import { AuthService } from '@/app/core/services/auth.service'
+import { userStorageKey } from '@/app/shared/utils/user-storage.util'
 
 /**
  * FilterPresetService — Orchestrator for saved filter presets.
@@ -25,10 +27,13 @@ export const FILTER_PRESETS_ENABLED = new InjectionToken<boolean>('FILTER_PRESET
   factory: () => false,
 })
 
+const LAST_APPLIED_KEY = 'logic:preset:lastApplied'
+
 @Injectable({ providedIn: 'root' })
 export class FilterPresetService {
   readonly enabled = inject(FILTER_PRESETS_ENABLED)
   private readonly storage = inject(FilterPresetApiStorage)
+  private readonly auth = inject(AuthService)
 
   /** Reactive signal of presets for the currently active page */
   presets = signal<FilterPreset[]>([])
@@ -45,8 +50,11 @@ export class FilterPresetService {
   /** Private backing for activePageKey (used by refreshFromApi) */
   private activePageKey = ''
 
-  /** localStorage key for the per-page last-applied map */
-  private readonly LAST_APPLIED_STORAGE_KEY = 'logic:preset:lastApplied'
+  /** localStorage key for the per-page last-applied map — per user: preset ids are the user's own. */
+  private get LAST_APPLIED_STORAGE_KEY(): string {
+    const uid = this.auth.authInfo()?.uid
+    return uid ? userStorageKey(uid, LAST_APPLIED_KEY) : LAST_APPLIED_KEY
+  }
 
   // ---------------------------------------------------------------------------
   // Public API

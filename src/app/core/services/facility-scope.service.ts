@@ -62,6 +62,12 @@ export class FacilityScopeService {
   private restored = false
   /** The restored selection predates "No facility" (bare array); `prune()` migrates it. */
   private legacySelection = false
+  /**
+   * uid the state above belongs to. Logout navigates to /login without a page
+   * reload, so this root service outlives the session: when another user signs
+   * in, everything loaded for the previous one must be dropped (see `syncOwner`).
+   */
+  private ownerUid: string | null = null
 
   /** Every facility the authenticated user has access to. */
   readonly all = this._all.asReadonly()
@@ -234,6 +240,7 @@ export class FacilityScopeService {
    * control can clear. The topbar selector calls `restoreSelection()` itself.
    */
   load(force = false): void {
+    this.syncOwner()
     if (!force && (this._loaded() || this._loading())) return
 
     this._loading.set(true)
@@ -242,10 +249,13 @@ export class FacilityScopeService {
       config: { page: 1, rows: FACILITY_PAGE_SIZE },
     }
 
+    const uid = this.ownerUid
     this.http
       .post<FacilityScopeListResponse>(`${this.url}/my`, req)
       .subscribe({
         next: (resp) => {
+          // The user changed while this was in flight: it is someone else's list.
+          if (uid !== this.ownerUid) return
           this._all.set(resp?.data ?? [])
           this._loaded.set(true)
           this._loading.set(false)
@@ -254,7 +264,7 @@ export class FacilityScopeService {
           this.prune()
         },
         error: () => {
-          this._loading.set(false)
+          if (uid === this.ownerUid) this._loading.set(false)
         },
       })
   }
@@ -297,6 +307,23 @@ export class FacilityScopeService {
     if (migrate || kept.length !== current.length) this.setSelection(kept)
   }
 
+  /**
+   * Drops the previous user's facilities and selection when the signed-in uid
+   * differs from the one this state was built for. Called at the entry points
+   * (`load`, `restoreSelection`), which every page using the scope goes through.
+   */
+  private syncOwner(): void {
+    const uid = this.auth.authInfo()?.uid ?? null
+    if (uid === this.ownerUid) return
+    this.ownerUid = uid
+    this._all.set([])
+    this._selectedIds.set([])
+    this._loaded.set(false)
+    this._loading.set(false)
+    this.restored = false
+    this.legacySelection = false
+  }
+
   // === Persistence (mirrors TableStateService key scoping) ===
 
   private scopedKey(): string {
@@ -311,6 +338,7 @@ export class FacilityScopeService {
    * Order-independent from `load()`: if the list is already here, prune now.
    */
   restoreSelection(): void {
+    this.syncOwner()
     if (this.restored) return
     this.restored = true
     this.readPersisted()
