@@ -18,7 +18,6 @@ export default [
   },
   {
     path: 'tracecards',
-    data: { breadcrumb: 'pages.tracecards' },
     loadComponent: () => import('./tracecards/warehouse.component'),
   },
   {

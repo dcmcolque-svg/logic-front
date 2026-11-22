@@ -67,6 +67,8 @@ export const APP_MENU: any[] = [
     items: [
       {
         label: 'tracecards',
+        // label is the permission activity; i18nKey only changes the text shown
+        i18nKey: 'inventory',
         icon: 'pi pi-id-card',
         routerLink: ['/app/inventory/tracecards'],
         path: '/inventory/tracecards',
