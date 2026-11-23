@@ -406,7 +406,10 @@ export default class FacilitiesComponent implements OnInit {
             header: facility
                 ? this.translate.instant('preferences.facilities.edit_facility')
                 : this.translate.instant('preferences.facilities.new_facility'),
-            width: '950px',
+            width: '1000px',
+            breakpoints: { '1100px': '92vw', '640px': '100vw' },
+            modal: true,
+            closable: true,
             closeOnEscape: false,
             contentStyle: { overflow: 'auto' },
             baseZIndex: 10000,

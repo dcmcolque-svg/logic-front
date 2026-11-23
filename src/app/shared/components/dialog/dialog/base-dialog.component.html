@@ -36,7 +36,7 @@
   <!-- Footer -->
   @if (showFooter()) {
     <ng-template pTemplate="footer">
-      <div class="flex justify-end gap-2">
+      <div class="flex flex-wrap justify-end gap-2">
         @if (showCancel()) {
           <p-button
             [label]="cancelLabel() | translate"
@@ -45,6 +45,15 @@
             [disabled]="loading()"
             (onClick)="onCancel()"
             icon="pi pi-times"
+          />
+        }
+        @if (showSave() && saveAndNewLabel()) {
+          <p-button
+            [label]="saveAndNewLabel() | translate"
+            [outlined]="true"
+            [disabled]="saveDisabled() || loading()"
+            (onClick)="saveAndNew.emit()"
+            icon="pi pi-plus"
           />
         }
         @if (showSave()) {

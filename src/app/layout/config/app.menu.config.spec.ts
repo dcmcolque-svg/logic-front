@@ -26,9 +26,14 @@ describe('APP_MENU_TOPBAR', () => {
 })
 
 describe('APP_MENU', () => {
-  it('follows the business order, demo last', () => {
+  it('follows the business order, settings then demo last', () => {
     expect(APP_MENU.map(item => item.label)).toEqual([
-      'home', 'sales', 'inventory', 'inbound', 'outbound', 'demo_components',
+      'home', 'sales', 'inventory', 'inbound', 'outbound', 'settings', 'demo_components',
     ])
+  })
+
+  it('puts the settings pages in the sidebar', () => {
+    const settings = APP_MENU.find(item => item.label === 'settings')
+    expect(settings?.items).toBe(APP_MENU_TOPBAR)
   })
 })

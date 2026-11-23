@@ -87,6 +87,9 @@ describe('PackagingComponent', () => {
     })
 
     afterEach(() => {
+        // The table loads the facility scope list on creation; tests that
+        // care flush it themselves.
+        http.match((r) => r.url.endsWith('v2/facility/my'))
         http.verify()
     })
 

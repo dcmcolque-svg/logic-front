@@ -69,6 +69,14 @@ export class FacilityScopeService {
    */
   private ownerUid: string | null = null
 
+  /**
+   * Whether tables may drop their facility column when the scope covers a
+   * single facility. Off while the topbar selector is hidden: with no control
+   * showing the scope, the column is the only place the facility appears.
+   * Turn it back on together with the selector.
+   */
+  readonly hideSingleFacilityColumn: boolean = false
+
   /** Every facility the authenticated user has access to. */
   readonly all = this._all.asReadonly()
   readonly loading = this._loading.asReadonly()

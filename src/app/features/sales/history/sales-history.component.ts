@@ -115,7 +115,9 @@ export default class SalesHistoryComponent {
   readonly isOwner = isOwnerRole(this.auth.getAuthUserInfo()?.role)
   readonly pageSize = PAGE_SIZE
   readonly activeTab = signal<'sales' | 'registers'>('sales')
-  readonly showFacility = computed(() => !this.facilityScope.isSingle())
+  readonly showFacility = computed(
+    () => !this.facilityScope.hideSingleFacilityColumn || !this.facilityScope.isSingle()
+  )
 
   readonly presetOptions: { value: Preset; label: string }[] = [
     { value: 'today', label: 'sales.history.today' },

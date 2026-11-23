@@ -1,10 +1,49 @@
 import { MenuItem } from 'primeng/api'
 
+/**
+ * Settings entry: translation key, PrimeIcons class and absolute route. The
+ * `path` (/settings/<last segment>) lets the sidebar highlight the group, and
+ * `description` (i18n key) is shown as the item's tooltip.
+ */
+const topbarLink = (label: string, icon: string, route: string): MenuItem => {
+  const segment = route.split('/').pop()
+  return {
+    label,
+    icon,
+    routerLink: [route],
+    path: '/settings/' + segment,
+    description: 'topbar.settings_desc.' + segment,
+  }
+}
+
+/** Settings pages (users, companies, facilities…), shown as the last sidebar group. */
+export const APP_MENU_TOPBAR: MenuItem[] = [
+  topbarLink('users', 'pi pi-user', '/app/preferences/useraccount'),
+  // Activity "Companies" — OWNER only: the operator's companies (inventory owners)
+  topbarLink('companies', 'pi pi-building', '/app/preferences/companies'),
+  topbarLink(
+    'fulfillment locations',
+    'pi pi-sliders-h',
+    '/app/preferences/facilities'
+  ),
+  topbarLink('packaging', 'pi pi-box', '/app/preferences/packaging'),
+  topbarLink(
+    'Locations & Bins',
+    'pi pi-warehouse',
+    '/app/preferences/locations'
+  ),
+  // Activity "Appearance" — OWNER only: the company's colors and menu type
+  topbarLink('appearance', 'pi pi-palette', '/app/preferences/appearance'),
+  // Temporarily hidden: Rotations & Integrations
+  // topbarLink('rotations', 'pi pi-sync', '/app/preferences/rotations'),
+  // topbarLink('integrations', 'pi pi-globe', '/app/preferences/integrations'),
+]
+
 export const APP_PREFERENCES_USERACCOUNT_URL = '/app/preferences/useraccount'
 
 /**
  * Sidebar, in the order the business uses it: home, sales, inventory, inbound,
- * outbound. The order also picks the landing page after login
+ * outbound, settings. The order also picks the landing page after login
  * (AuthService.getFirstAvailableRoute: the first entry the user may open).
  */
 export const APP_MENU: any[] = [
@@ -161,6 +200,14 @@ export const APP_MENU: any[] = [
     ],
   },
   {
+    // Settings: kept last among business groups so it reads as admin, not daily work.
+    // Children are filtered by activity like any other group (MenuSidebarService).
+    label: 'settings',
+    icon: 'pi pi-cog',
+    path: '/settings',
+    items: APP_MENU_TOPBAR,
+  },
+  {
     label: 'demo_components',
     icon: 'pi pi-palette',
     path: '/demo',
@@ -193,33 +240,4 @@ export const APP_MENU: any[] = [
   //       },
   //     ],
   //   },
-]
-
-/** Top-bar shortcut: translation key, PrimeIcons class and absolute route. */
-const topbarLink = (label: string, icon: string, route: string): MenuItem => ({
-  label,
-  icon,
-  routerLink: [route],
-})
-
-export const APP_MENU_TOPBAR: MenuItem[] = [
-  topbarLink('users', 'pi pi-user', '/app/preferences/useraccount'),
-  // Activity "Companies" — OWNER only: the operator's companies (inventory owners)
-  topbarLink('companies', 'pi pi-building', '/app/preferences/companies'),
-  topbarLink(
-    'fulfillment locations',
-    'pi pi-sliders-h',
-    '/app/preferences/facilities'
-  ),
-  topbarLink('packaging', 'pi pi-box', '/app/preferences/packaging'),
-  topbarLink(
-    'Locations & Bins',
-    'pi pi-warehouse',
-    '/app/preferences/locations'
-  ),
-  // Activity "Appearance" — OWNER only: the company's colors and menu type
-  topbarLink('appearance', 'pi pi-palette', '/app/preferences/appearance'),
-  // Temporarily hidden: Rotations & Integrations
-  // topbarLink('rotations', 'pi pi-sync', '/app/preferences/rotations'),
-  // topbarLink('integrations', 'pi pi-globe', '/app/preferences/integrations'),
 ]

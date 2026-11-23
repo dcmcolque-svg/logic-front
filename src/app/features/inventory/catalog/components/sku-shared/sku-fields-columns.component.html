@@ -9,28 +9,44 @@
   [style.display]="hideColumns() ? 'none' : null"
 >
   <div class="flex items-center gap-2 mb-1">
-    <i class="pi pi-cog text-primary" [class.text-sm]="dense()"></i>
+    <i class="pi pi-info-circle text-primary" [class.text-sm]="dense()"></i>
     <span class="font-semibold text-primary" [class.text-sm]="dense()">
       {{ 'labels.general_information' | translate }}
     </span>
   </div>
   <ng-content />
-  <base-form-field
-    type="text"
-    label="labels.sku"
-    [control]="f.sku_code"
-    [required]="true"
-    [placeholder]="skuPlaceholder()"
-  />
-  <base-form-field type="text" label="labels.barcode" [control]="f.barcode" />
+  <div class="flex flex-col">
+    <base-form-field
+      type="text"
+      label="labels.sku"
+      [control]="f.sku_code"
+      [required]="true"
+      [placeholder]="skuPlaceholder()"
+      [fieldId]="skuFieldId"
+    />
+    <!-- Live uniqueness lookup (the "taken" case is shown by the field's own error) -->
+    @switch (skuStatus()) {
+      @case ('checking') {
+        <small class="text-xs text-muted-color mt-1 flex items-center gap-1" aria-live="polite">
+          <i class="pi pi-spin pi-spinner text-xs" aria-hidden="true"></i>{{ 'catalog.sku_checking' | translate }}
+        </small>
+      }
+      @case ('available') {
+        <small class="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1" aria-live="polite">
+          <i class="pi pi-check-circle text-xs" aria-hidden="true"></i>{{ 'catalog.sku_available' | translate }}
+        </small>
+      }
+    }
+  </div>
   <base-form-field type="text" label="labels.name" [control]="f.name" [required]="true" />
+  <base-form-field type="text" label="labels.barcode" [control]="f.barcode" />
   <base-form-field type="text" label="labels.description" [control]="f.description" />
   <base-form-field type="text" label="labels.hs_code" [control]="f.hs_code" />
   <base-form-field
     type="dropdown"
     label="labels.serial_control_mode"
     [control]="f.serial_control_mode"
-    [options]="serialControlModeOptions"
+    [options]="serialControlModeOptions()"
     optionLabel="label"
     optionValue="value"
   />
@@ -44,7 +60,7 @@
   [style.display]="hideColumns() ? 'none' : null"
 >
   <div class="flex items-center gap-2 mb-1">
-    <i class="pi pi-search text-primary" [class.text-sm]="dense()"></i>
+    <i class="pi pi-arrows-alt text-primary" [class.text-sm]="dense()"></i>
     <span class="font-semibold text-primary" [class.text-sm]="dense()">
       {{ 'labels.dimensions_weight' | translate }}
     </span>
@@ -69,6 +85,25 @@
     <!-- unit_factor is an integer on the backend -->
     <base-form-field type="number" label="labels.unit_factor" [control]="f.unit_factor" [maxFractionDigits]="0" [min]="1" />
   </div>
+  <!-- Margin over cost, recalculated as the user types -->
+  @let priceMargins = margins();
+  @if (priceMargins.length > 0) {
+    <div class="flex flex-col gap-1 text-xs" aria-live="polite">
+      <div class="flex flex-wrap gap-x-3 gap-y-1">
+        @for (m of priceMargins; track m.label) {
+          <span [class]="m.percent < 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-color'">
+            {{ 'catalog.margin_of' | translate: { price: (m.label | translate) } }}:
+            <span class="font-semibold">{{ m.percent }}%</span>
+          </span>
+        }
+      </div>
+      @if (hasPriceBelowCost(priceMargins)) {
+        <span class="text-red-600 dark:text-red-400 flex items-center gap-1">
+          <i class="pi pi-exclamation-triangle text-xs" aria-hidden="true"></i>{{ 'catalog.price_below_cost' | translate }}
+        </span>
+      }
+    </div>
+  }
 
   <!-- Custom Attributes (below cost and price) -->
   <div class="flex items-center justify-between mb-1 mt-1">

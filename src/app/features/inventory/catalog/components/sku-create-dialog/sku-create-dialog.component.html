@@ -13,13 +13,23 @@
   [dismissableMask]="false"
   [loading]="saving()"
   [saveDisabled]="!isValid()"
+  saveAndNewLabel="catalog.save_and_new"
   (save)="onSave()"
+  (saveAndNew)="onSaveAndNew()"
+  (shown)="focusSkuCode()"
   (hide)="onHide()"
 >
   <!-- ═══════ SKU Section (main content) ═══════ -->
   <div class="grid grid-cols-12 gap-8">
     <!-- Left column: General Info / Center column: Dimensions, Weight, Cost & Price, Custom Attributes -->
-    <app-sku-fields-columns [form]="skuForm" [attributes]="customAttrs" [hideColumns]="workspaceOpen()" [dense]="true">
+    <app-sku-fields-columns
+      [form]="skuForm"
+      [attributes]="customAttrs"
+      [hideColumns]="workspaceOpen()"
+      [dense]="true"
+      [skuStatus]="skuStatus()"
+      skuPlaceholder="labels.sku_placeholder"
+    >
       <base-form-field
         type="dropdown"
         label="labels.company"

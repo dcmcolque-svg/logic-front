@@ -116,12 +116,12 @@
 
         .topbar-actions {
             gap: 0.25rem;
+        }
 
-            app-route-menu {
-                > div {
-                    margin-right: 0;
-                    margin-top: 0;
-                }
+        .topbar-language-button {
+            span,
+            i {
+                display: none;
             }
         }
     }

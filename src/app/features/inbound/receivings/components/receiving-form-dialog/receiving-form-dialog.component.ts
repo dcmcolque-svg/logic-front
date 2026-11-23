@@ -150,6 +150,8 @@ export class ReceivingFormDialogComponent {
   hide = output<void>()
   /** Emitted after a successful create or update. */
   saved = output<ReceivingResult>()
+  /** Emitted after "Save and create another": the dialog stays open for the next one. */
+  savedAndNew = output<ReceivingResult>()
 
   // ── State ─────────────────────────────────────────────────────────────────
   editing = computed(() => !!this.receiving())
@@ -330,6 +332,19 @@ export class ReceivingFormDialogComponent {
     this.loadingLines.set(false)
   }
 
+  /**
+   * Clears the document-specific fields after "Save and create another".
+   * Branch, company, supplier and doc type stay — a batch of receivings
+   * usually shares them — so only the number, refs, notes and lines reset.
+   */
+  private resetForNext(): void {
+    this.items.clear()
+    this.form.patchValue({ doc_number: '', external_ref: null, expected_arrival: null, notes: null })
+    this.form.controls.doc_number.markAsUntouched()
+    this.items.markAsUntouched()
+    this.skuSearch.reset()
+  }
+
   /** Fills the header from the list row and fetches its expected lines. */
   private loadForEdit(rec: ReceivingListItem): void {
     this.patching = true
@@ -473,7 +488,8 @@ export class ReceivingFormDialogComponent {
 
   // ── Save ──────────────────────────────────────────────────────────────────
 
-  onSave(): void {
+  /** `andNew` (create mode only) keeps the dialog open and clears it for the next receiving. */
+  onSave(andNew = false): void {
     if (this.loadingLines()) return
     if (this.form.invalid) {
       this.form.markAllAsTouched()
@@ -515,6 +531,11 @@ export class ReceivingFormDialogComponent {
           detail: res.doc_number,
           life: 3000,
         })
+        if (andNew && !editing) {
+          this.resetForNext()
+          this.savedAndNew.emit(res)
+          return
+        }
         this.saved.emit(res)
       },
       error: err => {

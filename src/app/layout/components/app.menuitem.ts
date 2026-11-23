@@ -65,8 +65,10 @@ import { LayoutService } from '@/app/layout/service/layout.service'
         [attr.target]="item().target"
         tabindex="0"
         pRipple
-        [pTooltip]="item().label"
-        [tooltipDisabled]="isTooltipDisabled()"
+        [pTooltip]="item()['description'] || item().label"
+        [tooltipDisabled]="isTooltipDisabled() && !item()['description']"
+        tooltipPosition="right"
+        [showDelay]="item()['description'] ? 400 : 0"
       >
         <i [ngClass]="item().icon" class="layout-menuitem-icon"></i>
         <span class="layout-menuitem-text">{{ item().label }}</span>

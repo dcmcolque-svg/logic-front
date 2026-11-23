@@ -20,6 +20,8 @@ const LA: ScopeFacility = { id: 'f3', name: 'LA' }
 
 /** Minimal stand-in for FacilityScopeService, driven from the test. */
 class ScopeStub {
+  /** On here so the hiding rules stay covered; the real service ships it off. */
+  hideSingleFacilityColumn = true
   readonly all = signal<ScopeFacility[]>([MIAMI, DALLAS, LA])
   readonly selectedIds = signal<string[]>([])
   /** Coverage, like the real service: "all" of a single facility is single too. */
@@ -41,6 +43,7 @@ class ScopeStub {
       ? this.all()
       : this.all().filter((f) => ids.includes(f.id))
   })
+  load(): void {}
 }
 
 function columns(): ShColumnDef[] {
@@ -116,6 +119,16 @@ describe('BaseDataTable — global facility scope', () => {
       create()
       moveScope(['f2'])
       expect(table.visibleColumns().map((c) => c.field)).toEqual(['tracking'])
+    })
+
+    it('keeps the facility column when the service has hiding switched off', () => {
+      scope.hideSingleFacilityColumn = false
+      create()
+      moveScope(['f2'])
+      expect(table.visibleColumns().map((c) => c.field)).toEqual([
+        'tracking',
+        'facility_id',
+      ])
     })
 
     it('narrows the facility filter options when several are in scope', () => {

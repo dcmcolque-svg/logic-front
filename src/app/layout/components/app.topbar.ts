@@ -19,15 +19,15 @@ import { IconField } from 'primeng/iconfield'
 import { InputIcon } from 'primeng/inputicon'
 import { FormsModule } from '@angular/forms'
 import { AuthService } from '../../core/services/auth.service'
-import { SelectButton } from 'primeng/selectbutton'
 import { Divider } from 'primeng/divider'
-import { RouteMenuComponent } from './route-menu.component'
+import { MenuModule } from 'primeng/menu'
+import { TooltipModule } from 'primeng/tooltip'
+import { MenuItem } from 'primeng/api'
 import { TranslateModule, TranslateService } from '@ngx-translate/core'
 import { TranslateLanService } from '../../core/services/translate-lan.service'
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog'
 import { AppEditUserProfile } from './app.edit-user-profile'
 import { OperatorBrandingDialogComponent } from '@/app/features/preferences/operator-branding/operator-branding-dialog.component'
-import { FacilityScopeSelectorComponent } from './facility-scope-selector.component'
 
 @Component({
   selector: '[app-topbar]',
@@ -42,14 +42,13 @@ import { FacilityScopeSelectorComponent } from './facility-scope-selector.compon
     ButtonModule,
     IconField,
     InputIcon,
-    SelectButton,
     Divider,
-    RouteMenuComponent,
+    MenuModule,
+    TooltipModule,
     TranslateModule,
     NgOptimizedImage,
     DynamicDialogModule,
     OperatorBrandingDialogComponent,
-    FacilityScopeSelectorComponent,
   ],
   providers: [DialogService],
   template: `
@@ -87,12 +86,42 @@ import { FacilityScopeSelectorComponent } from './facility-scope-selector.compon
 
       <!-- Contendor para acciones del topbar derecha -->
       <div class="topbar-actions">
-        <!-- Global facility scope — narrows every base-data-table in the app -->
-         <!-- TODO DESCOMENTAR CUANDO EL TICKET ESTE APROBADO -->
-        <app-facility-scope-selector />
+        <!-- Theme (Light / Dark) -->
+        <button
+          type="button"
+          class="topbar-icon-button"
+          [attr.aria-label]="(layoutService.isDarkTheme() ? 'topbar.themeLight' : 'topbar.themeDark') | translate"
+          [pTooltip]="(layoutService.isDarkTheme() ? 'topbar.themeLight' : 'topbar.themeDark') | translate"
+          tooltipPosition="bottom"
+          (click)="toggleTheme()"
+        >
+          <i [class]="layoutService.isDarkTheme() ? 'pi pi-sun' : 'pi pi-moon'"></i>
+        </button>
 
-        <!-- Settings gear (route-menu) -->
-        <app-route-menu class="ml-2 sm:ml-0"></app-route-menu>
+        <!-- Language -->
+        <button
+          type="button"
+          class="topbar-language-button"
+          [attr.aria-label]="'topbar.language' | translate"
+          [pTooltip]="'topbar.language' | translate"
+          tooltipPosition="bottom"
+          (click)="languageMenu.toggle($event)"
+        >
+          <img [src]="selectedLanguage.icon" [alt]="selectedLanguage.label | translate" />
+          <span>{{ selectedLanguage.value | uppercase }}</span>
+          <i class="pi pi-angle-down"></i>
+        </button>
+        <p-menu #languageMenu [model]="languageMenuItems()" [popup]="true" appendTo="body">
+          <ng-template #item let-item>
+            <a class="flex items-center gap-2 px-3 py-2 cursor-pointer">
+              <img [src]="item.icon" alt="" style="width: 1.25rem; height: 1.25rem; border-radius: 50%" />
+              <span class="flex-1">{{ item.label | translate }}</span>
+              @if (item.id === selectedLanguage.value) {
+                <i class="pi pi-check text-primary"></i>
+              }
+            </a>
+          </ng-template>
+        </p-menu>
 
         <!-- Profile -->
         <div class="topbar-profile">
@@ -134,66 +163,6 @@ import { FacilityScopeSelectorComponent } from './facility-scope-selector.compon
                 <i class="pi pi-user mr-4"></i>
                 <span>{{ 'topbar.edit_profile' | translate }}</span>
               </a>
-
-              <!-- Theme (Light / Dark) -->
-              <div class="text-sm font-bold mt-2">
-                {{ 'topbar.theme' | translate }}
-              </div>
-              <p-selectbutton
-                [options]="themeOptions"
-                [(ngModel)]="selectedTheme"
-                optionLabel="label"
-                [allowEmpty]="false"
-                (onChange)="handleThemeChange($event)"
-                [style]="{
-                  width: '100%',
-                  display: 'flex',
-                  'justify-content': 'center',
-                }"
-              >
-                <ng-template let-item pTemplate="item">
-                  <div class="flex items-center justify-center w-full">
-                    <i
-                      [class]="'pi ' + item.icon + ' mr-2'"
-                      style="font-size: 1.2rem"
-                    ></i>
-                    <span class="text-center w-full" style="min-width: 3rem">{{
-                      item.label | translate
-                    }}</span>
-                  </div>
-                </ng-template>
-              </p-selectbutton>
-
-              <!-- Language -->
-              <div class="text-sm font-bold mt-2">
-                {{ 'topbar.language' | translate }}
-              </div>
-              <p-selectbutton
-                [options]="languageOptions"
-                [(ngModel)]="selectedLanguage"
-                optionLabel="label"
-                [allowEmpty]="false"
-                (onChange)="handleLanguageChange($event)"
-                [style]="{
-                  width: '100%',
-                  display: 'flex',
-                  'justify-content': 'center',
-                }"
-              >
-                <ng-template let-item pTemplate="item">
-                  <div class="flex items-center justify-center w-full">
-                    <img
-                      [src]="item.icon"
-                      [alt]="item.label"
-                      class="mr-2"
-                      style="width: 1.3rem; height: 1.3rem; border-radius: 50%"
-                    />
-                    <span class="text-center w-full" style="min-width: 3rem">{{
-                      item.label | translate
-                    }}</span>
-                  </div>
-                </ng-template>
-              </p-selectbutton>
 
               <!-- Temporarily hidden: Logos / Branding (incl. its leading divider)
               <p-divider
@@ -274,17 +243,20 @@ export class AppTopbar implements OnInit {
     return path + logo
   })
 
-  themeOptions = [
-    { label: 'topbar.themeLight', value: 'light', icon: 'pi-sun' },
-    { label: 'topbar.themeDark', value: 'dark', icon: 'pi-moon' },
-  ]
-  selectedTheme = this.themeOptions[0]
-
   languageOptions: { label: string; value: string; icon: string }[] = [
     { label: 'labels.english', value: 'en', icon: '/layout/icons/um.png' },
     { label: 'labels.spanish', value: 'es', icon: '/layout/icons/es.png' },
   ]
   selectedLanguage: { label: string; value: string; icon: string }
+  /** Items of the topbar language popup (label is an i18n key, translated in the template). */
+  languageMenuItems = signal<MenuItem[]>(
+    this.languageOptions.map((opt) => ({
+      id: opt.value,
+      label: opt.label,
+      icon: opt.icon,
+      command: () => this.setLanguage(opt),
+    }))
+  )
 
   constructor() {
     const lan = this.translateLanService.getLanguage()
@@ -323,12 +295,6 @@ export class AppTopbar implements OnInit {
     if (avatar) {
       this.avatarUrl.set(avatar)
     }
-
-    // Restore theme selection from localStorage
-    const storedTheme = this.layoutService.getStoredTheme()
-    this.selectedTheme =
-      this.themeOptions.find((t) => t.value === storedTheme) ||
-      this.themeOptions[0]
   }
 
   onMenuButtonClick() {
@@ -346,18 +312,17 @@ export class AppTopbar implements OnInit {
     this.searchActive.set(false)
   }
 
-  handleThemeChange(event: any) {
-    const isDark = event.value.value === 'dark'
+  toggleTheme(): void {
     this.layoutService.layoutConfig.update((prev) => ({
       ...prev,
-      darkTheme: isDark,
+      darkTheme: !prev.darkTheme,
     }))
   }
 
-  handleLanguageChange(event: any) {
-    const lan = event.value.value
-    this.translateLanService.setLanguage(lan)
-    this.translateService.use(lan)
+  setLanguage(opt: { label: string; value: string; icon: string }): void {
+    this.selectedLanguage = opt
+    this.translateLanService.setLanguage(opt.value)
+    this.translateService.use(opt.value)
   }
 
   openBrandingDialog(): void {

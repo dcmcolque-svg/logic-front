@@ -226,6 +226,7 @@
   [companies]="companies()"
   [preselectedProduct]="skuCreatePreselectedProduct()"
   (saved)="onSkuCreated()"
+  (created)="loadInventoryData()"
   (hide)="showSkuCreateDialog.set(false)"
 />
 

@@ -573,7 +573,7 @@ export default class WebhooksComponent implements OnInit {
     // ticked ids sends a different request.
     effect(() => {
       const ids = this.facilityScope.selectedIds().join(',')
-      const single = this.facilityScope.isSingleWithoutNulls()
+      const single = this.facilityScope.hideSingleFacilityColumn && this.facilityScope.isSingleWithoutNulls()
       const last = this.lastScope
       this.lastScope = { ids, single }
       if (last === null || last.ids === ids) {
@@ -610,7 +610,7 @@ export default class WebhooksComponent implements OnInit {
    * a raw p-table, and operator-level webhooks have no facility.
    */
   renderedColumns(): Column[] {
-    const single = this.facilityScope.isSingleWithoutNulls()
+    const single = this.facilityScope.hideSingleFacilityColumn && this.facilityScope.isSingleWithoutNulls()
     const memo = this.renderedMemo
     if (memo && memo.from === this.columnsSelect && memo.single === single) return memo.cols
     const cols = single

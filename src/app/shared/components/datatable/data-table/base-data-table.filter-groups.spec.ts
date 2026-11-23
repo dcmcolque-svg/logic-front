@@ -35,6 +35,7 @@ describe('BaseDataTable — AND/OR chip groups', () => {
       selectedIds: signal<string[]>([]),
       isSingle: computed(() => false),
       inScope: computed(() => []),
+      load: () => {},
     }
     TestBed.configureTestingModule({
       imports: [BaseDataTable],

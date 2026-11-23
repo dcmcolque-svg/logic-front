@@ -23,6 +23,7 @@ describe('WebhooksComponent – filter MatchModel', () => {
       postListFilterWebhooks: jasmine.createSpy().and.returnValue({ subscribe: () => {} }),
     }
     const facilityScopeStub = {
+      hideSingleFacilityColumn: true,
       zone: () => 'America/La_Paz', zoneOf: () => 'America/La_Paz', mixedZones: () => false, load: () => {},
       inScope: signal([]),
       selectedIds: signal([]),

@@ -53,7 +53,7 @@
           (ngModelChange)="facilityId.set($event)"
           optionLabel="name"
           optionValue="id"
-          placeholder="Select Facility"
+          [placeholder]="'preferences.facilities.select_facility' | translate"
           [style]="{ width: '220px', height: '32px', 'align-items': 'center' }"
           (onChange)="onFacilityChange($event)"
           [disabled]="stateService.isSavingLayout() || stateService.isLoadingLayout()"

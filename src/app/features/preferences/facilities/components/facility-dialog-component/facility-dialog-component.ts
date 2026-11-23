@@ -27,7 +27,7 @@ import { SelectModule } from 'primeng/select';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { ToastModule } from 'primeng/toast';
 import { KeyFilterModule } from 'primeng/keyfilter';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { TranslateLanService } from '../../../../../core/services/translate-lan.service';
@@ -130,7 +130,7 @@ const ALL_COUNTRY_CODES: string[] = Object.values(FULL_ALPHA2_TO_ALPHA3);
         ProgressBarModule,
         ToastModule,
         KeyFilterModule,
-        ToggleSwitchModule,
+        TooltipModule,
     ],
     providers: [MessageService],
     templateUrl: './facility-dialog-component.html',
@@ -155,6 +155,12 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
     searchQuery     = signal('');
     searchResults   = signal<NominatimResult[]>([]);
     showSuggestions = signal(false);
+    /** Suggestion highlighted by the keyboard (-1 = none). */
+    activeSuggestion = signal(-1);
+    isLocating        = signal(false);
+    isReverseGeocoding = signal(false);
+    /** Bumped on every reverse lookup so a slow, stale answer never overwrites a newer pin. */
+    private reverseSeq = 0;
     countries: { label: string; value: string }[] = [];
     /** IANA zones for the time zone select ('America/La_Paz' shown as 'America / La Paz'). */
     readonly timeZones = supportedTimeZones().map((z) => ({ value: z, label: z.replace(/_/g, ' ').replace(/\//g, ' / ') }));
@@ -164,8 +170,6 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
     private marker?: L.Marker;
     lat = signal<number | null>(null);
     lng = signal<number | null>(null);
-    /** Controls whether the address fields are editable. Default false on create, true on edit. */
-    addressEnabled = signal(false);
 
     constructor() {
         effect(() => this.translate.use(this.translateLan.changeLanguage()));
@@ -175,7 +179,9 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
     ngOnInit(): void {
         this.initForm();
         this.loadCountries();
-        this.translate.onLangChange.subscribe(() => this.loadCountries());
+        this.translate.onLangChange
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => this.loadCountries());
     }
 
     ngAfterViewInit(): void {
@@ -214,12 +220,13 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
             external_ref_id: new FormControl(f?.external_ref_id ?? ''),
             time_zone:       new FormControl(f?.time_zone ?? DEFAULT_TIME_ZONE, [Validators.required]),
 
-            // Address — controls start disabled when creating a new facility
-            street:         new FormControl({ value: f?.address?.street        ?? '', disabled: !f }, [Validators.required, noWhitespace]),
-            city:           new FormControl({ value: f?.address?.city          ?? '', disabled: !f }, [Validators.required, noWhitespace]),
-            state_province: new FormControl({ value: f?.address?.state_province ?? '', disabled: !f }, [Validators.required, noWhitespace]),
-            zip_code:       new FormControl({ value: f?.address?.zip_code      ?? '', disabled: !f }, [Validators.required, noWhitespace]),
-            country_code:   new FormControl({ value: f?.address?.country_code  ?? '', disabled: !f }, [Validators.required]),
+            // Address — filled from the map pin, always editable by hand.
+            // Zip is optional: many places in the region have no postal code.
+            street:         new FormControl(f?.address?.street         ?? '', [Validators.required, noWhitespace]),
+            city:           new FormControl(f?.address?.city           ?? '', [Validators.required, noWhitespace]),
+            state_province: new FormControl(f?.address?.state_province ?? '', [Validators.required, noWhitespace]),
+            zip_code:       new FormControl(f?.address?.zip_code       ?? '', [noWhitespace]),
+            country_code:   new FormControl(f?.address?.country_code   ?? '', [Validators.required]),
             reference:      new FormControl(f?.address?.reference     ?? ''),
             lat:            new FormControl(initLat, [nonZeroRequired]),
             lng:            new FormControl(initLng, [nonZeroRequired]),
@@ -235,9 +242,6 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
                     if (suggested && !tz.dirty) tz.setValue(suggested);
                 });
         }
-
-        // If editing an existing facility, address is enabled by default
-        if (f) this.addressEnabled.set(true);
 
         // Seed map coords signals
         if (initLat && initLng) {
@@ -293,15 +297,53 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
     }
 
     private updateMarker(lat: number, lng: number): void {
+        this.placePin(lat, lng);
+        // Geocodificación inversa para rellenar los campos de dirección
+        this.geocodificacionInversa(lat, lng);
+    }
+
+    /** Moves (or creates) the pin and syncs signals + form, without geocoding. */
+    private placePin(lat: number, lng: number): L.Marker {
         this.lat.set(lat);
         this.lng.set(lng);
         this.form.get('lat')?.setValue(lat);
         this.form.get('lng')?.setValue(lng);
+        this.form.get('lat')?.markAsDirty();
 
         if (this.marker) this.map.removeLayer(this.marker);
         this.marker = this.createDraggableMarker(lat, lng);
-        // Geocodificación inversa para rellenar los campos de dirección
-        this.geocodificacionInversa(lat, lng);
+        return this.marker;
+    }
+
+    /** Centers the map on the browser's position and pins it. */
+    usarMiUbicacion(): void {
+        if (!navigator.geolocation) {
+            this.warn('preferences.facilities.geolocation_error');
+            return;
+        }
+        this.isLocating.set(true);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                this.isLocating.set(false);
+                const { latitude, longitude } = pos.coords;
+                this.map?.setView([latitude, longitude], 17);
+                this.updateMarker(latitude, longitude);
+            },
+            () => {
+                this.isLocating.set(false);
+                this.warn('preferences.facilities.geolocation_error');
+            },
+            { enableHighAccuracy: true, timeout: 10000 },
+        );
+    }
+
+    private warn(detailKey: string): void {
+        this.messageService.add({
+            severity: 'warn',
+            summary: this.translate.instant('common.warning'),
+            detail: this.translate.instant(detailKey),
+            life: 4000,
+        });
     }
 
     // ── Geocoding (Reverse) ─────────────────────────────────────────────
@@ -311,7 +353,9 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
      * de Nominatim y rellena los campos street, city, state, zip y country.
      */
     private geocodificacionInversa(lat: number, lng: number): void {
+        const seq = ++this.reverseSeq;
         const url = `https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&lat=${lat}&lon=${lng}`;
+        this.isReverseGeocoding.set(true);
 
         fetch(url, {
             method: 'GET',
@@ -323,90 +367,43 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
             return res.json() as Promise<NominatimResult>;
         })
         .then(result => {
-            console.log('[Nominatim Reverse] Dirección obtenida:', result);
+            if (seq !== this.reverseSeq) return;
+            // Keep whatever the user typed: only warn, never wipe the fields.
             if (result.error) {
-                this.clearAddressFields();
-                this.messageService.add({
-                    severity: 'warn',
-                    summary: this.translate.instant('common.warning'),
-                    detail: this.translate.instant('preferences.facilities.geocode_error'),
-                    life: 4000,
-                });
+                this.warn('preferences.facilities.geocode_error');
                 return;
             }
             this.rellenarDireccion(result.address);
         })
-        .catch(err => {
-            console.error('[Nominatim Reverse] Error:', err);
-            this.clearAddressFields();
-            this.messageService.add({
-                severity: 'warn',
-                summary: this.translate.instant('common.warning'),
-                detail: this.translate.instant('preferences.facilities.geocode_error'),
-                life: 4000,
-            });
+        .catch(() => {
+            if (seq === this.reverseSeq) this.warn('preferences.facilities.geocode_error');
+        })
+        .finally(() => {
+            if (seq === this.reverseSeq) this.isReverseGeocoding.set(false);
         });
-    }
-
-    /**
-     * Parsea el objeto NominatimAddress y escribe los valores en el formulario.
-     * Usado tanto por forward como reverse geocoding.
-     */
-    /** Blanks all address-related form controls. Called when geocoding fails. */
-    private clearAddressFields(): void {
-        this.form.get('street')?.setValue('');
-        this.form.get('city')?.setValue('');
-        this.form.get('state_province')?.setValue('');
-        this.form.get('zip_code')?.setValue('');
-    }
-
-    /** Called by the address toggle switch. Enables or disables the address form controls. */
-    toggleAddressFields(enabled: boolean): void {
-        this.addressEnabled.set(enabled);
-        const fields = ['street', 'city', 'state_province', 'zip_code', 'country_code'];
-        if (enabled) {
-            fields.forEach(f => this.form.get(f)?.enable());
-        } else {
-            fields.forEach(f => this.form.get(f)?.disable());
-            
-            // Clear address text fields
-            this.clearAddressFields();
-            this.form.get('country_code')?.setValue('');
-            
-            // Clear geocoder search
-            this.searchQuery.set('');
-            this.searchResults.set([]);
-            
-            // Reset coordinates
-            this.form.get('lat')?.setValue(0);
-            this.form.get('lng')?.setValue(0);
-            this.lat.set(null);
-            this.lng.set(null);
-            
-            // Reset Map to default
-            if (this.map) {
-                this.map.setView([0, 0], 2);
-                if (this.marker) {
-                    this.map.removeLayer(this.marker);
-                    this.marker = undefined;
-                }
-            }
-        }
     }
 
     private rellenarDireccion(addr: NominatimAddress | undefined): void {
         if (!addr) return;
 
-        const street = addr.road ?? addr.pedestrian ?? addr.footway ?? addr.path ?? '';
-        this.form.get('street')?.setValue(street);
-
+        const road = addr.road ?? addr.pedestrian ?? addr.footway ?? addr.path ?? '';
+        const street = [road, addr.house_number].filter(Boolean).join(' ');
         const city = addr.city ?? addr.town ?? addr.village ?? addr.municipality ?? addr.county ?? '';
-        this.form.get('city')?.setValue(city);
-
         const state = addr.state ?? addr.province ?? addr.region ?? '';
-        this.form.get('state_province')?.setValue(state);
 
-        this.form.get('zip_code')?.setValue(addr.postcode ?? '');
+        // Only overwrite with what the lookup actually found, so a partial
+        // answer does not erase fields the user already filled in.
+        const set = (field: string, value: string | undefined) => {
+            const v = (value ?? '').trim().replace(/\s+/g, ' ');
+            if (!v) return;
+            const ctrl = this.form.get(field);
+            ctrl?.setValue(v);
+            ctrl?.markAsDirty();
+        };
+        set('street', street);
+        set('city', city);
+        set('state_province', state);
+        set('zip_code', addr.postcode?.replace(/[^0-9A-Za-z]/g, ''));
 
         if (addr.country_code) {
             const a2 = addr.country_code.toUpperCase();
@@ -442,6 +439,39 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
         }
     }
 
+    /** Arrow keys move through the suggestions, Enter picks/searches, Escape closes. */
+    onSearchKeydown(event: KeyboardEvent): void {
+        const open = this.showSuggestions() && this.searchResults().length > 0;
+        const count = this.searchResults().length;
+        switch (event.key) {
+            case 'ArrowDown':
+                if (!open) return;
+                event.preventDefault();
+                this.activeSuggestion.set((this.activeSuggestion() + 1) % count);
+                break;
+            case 'ArrowUp':
+                if (!open) return;
+                event.preventDefault();
+                this.activeSuggestion.set((this.activeSuggestion() - 1 + count) % count);
+                break;
+            case 'Enter': {
+                // Never let Enter here submit the facility form.
+                event.preventDefault();
+                const picked = open ? this.searchResults()[this.activeSuggestion()] : undefined;
+                if (picked) this.seleccionarResultado(picked);
+                else this.buscarDireccion(this.searchQuery());
+                break;
+            }
+            case 'Escape':
+                if (open) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.showSuggestions.set(false);
+                }
+                break;
+        }
+    }
+
     /**
      * Busca en Nominatim y puebla el dropdown de sugerencias (limit = 5).
      * También se llama directamente desde el botón / Enter para búsqueda inmediata.
@@ -468,8 +498,6 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
             return res.json() as Promise<NominatimResult[]>;
         })
         .then(results => {
-            console.log('[Nominatim] Resultados devueltos por la API:', results);
-
             if (!results || results.length === 0) {
                 this.searchResults.set([]);
                 this.showSuggestions.set(false);
@@ -478,15 +506,14 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
                     summary: this.translate.instant('preferences.facilities.geocoding.not_found_summary'),
                     detail:  this.translate.instant('preferences.facilities.geocoding.not_found_detail'),
                 });
-                console.warn('[Nominatim] No se encontraron resultados para:', query);
                 return;
             }
 
             this.searchResults.set(results);
+            this.activeSuggestion.set(0);
             this.showSuggestions.set(true);
         })
-        .catch(err => {
-            console.error('[Nominatim] Error en la petición a la API:', err);
+        .catch(() => {
             this.messageService.add({
                 severity: 'error',
                 summary: this.translate.instant('preferences.facilities.geocoding.error_summary'),
@@ -507,24 +534,17 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
         const lat = Number.parseFloat(result.lat);
         const lon = Number.parseFloat(result.lon);
 
-        console.log('[Nominatim] Resultado seleccionado → lat:', lat, 'lon:', lon);
-        console.log('[Nominatim] Dirección completa:', result.display_name);
-        console.log('[Nominatim] Detalle de dirección:', result.address);
-
         // Rellenar campos de dirección (ya tenemos el address del forward geocoding)
         this.rellenarDireccion(result.address);
 
-        // Actualizar coords en signals y form
-        this.lat.set(lat);
-        this.lng.set(lon);
-        this.form.get('lat')?.setValue(lat);
-        this.form.get('lng')?.setValue(lon);
-
         // Mover cámara y marcador sin disparar reverse geocoding adicional
-        this.map.setView([lat, lon], 16);
-        if (this.marker) this.map.removeLayer(this.marker);
-        this.marker = this.createDraggableMarker(lat, lon);
-        this.marker.bindPopup(`<strong>${result.display_name}</strong>`).openPopup();
+        this.reverseSeq++; // drop any in-flight reverse lookup from an earlier click
+        this.isReverseGeocoding.set(false);
+        this.map.setView([lat, lon], 17);
+        const marker = this.placePin(lat, lon);
+        const popup = document.createElement('strong');
+        popup.textContent = result.display_name; // text, not HTML: the name comes from a third party
+        marker.bindPopup(popup).openPopup();
     }
 
     /** Cierra el dropdown con un pequeño delay para que el mousedown del item se registre primero. */
@@ -535,8 +555,13 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
     // ── Actions ───────────────────────────────────────────────────────────
 
     save(): void {
+        if (this.isLoading()) return;
         this.touchAll();
-        if (!this.form.valid) return;
+        if (!this.form.valid) {
+            this.warn('preferences.facilities.form_invalid');
+            this.focusFirstInvalid();
+            return;
+        }
 
         const v = this.form.getRawValue();
         const clean = (s: string) => (s ?? '').trim().replaceAll(/\s+/g, ' ');
@@ -598,28 +623,12 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
         return !!(ctrl?.invalid && (ctrl.dirty || ctrl.touched));
     }
 
-    isFormValid(): boolean {
-        if (!this.form) return false;
-        if (this.form.invalid) return false;
-
-        // Since address fields can be disabled (which excludes them from form.valid),
-        // we manually check that all required address fields have non-empty raw values.
-        const raw = this.form.getRawValue();
-        const requiredAddressFields = ['street', 'city', 'state_province', 'zip_code', 'country_code'];
-        for (const field of requiredAddressFields) {
-            const val = raw[field];
-            if (!val || (typeof val === 'string' && !val.trim())) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     getError(field: string): string {
         const ctrl = this.form.get(field);
         if (!ctrl?.errors) return '';
         if (ctrl.errors['required'])    return this.translate.instant('forms_validation.required');
-        if (ctrl.errors['minlength'])   return this.translate.instant('forms_validation.number_characters_3');
+        if (ctrl.errors['minlength'])   return this.translate.instant('forms_validation.min_length', { min: ctrl.errors['minlength'].requiredLength });
+        if (ctrl.errors['maxlength'])   return this.translate.instant('forms_validation.max_length');
         if (ctrl.errors['whitespace'])  return this.translate.instant('forms_validation.whitespace_not_allowed');
         if (ctrl.errors['extraSpaces']) return this.translate.instant('forms_validation.extra_spaces_not_allowed');
         if (ctrl.errors['pattern'])     return this.translate.instant('forms_validation.invalid_format');
@@ -629,11 +638,26 @@ export class FacilityDialogComponent implements OnInit, AfterViewInit, OnDestroy
     private touchAll(): void {
         Object.values(this.form.controls).forEach(c => c.markAsTouched());
     }
+
+    /** Scrolls to and focuses the first field with an error (the map when only the pin is missing). */
+    private focusFirstInvalid(): void {
+        const order: [string, string][] = [
+            ['code', 'fac-code'], ['name', 'fac-name'], ['time_zone', 'fac-tz'],
+            ['street', 'fac-street'], ['city', 'fac-city'], ['state_province', 'fac-state'],
+            ['country_code', 'fac-country'], ['zip_code', 'fac-zip'], ['lat', 'map-geocoder-input'],
+        ];
+        const hit = order.find(([field]) => this.form.get(field)?.invalid);
+        if (!hit) return;
+        const el = document.getElementById(hit[1]);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.focus({ preventScroll: true });
+    }
 }
 
 // ── Nominatim API response shape ─────────────────────────────────────────────
 interface NominatimAddress {
     road?:          string;   // calle principal
+    house_number?:  string;
     pedestrian?:    string;   // vía peatonal
     footway?:       string;
     path?:          string;

@@ -1,6 +1,6 @@
-import { Component, input, signal, OnChanges, SimpleChanges } from '@angular/core'
+import { Component, input, output, signal, OnChanges, SimpleChanges } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
-import { catchError, debounceTime, distinctUntilChanged, map, merge, of, switchMap } from 'rxjs'
+import { catchError, debounceTime, map, merge, of, switchMap, tap } from 'rxjs'
 import { CommonModule } from '@angular/common'
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms'
 import { TranslateModule } from '@ngx-translate/core'
@@ -13,7 +13,7 @@ import { BaseFormField } from '@/app/shared/components/form/form-field/base-form
 import { ProductListItem } from '../../types/catalog.types'
 import { ProductWorkspaceComponent } from '../product-workspace/product-workspace.component'
 import { buildSkuDimensions, createSkuForm, SkuDialogBase } from '../sku-shared/sku-dialog-base'
-import { SkuFieldsColumnsComponent } from '../sku-shared/sku-fields-columns.component'
+import { SkuCodeStatus, SkuFieldsColumnsComponent } from '../sku-shared/sku-fields-columns.component'
 
 /** Custom attribute keys are stored in Title Case to prevent duplicates (Camera/CAMERA/camera). */
 function toTitleCase(key: string): string {
@@ -45,6 +45,24 @@ export class SkuCreateDialogComponent extends SkuDialogBase implements OnChanges
   /** Mirrors companyControl so the product workspace (signal-based) can react to it */
   companyId = signal<string | null>(null)
 
+  /**
+   * Emitted after a "Save and create another": the SKU was created but the dialog
+   * stays open (the parent only refreshes its list; `saved` would close it).
+   */
+  created = output<void>()
+
+  /** Live state of the SKU code uniqueness lookup, shown under the field */
+  skuStatus = signal<SkuCodeStatus>('idle')
+
+  /** Last answered uniqueness lookup (company|lowercased code) */
+  private lastSkuCheck: { key: string; exists: boolean } | null = null
+
+  /** Set by "Save and create another": keep the dialog open once the save succeeds */
+  private keepOpen = false
+
+  /** Name last copied from the product, so a product change can replace it but not a typed one */
+  private autoFilledName: string | null = null
+
   /** Pending image files */
   pendingFiles: File[] = []
   /** Object URL previews */
@@ -68,26 +86,31 @@ export class SkuCreateDialogComponent extends SkuDialogBase implements OnChanges
     // happen here: re-run it while the user types and whenever the company changes.
     merge(this.skuForm.controls.sku_code.valueChanges, this.companyControl.valueChanges)
       .pipe(
+        // Show "checking…" right away so the wait reads as progress, not a dead field
+        tap(() => this.skuStatus.set(this.currentSkuKey() ? 'checking' : 'idle')),
         debounceTime(this.SKU_CHECK_DEBOUNCE_MS),
-        // One request per distinct company+code pair. Lowercased because sku_code
-        // is citext: "ABC" and "abc" collide, so re-querying them adds nothing.
-        map(() => {
-          const skuCode = (this.skuForm.controls.sku_code.value || '').trim()
-          return `${this.resolveCompanyId() ?? ''}|${skuCode.toLowerCase()}`
-        }),
-        distinctUntilChanged(),
-        switchMap(() => {
+        map(() => this.currentSkuKey()),
+        switchMap(key => {
           const skuCode = (this.skuForm.controls.sku_code.value || '').trim()
           const companyId = this.resolveCompanyId()
-          if (!skuCode || !companyId) return of(false)
-          // switchMap drops in-flight lookups, so a stale response can't win
-          return this.catalogService
-            .skuCodeExists(skuCode, companyId)
-            .pipe(catchError(() => of(false)))
+          if (!key || !skuCode || !companyId) return of<boolean | null>(null)
+          // Same company+code as the last lookup: reuse its answer. Still re-applied
+          // below, because editing the field re-ran the validators and wiped the error.
+          if (key === this.lastSkuCheck?.key) return of(this.lastSkuCheck.exists)
+          // switchMap drops in-flight lookups, so a stale response can't win.
+          // A failed lookup is "unknown" (null): no error, but no "available" either.
+          return this.catalogService.skuCodeExists(skuCode, companyId).pipe(
+            tap(exists => (this.lastSkuCheck = { key, exists })),
+            catchError(() => of<boolean | null>(null)),
+          )
         }),
         takeUntilDestroyed(),
       )
-      .subscribe(exists => (exists ? this.setDuplicateSkuError() : this.clearDuplicateSkuError()))
+      .subscribe(exists => {
+        if (exists) this.setDuplicateSkuError()
+        else this.clearDuplicateSkuError()
+        this.skuStatus.set(exists === null ? 'idle' : exists ? 'taken' : 'available')
+      })
 
     this.companyControl.valueChanges
       .pipe(takeUntilDestroyed())
@@ -113,6 +136,21 @@ export class SkuCreateDialogComponent extends SkuDialogBase implements OnChanges
     }
   }
 
+  /**
+   * Lookup key of the current company + code, '' when either is missing.
+   * Lowercased because sku_code is citext: "ABC" and "abc" collide.
+   */
+  private currentSkuKey(): string {
+    const skuCode = (this.skuForm.controls.sku_code.value || '').trim()
+    const companyId = this.resolveCompanyId()
+    return skuCode && companyId ? `${companyId}|${skuCode.toLowerCase()}` : ''
+  }
+
+  /** Puts the cursor in the SKU code once the dialog is open, ready to type or scan. */
+  focusSkuCode() {
+    setTimeout(() => document.getElementById('sku-code-field')?.focus())
+  }
+
   /** With only one company available there is nothing to choose — set it. */
   private preselectSingleCompany() {
     const companies = this.companies()
@@ -125,6 +163,20 @@ export class SkuCreateDialogComponent extends SkuDialogBase implements OnChanges
   dialogHeader(): string {
     if (!this.workspaceOpen()) return 'labels.new_sku'
     return this.workspaceHeaderKey()
+  }
+
+  /**
+   * Linking a product suggests its name for the SKU, as long as the user hasn't
+   * typed their own (a name copied from the previous product is still replaced).
+   */
+  override onProductChange(product: ProductListItem | null) {
+    super.onProductChange(product)
+    const nameCtrl = this.skuForm.controls.name
+    const current = (nameCtrl.value || '').trim()
+    if (current && current !== this.autoFilledName) return
+    const suggested = product?.name?.trim() || ''
+    nameCtrl.setValue(suggested)
+    this.autoFilledName = suggested || null
   }
 
   // === Image handling ===
@@ -160,6 +212,7 @@ export class SkuCreateDialogComponent extends SkuDialogBase implements OnChanges
     const ctrl = this.skuForm.controls.sku_code
     ctrl.setErrors({ ...ctrl.errors, customMessage: 'validation.sku_duplicate' })
     ctrl.markAsDirty()
+    this.skuStatus.set('taken')
   }
 
   private clearDuplicateSkuError() {
@@ -173,6 +226,8 @@ export class SkuCreateDialogComponent extends SkuDialogBase implements OnChanges
   /** Shown when the SKU turns out to be taken — on check or on a skipped insert. */
   private notifyDuplicateSku() {
     this.saving.set(false)
+    const key = this.currentSkuKey()
+    if (key) this.lastSkuCheck = { key, exists: true }
     this.setDuplicateSkuError()
     this.notify('error', 'messages.error', this.translate.instant('validation.sku_duplicate'))
   }
@@ -194,13 +249,22 @@ export class SkuCreateDialogComponent extends SkuDialogBase implements OnChanges
     this.companyControl.reset()
     this.selectedProduct.set(null)
     this.resetWorkspace()
-    this.skuForm.reset({ serial_control_mode: 'NONE', unit_factor: 1 })
-    this.clearDuplicateSkuError()
+    this.resetSkuFields()
     this.customAttrs.items.set([])
     // Revoke object URLs and clear pending files
     this.pendingPreviews.forEach(url => URL.revokeObjectURL(url))
     this.pendingFiles = []
     this.pendingPreviews = []
+  }
+
+  /** Clears the SKU's own fields (company and product are kept). */
+  private resetSkuFields() {
+    this.skuForm.reset({ serial_control_mode: 'NONE', unit_factor: 1 })
+    this.clearDuplicateSkuError()
+    this.skuStatus.set('idle')
+    this.lastSkuCheck = null
+    this.autoFilledName = null
+    this.keepOpen = false
   }
 
   // === Dialog actions ===
@@ -213,8 +277,14 @@ export class SkuCreateDialogComponent extends SkuDialogBase implements OnChanges
     this.resetForm()
   }
 
-  onSave() {
+  /** "Save and create another": same save, but the dialog stays open for the next SKU. */
+  onSaveAndNew() {
+    this.onSave(true)
+  }
+
+  onSave(keepOpen = false) {
     if (!this.isValid()) return
+    this.keepOpen = keepOpen
     this.saving.set(true)
 
     const skuCode = (this.skuForm.controls.sku_code.value || '').trim()
@@ -231,6 +301,28 @@ export class SkuCreateDialogComponent extends SkuDialogBase implements OnChanges
       // Lookup failed — go ahead; the response guard still catches a skipped insert
       error: () => this.dispatchSave(),
     })
+  }
+
+  /**
+   * After a "Save and create another" the dialog stays open: the list refreshes,
+   * the SKU fields clear (company, product and custom attribute keys stay) and
+   * the cursor goes back to the SKU code.
+   */
+  protected override finishSaved(detailKey: string) {
+    if (!this.keepOpen) {
+      super.finishSaved(detailKey)
+      return
+    }
+    const skuCode = (this.skuForm.controls.sku_code.value || '').trim()
+    this.saving.set(false)
+    this.notify('success', 'messages.success', this.translate.instant('catalog.sku_created_next', { sku: skuCode }))
+    this.created.emit()
+    // Re-suggest the linked product's name for the next SKU
+    const product = this.selectedProduct()
+    this.resetSkuFields()
+    this.customAttrs.items.update(attrs => attrs.map(a => ({ ...a, value: '' })))
+    if (product) this.onProductChange(product)
+    this.focusSkuCode()
   }
 
   private dispatchSave() {

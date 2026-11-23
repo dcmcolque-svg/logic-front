@@ -24,6 +24,7 @@ class ScopeStub {
   readonly selectedIds = signal<string[]>([])
   readonly isSingle = computed(() => this.selectedIds().length === 1)
   readonly inScope = computed(() => this.all())
+  load(): void {}
 }
 
 const COLUMNS: ShColumnDef[] = [

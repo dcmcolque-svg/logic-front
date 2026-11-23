@@ -8,7 +8,9 @@
   cancelLabel="buttons.cancel"
   [saveDisabled]="saving()"
   [dismissableMask]="false"
+  [saveAndNewLabel]="editing() ? '' : 'inbound.save_and_new'"
   (save)="onSave()"
+  (saveAndNew)="onSave(true)"
   (hide)="hide.emit()"
 >
   <!-- ── Header ─────────────────────────────────────────────── -->

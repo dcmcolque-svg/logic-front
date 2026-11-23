@@ -88,6 +88,11 @@ export class BaseDialog {
   cancelLabel = input('labels.cancel')
   /** Save button icon */
   saveIcon = input('pi pi-check')
+  /**
+   * Label (i18n key) of an optional secondary save button, e.g. "Save and create
+   * another". Empty hides it; when shown, clicking it emits `saveAndNew`.
+   */
+  saveAndNewLabel = input('')
   /** Disable save button */
   saveDisabled = input(false)
   /** Save button color — e.g. 'danger' for an irreversible action. Default: primary */
@@ -100,6 +105,8 @@ export class BaseDialog {
 
   /** Emitted when save is clicked */
   save = output<void>()
+  /** Emitted when the secondary "save and new" button is clicked */
+  saveAndNew = output<void>()
   /** Emitted when dialog is hidden */
   hide = output<void>()
   /** Emitted once the dialog has opened (e.g. to reset the form and focus a field) */

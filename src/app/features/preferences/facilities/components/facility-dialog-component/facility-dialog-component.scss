@@ -1,10 +1,133 @@
+// Theme tokens (work in light and dark mode)
+$border: var(--p-content-border-color);
+$bg: var(--p-content-background);
+$text: var(--p-text-color);
+$muted: var(--p-text-muted-color);
+$radius: var(--p-content-border-radius, 8px);
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: $text;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid $border;
+
+    > i {
+        color: var(--p-primary-color);
+        font-size: 1rem;
+    }
+}
+
+.dialog-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid $border;
+    background: $bg;
+}
+
+// ── Map panel (search bar + map, one bordered block) ────────────────────────
+.map-panel {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid $border;
+    border-radius: $radius;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:focus-within {
+        border-color: var(--p-primary-color);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--p-primary-color) 15%, transparent);
+    }
+
+    &--invalid,
+    &--invalid:focus-within {
+        border-color: var(--p-red-500);
+    }
+}
+
+.map-container {
+    position: relative;
+}
+
 .facility-map {
-    height: 23rem;
+    height: 24rem;
     width: 100%;
-    border-radius: 0 0 8px 8px;
-    border: 1px solid var(--p-surface-200);
-    border-top: none;
+    border-radius: 0 0 $radius $radius;
     overflow: hidden;
+
+    @media (max-width: 1023px) {
+        height: 18rem;
+    }
+}
+
+.map-empty {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 500; // above tiles, below Leaflet controls
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: calc(100% - 2rem);
+    padding: 0.6rem 0.9rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, $bg 92%, transparent);
+    color: $text;
+    font-size: 0.8125rem;
+    box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.25);
+    pointer-events: none;
+    text-align: center;
+
+    i {
+        color: var(--p-primary-color);
+    }
+}
+
+.map-busy {
+    position: absolute;
+    top: 0.6rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 500;
+    padding: 0.3rem 0.6rem;
+    border-radius: 999px;
+    background: $bg;
+    color: var(--p-primary-color);
+    box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.25);
+    pointer-events: none;
+}
+
+.map-locate-btn {
+    position: absolute;
+    right: 0.6rem;
+    bottom: 1.6rem;
+    z-index: 900; // above tiles/overlays, below suggestions
+    width: 2.25rem;
+    height: 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid $border;
+    border-radius: 0.5rem;
+    background: $bg;
+    color: $text;
+    cursor: pointer;
+    box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.25);
+    transition: color 0.15s ease;
+
+    &:hover:not(:disabled) {
+        color: var(--p-primary-color);
+    }
+
+    &:disabled {
+        cursor: progress;
+    }
 }
 
 // ── Map search wrapper (anchor for the absolute dropdown) ───────────────────
@@ -13,28 +136,19 @@
     z-index: 1001; // above Leaflet controls (z-index: 1000)
 }
 
-// ── Map geocoding search bar ────────────────────────────────────────────────
 .map-search-bar {
     display: flex;
     align-items: center;
-    gap: 0;
-    border: 1px solid var(--p-surface-300);
-    border-bottom: none;
-    border-radius: 8px 8px 0 0;
-    background: var(--p-surface-0);
+    border-bottom: 1px solid $border;
+    border-radius: $radius $radius 0 0;
+    background: $bg;
     overflow: hidden;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-
-    &:focus-within {
-        border-color: var(--p-primary-color);
-        box-shadow: 0 0 0 2px color-mix(in srgb, var(--p-primary-color) 15%, transparent);
-    }
 }
 
 .map-search-icon {
     flex-shrink: 0;
     padding: 0 0.75rem;
-    color: var(--p-surface-400);
+    color: $muted;
     font-size: 0.875rem;
     pointer-events: none;
 }
@@ -44,33 +158,27 @@
     border: none;
     outline: none;
     background: transparent;
-    padding: 0.6rem 0.5rem 0.6rem 0;
+    padding: 0.65rem 0.5rem 0.65rem 0;
     font-size: 0.875rem;
-    color: var(--p-surface-900);
+    color: $text;
     min-width: 0;
 
     &::placeholder {
-        color: var(--p-surface-400);
+        color: $muted;
     }
 
-    // Remove default browser search "x" cancel button on webkit
     &::-webkit-search-cancel-button {
         -webkit-appearance: none;
-    }
-
-    &:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
     }
 }
 
 .map-search-btn {
     flex-shrink: 0;
+    align-self: stretch;
     border: none;
-    border-left: 1px solid var(--p-surface-200);
     background: var(--p-primary-color);
-    color: #fff;
-    padding: 0.6rem 1rem;
+    color: var(--p-primary-contrast-color);
+    padding: 0 1rem;
     font-size: 0.8125rem;
     font-weight: 600;
     cursor: pointer;
@@ -78,16 +186,12 @@
     white-space: nowrap;
 
     &:hover:not(:disabled) {
-        background: var(--p-primary-600, color-mix(in srgb, var(--p-primary-color) 85%, black));
+        background: var(--p-primary-hover-color);
     }
 
     &:disabled {
         opacity: 0.55;
         cursor: not-allowed;
-    }
-
-    .pi-spinner {
-        font-size: 0.875rem;
     }
 }
 
@@ -95,24 +199,18 @@
 .map-suggestions {
     position: absolute;
     top: 100%;
-    left: 0;
-    right: 0;
-    z-index: 1002; // above Leaflet controls (1000) and wrapper stacking context (1001)
+    left: -1px;
+    right: -1px;
+    z-index: 1002;
     list-style: none;
     margin: 0;
     padding: 0.25rem 0;
-    background: var(--p-surface-0);
-    border: 1px solid var(--p-surface-300);
-    border-top: none;
-    border-radius: 0 0 8px 8px;
-    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.15), 0 2px 8px -2px rgba(0, 0, 0, 0.08);
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: 0 0 $radius $radius;
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.2), 0 2px 8px -2px rgba(0, 0, 0, 0.1);
     max-height: 16rem;
     overflow-y: auto;
-
-    // Scrollbar sutil
-    &::-webkit-scrollbar        { width: 4px; }
-    &::-webkit-scrollbar-track  { background: transparent; }
-    &::-webkit-scrollbar-thumb  { background: var(--p-surface-300); border-radius: 2px; }
 }
 
 .map-suggestion-item {
@@ -124,11 +222,11 @@
     transition: background 0.15s ease;
 
     &:not(:last-child) {
-        border-bottom: 1px solid var(--p-surface-100);
+        border-bottom: 1px solid $border;
     }
 
-    &:hover {
-        background: color-mix(in srgb, var(--p-primary-color) 8%, transparent);
+    &.is-active {
+        background: color-mix(in srgb, var(--p-primary-color) 10%, transparent);
 
         .map-suggestion-icon {
             color: var(--p-primary-color);
@@ -140,12 +238,11 @@
     flex-shrink: 0;
     margin-top: 2px;
     font-size: 0.75rem;
-    color: var(--p-surface-400);
-    transition: color 0.15s ease;
+    color: $muted;
 }
 
 .map-suggestion-text {
     font-size: 0.8125rem;
-    color: var(--p-surface-700);
+    color: $text;
     line-height: 1.4;
 }

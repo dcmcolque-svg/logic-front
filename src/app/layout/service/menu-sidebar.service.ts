@@ -88,6 +88,13 @@ export class MenuSidebarService {
       )
       item.label = translatedLabel
 
+      // Optional i18n key for the item's tooltip (e.g. settings pages)
+      if (item['description']) {
+        item['description'] = await firstValueFrom(
+          this.translate.get(item['description'])
+        )
+      }
+
       if (item.items) {
         await this.processMenuTranslation(item.items)
       }

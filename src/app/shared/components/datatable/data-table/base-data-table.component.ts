@@ -131,6 +131,10 @@ export class BaseDataTable implements OnInit, OnDestroy {
   private readonly columnsBus = inject(TableColumnsBus, { optional: true })
 
   constructor() {
+    // Facility names, zones and column-filter options come from the scope's
+    // list. The topbar selector used to load it; now each table asks (one
+    // request per session, later calls are no-ops).
+    this.facilityScope.load()
     effect(() => this.columnsBus?.publish(this.visibleColumns()))
     // How many records Export would write — which is not the page on screen.
     // With server paging it collects the whole filtered result, so the total
@@ -336,10 +340,12 @@ El problema es que cuando se sale de la pagina y se vuelve hay que volver a intr
   mobileColumns = computed(() => this.applyFacilityScope(this.columns()))
 
   /** Whether the scope hides this table's facility column. */
-  private readonly scopeIsSingle = computed(() =>
-    this.nullableFacility()
-      ? this.facilityScope.isSingleWithoutNulls()
-      : this.facilityScope.isSingle()
+  private readonly scopeIsSingle = computed(
+    () =>
+      this.facilityScope.hideSingleFacilityColumn &&
+      (this.nullableFacility()
+        ? this.facilityScope.isSingleWithoutNulls()
+        : this.facilityScope.isSingle())
   )
 
   private applyFacilityScope(cols: ShColumnDef[]): ShColumnDef[] {
