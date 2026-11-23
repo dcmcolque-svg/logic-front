@@ -218,6 +218,28 @@ describe('PaymentDialogComponent', () => {
     expect(c.problems()).toEqual([])
   })
 
+  it('shows cash received short as still due, and change when received over', () => {
+    const c = setup(100)
+    expect(c.due()).toBe(0)
+    c.setReceived(0, 50)
+    expect(c.due()).toBe(50)
+    expect(c.change()).toBe(0)
+    expect(c.problems()).toContain('sales.pos.received_short')
+    c.setReceived(0, 120)
+    expect(c.due()).toBe(0)
+    expect(c.change()).toBe(20)
+  })
+
+  it('due adds unassigned total and the cash shortfall in a mixed payment', () => {
+    const c = setup(100)
+    c.adding.set(true)
+    c.pick(METHODS[1]) // 50 cash + 50 card
+    c.setReceived(0, 30) // 20 short on cash
+    expect(c.due()).toBe(20)
+    c.remove(1) // cash now covers 100, received 30 stays
+    expect(c.due()).toBe(70)
+  })
+
   it('switches the single payment to card and asks for its voucher', () => {
     const c = setup(20)
     c.pick(METHODS[1])

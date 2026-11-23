@@ -9,7 +9,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch'
 
 import { BaseDialog } from '@/app/shared/components'
 import { FacilityScopeService } from '@/app/core/services/facility-scope.service'
-import { CostingCurrency, currencyDecimals } from '@/app/shared/utils/costing.util'
+import { CostingCurrency, MONEY_MAX_DECIMALS } from '@/app/shared/utils/costing.util'
 import { SalesService } from '../sales.service'
 import { SessionSummary } from '../sales.types'
 import { denominations, money, round2, salesErrorMessages } from '../sales.util'
@@ -166,7 +166,8 @@ export class CloseRegisterDialogComponent {
   }
 
   readonly currency = computed(() => (this.summary()?.session.currency ?? 'BOB') as CostingCurrency)
-  readonly decimals = computed(() => currencyDecimals(this.currency()))
+  /** Amount inputs take cents in any currency (CLP too), as typed. */
+  readonly decimals = computed(() => MONEY_MAX_DECIMALS)
   readonly bills = computed(() => [...denominations(this.currency())].reverse())
   readonly difference = computed(() => round2((this.counted() ?? 0) - (this.summary()?.expected ?? 0)))
   /** A difference must be explained before closing. */

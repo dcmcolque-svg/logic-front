@@ -37,7 +37,7 @@ import { catchError, debounceTime, EMPTY, map, of, Subject, switchMap, tap } fro
 
 import { AuthService } from '@/app/core/services/auth.service'
 import { FacilityScopeService } from '@/app/core/services/facility-scope.service'
-import { CostingCurrency, currencyDecimals, isOwnerRole } from '@/app/shared/utils/costing.util'
+import { CostingCurrency, MONEY_MAX_DECIMALS, isOwnerRole } from '@/app/shared/utils/costing.util'
 import { SalesService } from '../sales.service'
 import {
   CatalogItem,
@@ -167,7 +167,8 @@ export default class PosComponent {
   readonly facilityId = signal<string | null>(null)
   readonly facilityName = computed(() => this.facilityScope.nameOf(this.facilityId()))
   readonly currency = signal<CostingCurrency>('BOB')
-  readonly decimals = computed(() => currencyDecimals(this.currency()))
+  /** Amount inputs take cents in any currency (CLP too), as typed. */
+  readonly decimals = computed(() => MONEY_MAX_DECIMALS)
 
   readonly register = signal<SessionSummary | null>(null)
   readonly registerLoading = signal(false)

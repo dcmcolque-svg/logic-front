@@ -65,13 +65,21 @@ export function currencyDecimals(currency: CostingCurrency): number {
 }
 
 /**
- * "Bs 10,50", "CLP$ 1.250", "US$ 3,00"; "—" when there is no value. Numbers
- * follow DISPLAY_LOCALE (display-format), not the UI language.
+ * Decimals an amount may carry in any currency. Users may type cents even in
+ * CLP (e.g. a price of 46,30), and every screen shows them as typed.
+ */
+export const MONEY_MAX_DECIMALS = 2
+
+/**
+ * "Bs 10,50", "CLP$ 1.250", "CLP$ 46,3", "US$ 3,00"; "—" when there is no
+ * value. The currency's decimals are the minimum (BOB/USD always show cents);
+ * cents a CLP amount does carry are shown, never rounded away. Numbers follow
+ * DISPLAY_LOCALE (display-format), not the UI language.
  */
 export function formatCost(value: number | null | undefined, currency: CostingCurrency): string {
   if (value === null || value === undefined || isNaN(value)) return '—'
   const d = currencyDecimals(currency)
-  return `${currencyPrefix(currency)} ${formatDisplayNumber(value, d, d)}`
+  return `${currencyPrefix(currency)} ${formatDisplayNumber(value, d, Math.max(d, MONEY_MAX_DECIMALS))}`
 }
 
 /**
@@ -94,9 +102,9 @@ export function commonCurrency(settings: Array<CostingSettings | null | undefine
 
 /**
  * DecimalPipe digitsInfo for amounts the user typed (catalog cost / prices):
- * no forced trailing zeros, capped at the currency's ISO 4217 decimals
- * (CLP → '1.0-0', BOB/USD → '1.0-2'). Unknown currency → '1.0-2'.
+ * no forced trailing zeros, and the cents shown as typed in any currency
+ * (CLP 46,3 stays 46,3) → always '1.0-2'.
  */
-export function enteredAmountDigits(currency: CostingCurrency | null | undefined): string {
-  return `1.0-${currency ? currencyDecimals(currency) : 2}`
+export function enteredAmountDigits(_currency?: CostingCurrency | null): string {
+  return `1.0-${MONEY_MAX_DECIMALS}`
 }

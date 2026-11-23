@@ -8,7 +8,7 @@ import { MessageModule } from 'primeng/message'
 
 import { BaseDialog } from '@/app/shared/components'
 import { FacilityScopeService } from '@/app/core/services/facility-scope.service'
-import { CostingCurrency, currencyDecimals } from '@/app/shared/utils/costing.util'
+import { CostingCurrency, MONEY_MAX_DECIMALS } from '@/app/shared/utils/costing.util'
 import { SalesService } from '../sales.service'
 import { Customer, CustomerPaymentResult, PaymentMethod } from '../sales.types'
 import { kindIcon, money, newClientRef, quickTenders, round2, salesErrorMessages } from '../sales.util'
@@ -179,7 +179,8 @@ export class CustomerPaymentDialogComponent {
   readonly result = signal<CustomerPaymentResult | null>(null)
   private clientRef: string | null = null
 
-  readonly decimals = computed(() => currencyDecimals(this.currency()))
+  /** Amount inputs take cents in any currency (CLP too), as typed. */
+  readonly decimals = computed(() => MONEY_MAX_DECIMALS)
   readonly usableMethods = computed(() => this.methods().filter(m => m.is_active && m.kind !== 'CREDIT'))
   readonly balance = computed(() => this.customer()?.balances.find(b => b.currency === this.currency())?.balance ?? 0)
   readonly change = computed(() => (this.method()?.kind === 'CASH' ? round2(Math.max(this.received() - this.amount(), 0)) : 0))

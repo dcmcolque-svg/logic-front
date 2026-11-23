@@ -51,6 +51,10 @@ describe('sales.util', () => {
     expect(quickTenders(0, 'BOB')).toEqual([])
   })
 
+  it('keeps the cents of a CLP amount in the exact tender', () => {
+    expect(quickTenders(46.3, 'CLP')[0]).toBe(46.3)
+  })
+
   it('rounds CLP to whole pesos', () => {
     expect(roundCurrency(1234.56, 'CLP')).toBe(1235)
     expect(roundCurrency(12.345, 'BOB')).toBe(12.35)

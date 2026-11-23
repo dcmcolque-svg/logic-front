@@ -30,6 +30,7 @@ describe('costing.util', () => {
   it('formats with the currency prefix and decimals, in DISPLAY_LOCALE whatever the UI language', () => {
     expect(formatCost(10.5, 'BOB')).toBe('Bs 10,50')
     expect(formatCost(1250, 'CLP')).toBe('CLP$ 1.250')
+    expect(formatCost(46.3, 'CLP')).toBe('CLP$ 46,3')
     expect(formatCost(1234.5, 'USD')).toBe('US$ 1.234,50')
     expect(formatCost(null, 'BOB')).toBe('—')
   })
@@ -47,8 +48,8 @@ describe('costing.util', () => {
     expect(commonCurrency([{ method: 'NONE' }, undefined])).toBeNull()
   })
 
-  it('enteredAmountDigits caps by ISO decimals without forced zeros', () => {
-    expect(enteredAmountDigits('CLP')).toBe('1.0-0')
+  it('enteredAmountDigits keeps typed cents in every currency, without forced zeros', () => {
+    expect(enteredAmountDigits('CLP')).toBe('1.0-2')
     expect(enteredAmountDigits('BOB')).toBe('1.0-2')
     expect(enteredAmountDigits('USD')).toBe('1.0-2')
     expect(enteredAmountDigits(null)).toBe('1.0-2')

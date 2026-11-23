@@ -109,12 +109,13 @@ export function denominations(currency: CostingCurrency): number[] {
  */
 export function quickTenders(amount: number, currency: CostingCurrency, max = 4): number[] {
   if (amount <= 0) return []
-  const out = new Set<number>([roundCurrency(amount, currency)])
+  // The exact amount as is (CLP 46,30 stays 46,30): rounding it could leave it short.
+  const out = new Set<number>([round2(amount)])
   const bills = denominations(currency).filter(d => d >= 1 || currency === 'USD')
   for (const b of bills) {
     if (b < amount / 10) continue
     const next = Math.ceil(amount / b - 1e-9) * b
-    if (next >= amount) out.add(roundCurrency(next, currency))
+    if (next >= amount) out.add(round2(next))
     if (out.size >= max) break
   }
   return [...out].sort((a, b) => a - b).slice(0, max)

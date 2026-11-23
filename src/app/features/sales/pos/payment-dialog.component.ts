@@ -7,7 +7,7 @@ import { InputTextModule } from 'primeng/inputtext'
 import { MessageModule } from 'primeng/message'
 
 import { BaseDialog } from '@/app/shared/components'
-import { CostingCurrency, currencyDecimals } from '@/app/shared/utils/costing.util'
+import { CostingCurrency, MONEY_MAX_DECIMALS } from '@/app/shared/utils/costing.util'
 import { CheckoutPayment, PaymentMethod } from '../sales.types'
 import { kindIcon, money, quickTenders, round2, roundCurrency } from '../sales.util'
 
@@ -154,9 +154,9 @@ function withAmount(r: PaymentRow, amount: number): PaymentRow {
 
         <div class="grid grid-cols-2 gap-3 mt-4">
           <div class="rounded-lg p-3 text-center"
-               [class]="remaining() > 0 ? 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : 'bg-surface-50 dark:bg-surface-800'">
+               [class]="due() > 0 ? 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : 'bg-surface-50 dark:bg-surface-800'">
             <div class="text-xs uppercase">{{ 'sales.pos.remaining' | translate }}</div>
-            <div class="text-2xl font-bold">{{ m(remaining() > 0 ? remaining() : 0) }}</div>
+            <div class="text-2xl font-bold">{{ m(due()) }}</div>
           </div>
           <div class="rounded-lg p-3 text-center"
                [class]="change() > 0 ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-surface-50 dark:bg-surface-800'">
@@ -191,10 +191,21 @@ export class PaymentDialogComponent {
   readonly rows = signal<PaymentRow[]>([])
   /** "Add another method" was pressed: the next method tapped is added, not switched to. */
   readonly adding = signal(false)
-  readonly decimals = computed(() => currencyDecimals(this.currency()))
+  /** Amount inputs take cents in any currency (CLP too), as typed. */
+  readonly decimals = computed(() => MONEY_MAX_DECIMALS)
 
   readonly paid = computed(() => round2(this.rows().reduce((s, r) => s + (r.amount || 0), 0)))
   readonly remaining = computed(() => round2(this.total() - this.paid()))
+  /**
+   * What the cashier still has to collect: the part of the total no payment
+   * covers yet, plus cash received short of its amount (100 due, 50 received → 50).
+   */
+  readonly due = computed(() =>
+    round2(
+      Math.max(this.remaining(), 0) +
+        this.rows().reduce((s, r) => s + (r.method.kind === 'CASH' ? Math.max(r.amount - (r.received || 0), 0) : 0), 0)
+    )
+  )
   readonly change = computed(() =>
     round2(this.rows().reduce((s, r) => s + (r.method.kind === 'CASH' ? Math.max((r.received || 0) - r.amount, 0) : 0), 0))
   )
