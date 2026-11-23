@@ -165,6 +165,8 @@ export class BaseDataTable implements OnInit, OnDestroy {
   sort = input<ShSortConfig | undefined>(undefined)
   /** Enable row selection */
   selectable = input(false)
+  /** Draw cell borders (PrimeNG gridlines). On by default; pass false to opt out. */
+  bordered = input(true)
   /** Title displayed above the table */
   title = input('')
   /** Bulk action items shown in the filter-row ellipsis menu when rows are selected */
