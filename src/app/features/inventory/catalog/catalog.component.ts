@@ -95,6 +95,8 @@ import { isOwnerRole } from '@/app/shared/utils/costing.util'
 })
 export default class CatalogComponent implements OnInit {
   private readonly catalogService = inject(CatalogService)
+  /** digitsInfo for cost / prices, by the facilities' currency. */
+  readonly moneyDigits = this.catalogService.moneyDigits
   private readonly messageService = inject(MessageService)
   private readonly translate = inject(TranslateService)
   /** Costs are OWNER-only. */
@@ -201,6 +203,7 @@ export default class CatalogComponent implements OnInit {
     this.filterPresetService.loadPresets(this.PRESET_PAGE_KEY)
     this.loadAuxiliaryData()
     this.loadInventoryData()
+    this.catalogService.loadMoneyDigits()
   }
 
   // ═══════════════════════════════════════════════════════

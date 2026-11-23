@@ -27,6 +27,8 @@ import { CatalogItem } from '../../types/catalog.types'
 })
 export class SkuListInlineComponent implements OnChanges {
   private readonly catalogService = inject(CatalogService)
+  /** digitsInfo for prices, by the facilities' currency. */
+  readonly moneyDigits = this.catalogService.moneyDigits
 
   /** Product ID whose SKUs to load */
   productId = input.required<string>()
@@ -36,6 +38,10 @@ export class SkuListInlineComponent implements OnChanges {
 
   loading = signal(false)
   skus = signal<CatalogItem[]>([])
+
+  constructor() {
+    this.catalogService.loadMoneyDigits()
+  }
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['productId'] && this.productId()) {

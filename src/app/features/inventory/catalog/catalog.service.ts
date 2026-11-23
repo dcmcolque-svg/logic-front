@@ -1,7 +1,8 @@
-import { inject, Injectable } from '@angular/core'
+import { inject, Injectable, signal } from '@angular/core'
 import { HttpClient } from '@angular/common/http'
 import { map, Observable } from 'rxjs'
 import { environment } from '@/environments/environment'
+import { commonCurrency, CostingSettings, enteredAmountDigits } from '@/app/shared/utils/costing.util'
 import {
   CatalogListRequest,
   CatalogListResponse,
@@ -50,6 +51,30 @@ export class CatalogService {
   private readonly categoryUrl = environment.URL_API + 'v2/cat/category'
   private readonly skuUrl      = environment.URL_API + 'v2/cat/sku'
   private readonly companyUrl  = environment.URL_API + 'v2/company'
+
+  /**
+   * DecimalPipe digitsInfo for catalog cost / prices: shows what was typed,
+   * capped by the facilities' currency (CLP → no decimals, BOB/USD → up to 2).
+   * Catalog is per company and currency per facility, so it uses the
+   * currency all of the user's facilities share; mixed → up to 2.
+   */
+  readonly moneyDigits = signal(enteredAmountDigits(null))
+  private moneyDigitsLoaded = false
+
+  /** Loads moneyDigits once per session from POST /v2/facility/my. */
+  loadMoneyDigits(): void {
+    if (this.moneyDigitsLoaded) return
+    this.moneyDigitsLoaded = true
+    this.http
+      .post<{ data: Array<{ settings?: { costing?: CostingSettings } }> }>(`${environment.URL_API}v2/facility/my`, {
+        filter: {},
+        config: { page: 1, rows: 500, populate_data: false },
+      })
+      .subscribe({
+        next: res => this.moneyDigits.set(enteredAmountDigits(commonCurrency((res.data ?? []).map(f => f.settings?.costing)))),
+        error: () => (this.moneyDigitsLoaded = false),
+      })
+  }
 
   // ── Catalog (aggregated view) ─────────────────────────────
 

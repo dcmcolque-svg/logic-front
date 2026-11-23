@@ -189,7 +189,7 @@
             }
             @case ('money') {
               <span class="font-mono w-full inline-block text-right">{{
-                row[col.field] == null ? '—' : (row[col.field] | number: '1.2-2')
+                row[col.field] == null ? '—' : (row[col.field] | number: moneyDigits())
               }}</span>
             }
             @case ('number') {

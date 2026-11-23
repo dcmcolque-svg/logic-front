@@ -82,3 +82,21 @@ export function costVariancePct(cost: number | null | undefined, catalog: number
   if (cost === null || cost === undefined || catalog === null || catalog === undefined || catalog === 0) return null
   return ((cost - catalog) / catalog) * 100
 }
+
+/**
+ * The one currency shared by every given facility, or null when they differ
+ * or none has a currency set (callers then fall back to 2 decimals).
+ */
+export function commonCurrency(settings: Array<CostingSettings | null | undefined>): CostingCurrency | null {
+  const set = new Set(settings.map(s => s?.currency).filter((c): c is CostingCurrency => !!c && c in CURRENCY_FORMAT))
+  return set.size === 1 ? [...set][0] : null
+}
+
+/**
+ * DecimalPipe digitsInfo for amounts the user typed (catalog cost / prices):
+ * no forced trailing zeros, capped at the currency's ISO 4217 decimals
+ * (CLP → '1.0-0', BOB/USD → '1.0-2'). Unknown currency → '1.0-2'.
+ */
+export function enteredAmountDigits(currency: CostingCurrency | null | undefined): string {
+  return `1.0-${currency ? currencyDecimals(currency) : 2}`
+}

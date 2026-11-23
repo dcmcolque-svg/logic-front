@@ -1,5 +1,7 @@
 import {
+  commonCurrency,
   costVariancePct,
+  enteredAmountDigits,
   currencyOf,
   formatCost,
   isCostingEnabled,
@@ -37,5 +39,18 @@ describe('costing.util', () => {
     expect(costVariancePct(9, 10)).toBeCloseTo(-10)
     expect(costVariancePct(9, 0)).toBeNull()
     expect(costVariancePct(null, 10)).toBeNull()
+  })
+
+  it('commonCurrency only when every facility shares it', () => {
+    expect(commonCurrency([{ method: 'NONE', currency: 'CLP' }, { method: 'AVERAGE', currency: 'CLP' }, null])).toBe('CLP')
+    expect(commonCurrency([{ method: 'NONE', currency: 'CLP' }, { method: 'NONE', currency: 'BOB' }])).toBeNull()
+    expect(commonCurrency([{ method: 'NONE' }, undefined])).toBeNull()
+  })
+
+  it('enteredAmountDigits caps by ISO decimals without forced zeros', () => {
+    expect(enteredAmountDigits('CLP')).toBe('1.0-0')
+    expect(enteredAmountDigits('BOB')).toBe('1.0-2')
+    expect(enteredAmountDigits('USD')).toBe('1.0-2')
+    expect(enteredAmountDigits(null)).toBe('1.0-2')
   })
 })

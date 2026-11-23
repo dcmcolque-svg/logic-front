@@ -34,7 +34,7 @@
               </td>
               <td class="py-2 px-3">{{ sku.barcode || '—' }}</td>
               <td class="py-2 px-3">{{ sku.variant_name || '—' }}</td>
-              <td class="py-2 px-3 text-right font-mono">{{ sku.retail_price | number:'1.2-2' }}</td>
+              <td class="py-2 px-3 text-right font-mono">{{ sku.retail_price | number: moneyDigits() }}</td>
               <td class="py-2 px-3 text-right font-mono">{{ sku.available | number:'1.0-0' }}</td>
               <td class="py-2 px-3 text-right font-mono">{{ sku.asign | number:'1.0-0' }}</td>
             </tr>
@@ -62,7 +62,7 @@
             </div>
             <div class="flex justify-between">
               <span class="text-surface-400">{{ 'labels.retail_price' | translate }}</span>
-              <span class="font-mono font-medium">{{ sku.retail_price | number:'1.2-2' }}</span>
+              <span class="font-mono font-medium">{{ sku.retail_price | number: moneyDigits() }}</span>
             </div>
             <div class="flex justify-between">
               <span class="text-surface-400">{{ 'labels.available' | translate }}</span>
