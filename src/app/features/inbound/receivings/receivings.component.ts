@@ -246,7 +246,7 @@ export class Receivings implements OnInit {
       // API filter: status (multiselect) | API sort: status
       field: 'status',
       header: 'labels.status',
-      width: '10rem',
+      width: '12rem',
       template: 'status',
       sortable: true,
       filterable: true,

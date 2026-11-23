@@ -115,7 +115,31 @@
         <ng-template #cell let-row let-col="col">
             @switch (col.template) {
                 @case ('status') {
-                    <base-status-badge [value]="row.status" [statusMap]="statusMap" />
+                    <div class="flex flex-col items-start gap-1.5">
+                        <base-status-badge [value]="row.status" [statusMap]="statusMap" />
+                        <!-- Next step, in plain sight (also in the ⋮ menu) -->
+                        @if (row.status === 'IN-TRANSIT') {
+                            <p-button
+                                icon="pi pi-warehouse"
+                                [label]="'inbound.start' | translate"
+                                size="small"
+                                severity="warn"
+                                [outlined]="true"
+                                styleClass="py-1 px-2 text-xs whitespace-nowrap"
+                                (onClick)="$event.stopPropagation(); confirmStart(row)"
+                            />
+                        } @else if (row.status === 'IN-WAREHOUSE' || row.status === 'PROCESSING') {
+                            <p-button
+                                icon="pi pi-download"
+                                [label]="'inbound.receive' | translate"
+                                size="small"
+                                severity="success"
+                                [outlined]="true"
+                                styleClass="py-1 px-2 text-xs whitespace-nowrap"
+                                (onClick)="$event.stopPropagation(); goReceive(row)"
+                            />
+                        }
+                    </div>
                 }
                 @case ('facility') {
                     <div class="text-sm font-medium">{{ col.exportValue?.(row) }}</div>

@@ -621,7 +621,7 @@ export default class ReceivingProcessingComponent implements OnDestroy, CanLeave
     })
     if (res.status === 'COMPLETE') {
       this.leavingOnPurpose = true
-      this.router.navigate(['app/inbound/details', this.id])
+      this.router.navigate(['app/inbound/details', this.id], { replaceUrl: true })
       return
     }
     // Keep the destination: the next batch usually goes to the same place.
@@ -699,7 +699,7 @@ export default class ReceivingProcessingComponent implements OnDestroy, CanLeave
   // ── Navigation ────────────────────────────────────────────────────────────
 
   goDetails(): void {
-    this.router.navigate(['app/inbound/details', this.id])
+    this.router.navigate(['app/inbound/details', this.id], { replaceUrl: true })
   }
 
   back(): void {

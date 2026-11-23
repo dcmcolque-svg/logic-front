@@ -122,7 +122,7 @@ export default class ReceivingDetailsComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router)
 
   goReceive(): void {
-    this.router.navigate(['app/inbound/processing', this.id])
+    this.router.navigate(['app/inbound/processing', this.id], { replaceUrl: true })
   }
 
   // ── State ─────────────────────────────────────────────────────────────────
