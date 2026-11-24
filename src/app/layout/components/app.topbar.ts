@@ -27,6 +27,8 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core'
 import { TranslateLanService } from '../../core/services/translate-lan.service'
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog'
 import { AppEditUserProfile } from './app.edit-user-profile'
+import { AppChangePassword } from './app.change-password'
+import { MessageEdgeService } from '@/app/core/services/message.service'
 import { OperatorBrandingDialogComponent } from '@/app/features/preferences/operator-branding/operator-branding-dialog.component'
 
 @Component({
@@ -163,6 +165,14 @@ import { OperatorBrandingDialogComponent } from '@/app/features/preferences/oper
                 <i class="pi pi-user mr-4"></i>
                 <span>{{ 'topbar.edit_profile' | translate }}</span>
               </a>
+              <a
+                pRipple
+                class="flex p-2 rounded-border w-full items-center hover:bg-emphasis transition-colors duration-150 cursor-pointer"
+                (click)="openChangePassword()"
+              >
+                <i class="pi pi-lock mr-4"></i>
+                <span>{{ 'topbar.change_password' | translate }}</span>
+              </a>
 
               <!-- Temporarily hidden: Logos / Branding (incl. its leading divider)
               <p-divider
@@ -222,6 +232,7 @@ export class AppTopbar implements OnInit {
   translateLanService = inject(TranslateLanService)
   dialogService   = inject(DialogService)
   breadcrumb      = inject(BreadcrumbService)
+  messageService  = inject(MessageEdgeService)
 
   searchInput = viewChild<ElementRef>('searchinput')
   menuButton = viewChild<ElementRef>('menubutton')
@@ -283,6 +294,20 @@ export class AppTopbar implements OnInit {
       this.username.set(result.user_name || this.username())
       if (result.user_img) {
         this.avatarUrl.set(result.user_img)
+      }
+    })
+  }
+
+  openChangePassword(): void {
+    const ref = this.dialogService.open(AppChangePassword, {
+      header: this.translateService.instant('topbar.change_password'),
+      width: '420px',
+      modal: true,
+      closable: true,
+    })
+    ref?.onClose.subscribe((changed) => {
+      if (changed) {
+        this.messageService.showSuccess(this.translateService.instant('topbar.password_changed'))
       }
     })
   }

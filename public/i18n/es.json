@@ -60,6 +60,10 @@
   "topbar": {
     "profile": "Perfil",
     "edit_profile": "Editar Perfil",
+    "change_password": "Cambiar contraseña",
+    "current_password": "Contraseña actual",
+    "new_password": "Nueva contraseña",
+    "password_changed": "Contraseña actualizada.",
     "theme": "Tema",
     "themeLight": "Claro",
     "themeDark": "Oscuro",
@@ -1406,6 +1410,7 @@
     "AUTH_INVALID_EMAIL": "El correo no es válido.",
     "AUTH_PASSWORD_MISMATCH": "Las contraseñas no coinciden.",
     "AUTH_PASSWORD_TOO_SHORT": "La contraseña debe tener al menos 8 caracteres.",
+    "AUTH_CURRENT_PASSWORD_INVALID": "La contraseña actual no es correcta.",
     "RECEIVING_ALREADY_EXISTS": "Ya existe una recepción con este número de documento",
     "RECEIVING_COMPANY_NOT_FOUND": "Compañía no encontrada",
     "RECEIVING_FACILITY_NOT_FOUND": "Sucursal no encontrada",

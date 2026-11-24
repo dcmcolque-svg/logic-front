@@ -63,6 +63,11 @@ export class AuthService {
       .pipe(tap(() => this.loadAuthInfo()))
   }
 
+  /** Changes the signed-in user's own password (user taken from the token). */
+  changePassword(body: { curr: string; password: string; confirm_password: string }) {
+    return this.http.post(`${environment.URL_API}login/change`, body)
+  }
+
   /** Validates the private sign-up link key (404 when invalid or disabled). */
   checkRegisterKey(key: string) {
     return this.http.post(`${environment.URL_API}register/check`, { key })

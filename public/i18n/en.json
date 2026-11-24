@@ -60,6 +60,10 @@
   "topbar": {
     "profile": "Profile",
     "edit_profile": "Edit Profile",
+    "change_password": "Change password",
+    "current_password": "Current password",
+    "new_password": "New password",
+    "password_changed": "Password updated.",
     "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",
@@ -1406,6 +1410,7 @@
     "AUTH_INVALID_EMAIL": "Email is not valid.",
     "AUTH_PASSWORD_MISMATCH": "Passwords do not match.",
     "AUTH_PASSWORD_TOO_SHORT": "Password must be at least 8 characters.",
+    "AUTH_CURRENT_PASSWORD_INVALID": "Current password is incorrect.",
     "RECEIVING_ALREADY_EXISTS": "A receiving with this document number already exists",
     "RECEIVING_COMPANY_NOT_FOUND": "Company not found",
     "RECEIVING_FACILITY_NOT_FOUND": "Branch not found",
